@@ -23,6 +23,7 @@ model Profile {
   servers  Server[]
   members  Member[]
   channels Channel[]
+  files    File[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -41,6 +42,7 @@ model Server {
   updatedAt DateTime  @updatedAt
   members   Member[]
   channels  Channel[]
+  files     File[]
 
   @@index([profileID])
 }
@@ -88,7 +90,36 @@ model Channel {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  files     File[]
 
   @@index([serverID])
   @@index([profileID])
+}
+
+model File {
+  id         String  @id @default(uuid())
+  name       String
+  size       Int
+  mimeType   String
+  url        String  @db.Text
+  bucketName String
+  path       String?
+
+  // Optional: Associate files with users/profiles
+  profileId String?
+  profile   Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+
+  // Optional: Associate files with servers/channels
+  serverId String?
+  server   Server? @relation(fields: [serverId], references: [id], onDelete: SetNull)
+
+  channelId String?
+  channel   Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+  @@index([serverId])
+  @@index([channelId])
 }

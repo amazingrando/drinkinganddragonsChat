@@ -3,6 +3,7 @@ import * as z from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useState, useEffect } from "react"
+import { useFileUpload } from '@/hooks/use-file-upload'
 
 import {
   Dialog,
@@ -22,6 +23,8 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone'
+import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -52,6 +55,15 @@ const InitialModel = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log(values)
   }
+
+  const dropzoneProps = useFileUpload({
+    bucketName: 'server-images',
+    path: 'avatars',
+    maxFiles: 1,
+    maxFileSize: 5 * 1024 * 1024, // 5MB
+    allowedMimeTypes: ['image/*'],
+    profileId: undefined, // Add actual profile ID when available
+  })
 
   if (!isMounted) {
     return null
@@ -84,6 +96,19 @@ const InitialModel = () => {
                       placeholder="Enter server name" {...field} />
                   </FormControl>
 
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="imageUrl" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Server image</FormLabel>
+                  <FormControl>
+                    <Dropzone {...dropzoneProps} >
+                      <DropzoneEmptyState />
+                      <DropzoneContent />
+                    </Dropzone>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
