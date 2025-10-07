@@ -54,6 +54,7 @@ const InitialModel = () => {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log(values)
+    // TODO: Submit the form with the server name and image URL
   }
 
   const dropzoneProps = useFileUpload({
@@ -64,6 +65,18 @@ const InitialModel = () => {
     allowedMimeTypes: ['image/*'],
     profileId: undefined, // Add actual profile ID when available
   })
+
+  // Watch for successful uploads and update the form field
+  useEffect(() => {
+    if (dropzoneProps.isSuccess && dropzoneProps.files.length > 0) {
+      const uploadedFile = dropzoneProps.files[0]
+      if (uploadedFile.uniqueFileName) {
+        // Construct the public URL for the uploaded file
+        const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/server-images/avatars/${uploadedFile.uniqueFileName}`
+        form.setValue('imageUrl', imageUrl)
+      }
+    }
+  }, [dropzoneProps.isSuccess, dropzoneProps.files, form])
 
   if (!isMounted) {
     return null
@@ -82,10 +95,6 @@ const InitialModel = () => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="space-y-8 px-6">
-              <div className="flex items-center justify-center">
-                TODO: Upload server image
-              </div>
-
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Server name</FormLabel>
@@ -95,7 +104,6 @@ const InitialModel = () => {
                       className="bg-zinc-300/50 border-0 focus-visible:ring-0 text-black focus-visible:ring-offset-0"
                       placeholder="Enter server name" {...field} />
                   </FormControl>
-
                   <FormMessage />
                 </FormItem>
               )} />
