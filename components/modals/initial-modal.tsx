@@ -37,7 +37,7 @@ const formSchema = z.object({
   }),
 })
 
-const InitialModel = () => {
+const InitialModal = () => {
   const [isMounted, setIsMounted] = useState(false)
   const router = useRouter()
 
@@ -151,4 +151,4 @@ const InitialModel = () => {
   )
 }
 
-export default InitialModel
+export default InitialModal
