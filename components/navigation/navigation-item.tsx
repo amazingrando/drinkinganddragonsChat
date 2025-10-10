@@ -19,9 +19,13 @@ export const NavigationItem = ({
   const params = useParams()
   const router = useRouter()
 
+  const handleClick = () => {
+    router.push(`/servers/${id}`)
+  }
+
   return (
     <ActionTooltip label={name} side='right' align='center'>
-      <button className='group flex items-center' onClick={() => { }}>
+      <button className='group flex items-center' onClick={handleClick}>
         <div className={cn("absolute left-0 bg-primary rounded-r-full transition-all w-[4px]",
           params.serverId != id && "group-hover:h-[20px]",
           params.serverId === id ? "h-[36px]" : "h-[8px]",
