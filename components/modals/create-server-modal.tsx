@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input"
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone'
 import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 import { useRouter } from "next/navigation"
-import { useModal } from "@/hooks/use-model-store"
+import { useModal } from "@/hooks/use-modal-store"
 import { useEffect } from "react"
 
 const formSchema = z.object({
