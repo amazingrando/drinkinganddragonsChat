@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useState, useEffect } from "react"
 import { useFileUpload } from '@/hooks/use-file-upload'
+import axios from "axios"
 
 import {
   Dialog,
@@ -25,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone'
 import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
+import { useRouter } from "next/navigation"
 
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -37,6 +39,7 @@ const formSchema = z.object({
 
 const InitialModel = () => {
   const [isMounted, setIsMounted] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     setIsMounted(true)
@@ -54,7 +57,15 @@ const InitialModel = () => {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log(values)
-    // TODO: Submit the form with the server name and image URL
+    try {
+      await axios.post("/api/servers", values)
+
+      form.reset()
+      router.refresh()
+      window.location.reload()
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   const dropzoneProps = useFileUpload({
@@ -65,6 +76,14 @@ const InitialModel = () => {
     allowedMimeTypes: ['image/*'],
     profileId: undefined, // Add actual profile ID when available
   })
+
+  // Auto-upload when a file is added
+  useEffect(() => {
+    const filesWithoutErrors = dropzoneProps.files.filter(file => file.errors.length === 0)
+    if (filesWithoutErrors.length > 0 && !dropzoneProps.loading && !dropzoneProps.isSuccess) {
+      dropzoneProps.onUpload()
+    }
+  }, [dropzoneProps.files.length])
 
   // Watch for successful uploads and update the form field
   useEffect(() => {
