@@ -16,11 +16,11 @@ import { useOrigin } from "@/hooks/use-origin"
 import axios from "axios"
 
 const InviteModal = () => {
-  const { isOpen, type, onOpen, onClose } = useModal()
+  const { isOpen, type, onOpen, onClose, data } = useModal()
   const origin = useOrigin()
 
   const isModalOpen = isOpen && type === "invite"
-  const { server } = useModal().data
+  const { server } = data || {}
 
   const [copied, setCopied] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
