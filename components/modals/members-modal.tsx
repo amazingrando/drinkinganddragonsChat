@@ -127,7 +127,7 @@ const MembersModal = () => {
 
                     <DropdownMenuSeparator />
 
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onKick(member.id)}>
                       <Trash className="h-4 w-4 mr-2" /> Remove Member
                     </DropdownMenuItem>
                   </DropdownMenuContent>

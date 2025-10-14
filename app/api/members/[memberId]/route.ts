@@ -1,14 +1,16 @@
+import { NextResponse } from "next/server"
+
 import { currentProfile } from "@/lib/current-profile"
 import { db } from "@/lib/db"
-import { NextResponse } from "next/server"
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { memberId: string } }
+  { params }: { params: Promise<{ memberId: string }> }
 ) {
   try {
     const profile = await currentProfile()
     const { searchParams } = new URL(req.url)
+    const { memberId } = await params
 
     const serverId = searchParams.get("serverId")
 
@@ -20,7 +22,7 @@ export async function DELETE(
       return new NextResponse("Server ID is required", { status: 400 })
     }
 
-    if (!params.memberId) {
+    if (!memberId) {
       return new NextResponse("Member ID is required", { status: 400 })
     }
 
@@ -32,10 +34,20 @@ export async function DELETE(
       data: {
         members: {
           deleteMany: {
-            id: params.memberId,
+            id: memberId,
             profileID: {
               not: profile.id,
             },
+          },
+        },
+      },
+      include: {
+        members: {
+          include: {
+            profile: true,
+          },
+          orderBy: {
+            role: 'asc',
           },
         },
       },
@@ -51,12 +63,13 @@ export async function DELETE(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { memberId: string } }
+  { params }: { params: Promise<{ memberId: string }> }
 ) {
   try {
     const profile = await currentProfile()
     const { searchParams } = new URL(req.url)
     const { role } = await req.json()
+    const { memberId } = await params
 
     const serverId = searchParams.get("serverId")
 
@@ -69,7 +82,7 @@ export async function PATCH(
       return new NextResponse("Server ID is required", { status: 400 })
     }
 
-    if (!params.memberId) {
+    if (!memberId) {
       return new NextResponse("Member ID is required", { status: 400 })
     }
 
@@ -82,7 +95,7 @@ export async function PATCH(
         members: {
           update: {
             where: {
-              id: params.memberId,
+              id: memberId,
               profileID: {
                 not: profile.id,
               }
