@@ -2,8 +2,8 @@
 import * as z from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useFileUpload } from '@/hooks/use-file-upload'
 import axios from "axios"
+import { useParams, useRouter } from "next/navigation"
 
 import {
   Dialog,
@@ -22,25 +22,33 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone'
-import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
-import { useRouter } from "next/navigation"
 import { useModal } from "@/hooks/use-modal-store"
-import { useEffect } from "react"
+import { ChannelType } from "@prisma/client"
+import qs from "query-string"
 
 const formSchema = z.object({
   name: z.string().min(1, {
-    message: "Server name is required",
+    message: "Channel name is required",
+  }).refine((name) => name !== "general", {
+    message: "Channel name cannot be 'general'",
   }),
-  imageUrl: z.string().min(1, {
-    message: "Server image is required",
-  }),
+  type: z.enum(ChannelType),
 })
 
 const CreateChannelModal = () => {
   const { isOpen, type, onOpen, onClose } = useModal()
   const router = useRouter()
+  const params = useParams()
 
   const isModalOpen = isOpen && type === "createChannel"
 
@@ -48,7 +56,7 @@ const CreateChannelModal = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      imageUrl: "",
+      type: ChannelType.TEXT,
     },
   })
 
@@ -57,7 +65,13 @@ const CreateChannelModal = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log(values)
     try {
-      await axios.post("/api/channels", values)
+      const url = qs.stringifyUrl({
+        url: "/api/channels",
+        query: {
+          serverId: params.serverId,
+        },
+      })
+      await axios.post(url, values)
 
       form.reset()
       router.refresh()
@@ -66,35 +80,6 @@ const CreateChannelModal = () => {
       console.error(error)
     }
   }
-
-  const dropzoneProps = useFileUpload({
-    bucketName: 'server-images',
-    path: 'avatars',
-    maxFiles: 1,
-    maxFileSize: 5 * 1024 * 1024, // 5MB
-    allowedMimeTypes: ['image/*'],
-    profileId: undefined, // Add actual profile ID when available
-  })
-
-  // Auto-upload when a file is added
-  useEffect(() => {
-    const filesWithoutErrors = dropzoneProps.files.filter(file => file.errors.length === 0)
-    if (filesWithoutErrors.length > 0 && !dropzoneProps.loading && !dropzoneProps.isSuccess) {
-      dropzoneProps.onUpload()
-    }
-  }, [dropzoneProps.files.length])
-
-  // Watch for successful uploads and update the form field
-  useEffect(() => {
-    if (dropzoneProps.isSuccess && dropzoneProps.files.length > 0) {
-      const uploadedFile = dropzoneProps.files[0]
-      if (uploadedFile.uniqueFileName) {
-        // Construct the public URL for the uploaded file
-        const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/server-images/avatars/${uploadedFile.uniqueFileName}`
-        form.setValue('imageUrl', imageUrl)
-      }
-    }
-  }, [dropzoneProps.isSuccess, dropzoneProps.files, form])
 
   const handleClose = () => {
     form.reset()
@@ -105,9 +90,9 @@ const CreateChannelModal = () => {
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader className="pt-8 px-6">
-          <DialogTitle className="text-2xl text-center font-bold">Create a server</DialogTitle>
+          <DialogTitle className="text-2xl text-center font-bold">Create a Channel</DialogTitle>
           <DialogDescription className="text-center text-sm text-muted-foreground">
-            Create a server to get started.
+            Create a channel to get started.
           </DialogDescription>
         </DialogHeader>
 
@@ -116,26 +101,35 @@ const CreateChannelModal = () => {
             <div className="space-y-8 px-6">
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Server name</FormLabel>
+                  <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Channel name</FormLabel>
                   <FormControl>
                     <Input
                       disabled={isLoading}
                       className="bg-zinc-300/50 border-0 focus-visible:ring-0 text-black focus-visible:ring-offset-0"
-                      placeholder="Enter server name" {...field} />
+                      placeholder="Enter channel name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
 
-              <FormField control={form.control} name="imageUrl" render={({ field }) => (
+              <FormField control={form.control} name="type" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Server image</FormLabel>
-                  <FormControl>
-                    <Dropzone {...dropzoneProps} >
-                      <DropzoneEmptyState />
-                      <DropzoneContent />
-                    </Dropzone>
-                  </FormControl>
+                  <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Channel type</FormLabel>
+                  <Select disabled={isLoading} onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="bg-zinc-300/50 border-0 focus-visible:ring-0 text-black focus-visible:ring-offset-0 capitalize outline-none">
+                        <SelectValue placeholder="Select channel type" />
+                      </SelectTrigger>
+                    </FormControl>
+
+                    <SelectContent>
+                      {Object.values(ChannelType).map((type) => (
+                        <SelectItem key={type} value={type} className="capitalize">
+                          {type.toLowerCase()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )} />
