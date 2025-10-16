@@ -9,6 +9,7 @@ import { Hash, Mic, ShieldAlert, ShieldCheck, Users, Video } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { ServerSection } from '@/components/server/server-section'
 import { ServerChannel } from '@/components/server/server-channel'
+import { ServerMember } from '@/components/server/server-member'
 
 interface ServerSidebarProps {
   serverId: string
@@ -121,6 +122,31 @@ export const ServerSidebar = async ({ serverId }: ServerSidebarProps) => {
             ))}
           </div>
         )}
+        {!!audioChannels?.length && (
+          <div className="mb-4">
+            <ServerSection label="Voice Channels" sectionType="channels" channelType={ChannelType.AUDIO} role={role} />
+            {audioChannels.map((channel) => (
+              <ServerChannel key={channel.id} channel={channel} server={server} role={role} />
+            ))}
+          </div>
+        )}
+        {!!videoChannels?.length && (
+          <div className="mb-4">
+            <ServerSection label="Video Channels" sectionType="channels" channelType={ChannelType.VIDEO} role={role} />
+            {videoChannels.map((channel) => (
+              <ServerChannel key={channel.id} channel={channel} server={server} role={role} />
+            ))}
+          </div>
+        )}
+        {!!members?.length && (
+          <div className="mb-4">
+            <ServerSection label="Members" sectionType="members" role={role} server={server} />
+            {members.map((member) => (
+              <ServerMember key={member.id} member={member} server={server} />
+            ))}
+          </div>
+        )}
+
       </ScrollArea>
     </div>
   )

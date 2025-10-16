@@ -30,15 +30,14 @@ export const ServerSection = ({ label, role, sectionType, channelType, server }:
       )}
 
       {role === MemberRole.ADMIN && sectionType === "members" && (
-        <div className="flex items-center gap-x-2">
-          <button onClick={() => onOpen("members", { server })} className="text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition">
-            <Settings className="w-4 h-4" />
-          </button>
-        </div>
+        <ActionTooltip label="Manage Members" side="top">
+          <div className="flex items-center gap-x-2">
+            <button onClick={() => onOpen("members", { server })} className="text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition">
+              <Settings className="w-4 h-4" />
+            </button>
+          </div>
+        </ActionTooltip>
       )}
-
-
-
     </div>
   )
 }

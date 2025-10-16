@@ -11,7 +11,7 @@ import { useModal } from "@/hooks/use-modal-store"
 import { ServerWithMembersWithProfiles } from "@/types"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import UserAvatar from "@/components/user-avatar"
-import { Check, Loader2, MoreVertical, Shield, ShieldQuestion, ShieldCheck, User, Users, Trash } from "lucide-react"
+import { Check, Loader2, MoreVertical, Shield, ShieldQuestion, ShieldCheck, User, Users, Trash, ShieldAlert } from "lucide-react"
 import { MemberRole } from "@prisma/client"
 import { useState } from "react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from "@/components/ui/dropdown-menu"
@@ -20,8 +20,8 @@ import axios from "axios"
 import { useRouter } from "next/navigation"
 
 const roleIconMap = {
-  [MemberRole.ADMIN]: <Shield className="h-4 w-4 mr-2 text-indigo-500" />,
-  [MemberRole.MODERATOR]: <Shield className="h-4 w-4 mr-2 text-purple-500" />,
+  [MemberRole.ADMIN]: <ShieldAlert className="h-4 w-4 mr-2 text-indigo-500" />,
+  [MemberRole.MODERATOR]: <ShieldCheck className="h-4 w-4 mr-2 text-purple-500" />,
   [MemberRole.MEMBER]: <Users className="h-4 w-4 mr-2 text-gray-500" />,
 }
 
