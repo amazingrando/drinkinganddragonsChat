@@ -22,8 +22,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
-    // Use window.location.origin for client-side connection
-    const socketInstance = ClientIO(window.location.origin, {
+    const socketInstance = ClientIO(process.env.NEXT_PUBLIC_SITE_URL!, {
       path: "/api/socket/io",
       addTrailingSlash: false,
     })
