@@ -15,6 +15,7 @@ import axios from "axios"
 import qs from "query-string"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useModal } from "@/hooks/use-modal-store"
 
 interface ChatItemProps {
   id: string,
@@ -41,7 +42,7 @@ const formSchema = z.object({
 
 export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, currentMember, isUpdated, socketUrl, socketQuery }: ChatItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const { onOpen } = useModal();
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -165,7 +166,7 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
             </ActionTooltip>
           )}
           <ActionTooltip label="Delete">
-            <Trash className="w-4 h-4 text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition cursor-pointer" />
+            <Trash className="w-4 h-4 text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition cursor-pointer" onClick={() => onOpen("deleteMessage", { apiUrl: `${socketUrl}/${id}`, query: socketQuery })} />
           </ActionTooltip>
 
         </div>
