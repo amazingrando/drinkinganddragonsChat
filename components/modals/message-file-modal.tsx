@@ -100,7 +100,7 @@ const MessageFileModal = () => {
       const uploadedFile = dropzoneProps.files[0]
       if (uploadedFile.uniqueFileName) {
         // Construct the public URL for the uploaded file
-        const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/server-images/avatars/${uploadedFile.uniqueFileName}`
+        const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/server-images/message-files/${uploadedFile.uniqueFileName}`
         form.setValue('fileUrl', imageUrl)
       }
     }
