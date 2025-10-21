@@ -17,16 +17,33 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
       path,
       addTrailingSlash: false,
       cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-      }
+        origin: process.env.NODE_ENV === "production" 
+          ? [process.env.NEXT_PUBLIC_SITE_URL!] 
+          : "*",
+        methods: ["GET", "POST"],
+        credentials: true
+      },
+      transports: ["websocket", "polling"],
+      pingTimeout: 60000,
+      pingInterval: 25000,
+      upgradeTimeout: 10000,
+      allowEIO3: true,
     })
     
     io.on("connection", (socket) => {
       console.log("Client connected:", socket.id)
       
-      socket.on("disconnect", () => {
-        console.log("Client disconnected:", socket.id)
+      // Send ping to keep connection alive
+      socket.on("ping", () => {
+        socket.emit("pong")
+      })
+      
+      socket.on("disconnect", (reason) => {
+        console.log("Client disconnected:", socket.id, "Reason:", reason)
+      })
+      
+      socket.on("error", (error) => {
+        console.error("Socket error:", socket.id, error)
       })
     })
     
