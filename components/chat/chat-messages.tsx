@@ -8,6 +8,7 @@ import { Loader2, ServerCrash } from "lucide-react"
 import ChatItem from "@/components/chat/chat-item"
 import { format } from "date-fns"
 import { useChatSocket } from "@/hooks/use-chat-socket"
+import { useChatRealtime } from "@/hooks/use-chat-realtime"
 import { Button } from "../ui/button"
 import { useChatScroll } from "@/hooks/use-chat-scroll"
 
@@ -42,11 +43,21 @@ const ChatMessages = ({ name, member, chatId, apiUrl, socketUrl, socketQuery, pa
     paramValue: paramValue,
   })
 
-  useChatSocket({
-    addKey: addKey,
-    updateKey: updateKey,
-    queryKey: queryKey
-  })
+  // Use appropriate hook based on chat type
+  // Channels: Supabase Realtime, Direct Messages: Socket.IO
+  if (type === "channel") {
+    useChatRealtime({
+      addKey: addKey,
+      updateKey: updateKey,
+      queryKey: queryKey
+    })
+  } else {
+    useChatSocket({
+      addKey: addKey,
+      updateKey: updateKey,
+      queryKey: queryKey
+    })
+  }
 
   useChatScroll({
     chatRef: chatRef as React.RefObject<HTMLDivElement>,
@@ -106,7 +117,7 @@ const ChatMessages = ({ name, member, chatId, apiUrl, socketUrl, socketQuery, pa
                 content={message.content}
                 fileUrl={message.fileUrl}
                 deleted={message.deleted}
-                timestamp={format(new Date(message.createdAt), DATE_FORMAT)}
+                timestamp={format(new Date(message.createdAt || Date.now()), DATE_FORMAT)}
                 isUpdated={message.updatedAt !== message.createdAt}
                 socketUrl={socketUrl}
                 socketQuery={socketQuery}

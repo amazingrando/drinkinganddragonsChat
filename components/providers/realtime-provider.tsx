@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useRef } from "react"
 import { RealtimeChannel } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/client"
 
@@ -25,7 +25,7 @@ export const UseRealtime = () => {
 export const RealtimeProvider = ({ children }: { children: React.ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false)
   const [supabase] = useState(() => createClient())
-  const [channels, setChannels] = useState<Map<string, RealtimeChannel>>(new Map())
+  const channelsRef = useRef<Map<string, RealtimeChannel>>(new Map())
 
   useEffect(() => {
     // Track connection status
@@ -45,7 +45,7 @@ export const RealtimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   const subscribe = (channelName: string, event: string, callback: (payload: any) => void) => {
     // Clean up existing channel if it exists
-    const existingChannel = channels.get(channelName)
+    const existingChannel = channelsRef.current.get(channelName)
     if (existingChannel) {
       supabase.removeChannel(existingChannel)
     }
@@ -62,7 +62,7 @@ export const RealtimeProvider = ({ children }: { children: React.ReactNode }) =>
     })
 
     // Store channel for cleanup
-    setChannels(prev => new Map(prev).set(channelName, channel))
+    channelsRef.current.set(channelName, channel)
 
     return channel
   }
@@ -70,16 +70,12 @@ export const RealtimeProvider = ({ children }: { children: React.ReactNode }) =>
   const unsubscribe = (channel: RealtimeChannel) => {
     supabase.removeChannel(channel)
     // Remove from channels map
-    setChannels(prev => {
-      const newMap = new Map(prev)
-      for (const [key, value] of newMap.entries()) {
-        if (value === channel) {
-          newMap.delete(key)
-          break
-        }
+    for (const [key, value] of channelsRef.current.entries()) {
+      if (value === channel) {
+        channelsRef.current.delete(key)
+        break
       }
-      return newMap
-    })
+    }
   }
 
   const broadcast = async (channelName: string, event: string, payload: any) => {
@@ -96,11 +92,11 @@ export const RealtimeProvider = ({ children }: { children: React.ReactNode }) =>
   // Cleanup all channels on unmount
   useEffect(() => {
     return () => {
-      channels.forEach(channel => {
+      channelsRef.current.forEach(channel => {
         supabase.removeChannel(channel)
       })
     }
-  }, [channels, supabase])
+  }, [supabase])
 
   return (
     <RealtimeContext.Provider value={{

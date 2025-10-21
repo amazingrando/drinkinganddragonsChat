@@ -1,3 +1,5 @@
+"use client"
+
 import { UseRealtime } from "@/components/providers/realtime-provider";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -24,8 +26,14 @@ export const useChatRealtime = ({
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    if (!subscribe || !unsubscribe) {
+      return;
+    }
+
     // Subscribe to add messages
-    const addChannel = subscribe(addKey, addKey, (message: MessageWithMemberWithProfile) => {
+    const addChannel = subscribe(addKey, addKey, (payload: any) => {
+      console.log("Supabase Realtime received payload:", payload);
+      const message: MessageWithMemberWithProfile = payload.payload;
       queryClient.setQueryData([queryKey], (oldData: { pages?: Array<{ items: MessageWithMemberWithProfile[] }> } | undefined) => {
         if (!oldData || !Array.isArray(oldData.pages) || oldData.pages.length === 0) {
           return {
@@ -53,7 +61,8 @@ export const useChatRealtime = ({
     });
 
     // Subscribe to update messages
-    const updateChannel = subscribe(updateKey, updateKey, (message: MessageWithMemberWithProfile) => {
+    const updateChannel = subscribe(updateKey, updateKey, (payload: any) => {
+      const message: MessageWithMemberWithProfile = payload.payload;
       queryClient.setQueryData([queryKey], (oldData: { pages?: Array<{ items: MessageWithMemberWithProfile[] }> } | undefined) => {
         if (
           !oldData ||
@@ -83,8 +92,8 @@ export const useChatRealtime = ({
     });
 
     return () => {
-      unsubscribe(addChannel);
-      unsubscribe(updateChannel);
+      if (addChannel) unsubscribe(addChannel);
+      if (updateChannel) unsubscribe(updateChannel);
     }
-  }, [queryClient, addKey, queryKey, subscribe, unsubscribe, updateKey]);
+  }, [queryClient, addKey, queryKey, updateKey]);
 }

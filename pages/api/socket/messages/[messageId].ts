@@ -3,6 +3,7 @@ import { NextApiRequest } from "next";
 import { NextApiResponse } from "next";
 import { db } from "@/lib/db";
 import { MemberRole } from "@prisma/client";
+import { broadcastMessage } from "@/lib/supabase/server-broadcast";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "DELETE" && req.method !== "PATCH") {
@@ -131,12 +132,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const updateKey = `chat:${channelId}:messages:update`
-    // Fix: Properly access the socket server from res.socket as NextApiResponse's type does not define server custom property.
-    // We'll assert the type as any to access io safely for our use case (given Next.js custom server extension).
+    
+    // DUAL BROADCAST: Socket.IO + Supabase Realtime
+    // Keep Socket.IO (existing)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const io = (res.socket as any)?.server?.io;
     if (io) {
       io.emit(updateKey, message);
+    }
+
+    // Add Supabase broadcast
+    try {
+      await broadcastMessage(updateKey, updateKey, message);
+    } catch (error) {
+      console.log("[SUPABASE_BROADCAST_ERROR]", error);
+      // Don't fail the request if Supabase broadcast fails
     }
 
     return res.status(200).json(message);
