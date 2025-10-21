@@ -4,6 +4,14 @@ import { useFileUpload } from '@/hooks/use-file-upload'
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone'
 import { useState, useEffect } from 'react'
 
+interface UploadedFile {
+  id: string
+  name: string
+  size: number
+  mimeType: string
+  url: string
+}
+
 interface FileUploadServerImagesProps {
   profileId?: string
   serverId?: string
@@ -25,7 +33,7 @@ export const FileUploadServerImages = ({
   maxFileSize = 10 * 1024 * 1024, // 10MB
   allowedMimeTypes = ['image/*', 'application/pdf', 'text/*']
 }: FileUploadServerImagesProps) => {
-  const [uploadedFiles, setUploadedFiles] = useState<any[]>([])
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
 
   const fileUpload = useFileUpload({
     bucketName,
@@ -91,7 +99,7 @@ export const FileUploadServerImages = ({
       })
 
       if (response.ok) {
-        setUploadedFiles(prev => prev.filter(file => file.id !== fileId))
+        setUploadedFiles(prev => prev.filter(file => file?.id !== fileId))
       }
     } catch (error) {
       console.error('Error deleting file:', error)

@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     const serverId = searchParams.get('serverId')
     const channelId = searchParams.get('channelId')
     
-    const whereClause: any = {}
+    const whereClause: Record<string, string | undefined> = {}
     
     if (profileId) whereClause.profileId = profileId
     if (serverId) whereClause.serverId = serverId
