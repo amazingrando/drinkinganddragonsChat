@@ -10,16 +10,26 @@ export const ChatVideoButton = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isVideo = searchParams?.get("video") === "true";
+
+  const onClick = () => {
+    const url = qs.stringifyUrl({
+      url: pathname || "",
+      query: {
+        video: isVideo ? undefined : true,
+      },
+    }, { skipNull: true });
+    router.push(url);
+  }
   const Icon = isVideo ? VideoOff : Video;
   const tooltipLabel = isVideo ? "End Video Call" : "Start Video Call";
 
   return (
     <ActionTooltip
-      label="Voice Chat"
+      label={tooltipLabel}
       side="bottom"
     >
-      <button>
-        <Video className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300" />
+      <button onClick={onClick} className="hover:opacity-75 transition mr-4">
+        <Icon className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300" />
       </button>
     </ActionTooltip>
   )
