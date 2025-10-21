@@ -45,12 +45,12 @@ const ChatMessages = ({ name, member, chatId, apiUrl, socketUrl, socketQuery, pa
   useChatSocket({
     addKey: addKey,
     updateKey: updateKey,
-    queryKey: queryKey
+    queryKey: socketQuery
   })
 
   useChatScroll({
-    chatRef,
-    bottomRef,
+    chatRef: chatRef as React.RefObject<HTMLDivElement>,
+    bottomRef: bottomRef as React.RefObject<HTMLDivElement>,
     loadMore: fetchNextPage,
     shouldLoadMore: !isFetchingNextPage && !!hasNextPage,
     count: data?.pages?.[0]?.items.length || 0,

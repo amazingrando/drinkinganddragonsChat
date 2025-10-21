@@ -131,7 +131,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const updateKey = `chat:${channelId}:messages:update`
-    res?.socket?.server?.io?.emit(updateKey, message);
+    // Fix: Properly access the socket server from res.socket as NextApiResponse's type does not define server custom property.
+    // We'll assert the type as any to access io safely for our use case (given Next.js custom server extension).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const io = (res.socket as any)?.server?.io;
+    if (io) {
+      io.emit(updateKey, message);
+    }
 
     return res.status(200).json(message);
 

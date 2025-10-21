@@ -127,13 +127,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const updateKey = `chat:${conversation.id}:directMessages:update`
-    res?.socket?.server?.io?.emit(updateKey, directMessage);
+    const updateKey = `chat:${conversation.id}:directMessages:update`;
+
+    // Fix: Properly access the socket server from res.socket as NextApiResponse's type does not define server custom property.
+    // We'll assert the type as any to access io safely for our use case (given Next.js custom server extension).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const io = (res.socket as any)?.server?.io;
+    if (io) {
+      io.emit(updateKey, directMessage);
+    }
 
     return res.status(200).json(directMessage);
 
   } catch (error) {
-    console.error("[DIRECT_MESSAGE_ID_REQUEST]", error)
+    console.error("[MESSAGE_ID_REQUEST]", error)
     return res.status(500).json({ error: "Internal server error" })
   }
 }
