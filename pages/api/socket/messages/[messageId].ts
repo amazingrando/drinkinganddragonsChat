@@ -133,21 +133,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const updateKey = `chat:${channelId}:messages:update`
     
-    // DUAL BROADCAST: Socket.IO + Supabase Realtime
-    // Keep Socket.IO (existing)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const io = (res.socket as any)?.server?.io;
-    if (io) {
-      io.emit(updateKey, message);
-    }
-
-    // Add Supabase broadcast
-    try {
-      await broadcastMessage(updateKey, updateKey, message);
-    } catch (error) {
-      console.log("[SUPABASE_BROADCAST_ERROR]", error);
-      // Don't fail the request if Supabase broadcast fails
-    }
+        // Supabase Realtime broadcast only
+        try {
+          await broadcastMessage(updateKey, updateKey, message);
+        } catch (error) {
+          console.log("[SUPABASE_BROADCAST_ERROR]", error);
+          // Don't fail the request if Supabase broadcast fails
+        }
 
     return res.status(200).json(message);
 

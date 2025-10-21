@@ -83,15 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const channelKey = `chat:${channelId}:messages`
 
-    // DUAL BROADCAST: Socket.IO + Supabase Realtime
-    // Keep Socket.IO (existing)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const io = (res.socket as any)?.server?.io;
-    if (io) {
-      io.emit(channelKey, message);
-    }
-
-    // Add Supabase broadcast
+    // Supabase Realtime broadcast only
     try {
       await broadcastMessage(channelKey, channelKey, message);
     } catch (error) {

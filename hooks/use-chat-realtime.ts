@@ -32,7 +32,6 @@ export const useChatRealtime = ({
 
     // Subscribe to add messages
     const addChannel = subscribe(addKey, addKey, (payload: any) => {
-      console.log("Supabase Realtime received payload:", payload);
       const message: MessageWithMemberWithProfile = payload.payload;
       queryClient.setQueryData([queryKey], (oldData: { pages?: Array<{ items: MessageWithMemberWithProfile[] }> } | undefined) => {
         if (!oldData || !Array.isArray(oldData.pages) || oldData.pages.length === 0) {

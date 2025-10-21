@@ -12,10 +12,8 @@ import { cn } from "@/lib/utils"
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import { ModalProvider } from "@/components/providers/modal-provider"
-import { SocketProvider } from "@/components/providers/socket-provider"
 import { RealtimeProvider } from "@/components/providers/realtime-provider"
 import { QueryProvider } from "@/components/providers/query-provider"
-import { SocketHealthCheck } from "@/components/socket-health-check"
 
 const openSans = Open_Sans({
   variable: "--font-open-sans",
@@ -57,15 +55,12 @@ export default function RootLayout({
             disableTransitionOnChange
             storageKey="discord-theme"
           >
-            <SocketProvider>
-              <RealtimeProvider>
-                <ModalProvider />
-                <QueryProvider>
-                  {children}
-                  <SocketHealthCheck />
-                </QueryProvider>
-              </RealtimeProvider>
-            </SocketProvider>
+            <RealtimeProvider>
+              <ModalProvider />
+              <QueryProvider>
+                {children}
+              </QueryProvider>
+            </RealtimeProvider>
           </ThemeProvider>
         </body>
       </html>

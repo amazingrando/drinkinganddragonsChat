@@ -1,22 +1,22 @@
 "use client"
 
-import { UseSocket } from "@/components/providers/socket-provider"
+import { UseRealtime } from "@/components/providers/realtime-provider"
 import { Badge } from "@/components/ui/badge"
 
 export const SocketIndicator = () => {
-  const { isConnected } = UseSocket()
+  const { isConnected } = UseRealtime()
 
   if (!isConnected) {
     return (
       <Badge variant="outline" className="bg-yellow-600 text-white border-none">
-        Socket Not Connected
+        Realtime Not Connected
       </Badge>
     )
   }
 
   return (
     <Badge variant="outline" className="bg-emerald-600 text-white border-none">
-      Socket Connected
+      Realtime Connected
     </Badge>
   )
 }

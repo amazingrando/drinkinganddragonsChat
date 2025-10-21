@@ -2,7 +2,7 @@ import qs from "query-string"
 import {useParams} from "next/navigation"
 import { useInfiniteQuery } from "@tanstack/react-query"
 
-import { UseSocket } from "@/components/providers/socket-provider"
+import { UseRealtime } from "@/components/providers/realtime-provider"
 
 interface ChatQueryProps {
   queryKey: string
@@ -12,7 +12,7 @@ interface ChatQueryProps {
 }
 
 export const useChatQuery = ({ queryKey, apiUrl, paramKey, paramValue }: ChatQueryProps) => {
-  const { isConnected } = UseSocket()
+  const { isConnected } = UseRealtime()
 
   const fetchMessages = async ({ pageParam = undefined }) => {
     const url = qs.stringifyUrl({
