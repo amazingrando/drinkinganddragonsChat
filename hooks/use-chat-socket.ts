@@ -6,7 +6,7 @@ import { Member, Message, Profile } from "@prisma/client";
 type ChatSocketProps = {
   addKey: string
   updateKey: string
-  queryKey: Record<string, string>
+  queryKey: string
 }
 
 type MessageWithMemberWithProfile = Message & {

@@ -45,7 +45,7 @@ const ChatMessages = ({ name, member, chatId, apiUrl, socketUrl, socketQuery, pa
   useChatSocket({
     addKey: addKey,
     updateKey: updateKey,
-    queryKey: socketQuery
+    queryKey: queryKey
   })
 
   useChatScroll({

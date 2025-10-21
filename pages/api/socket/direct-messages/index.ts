@@ -9,7 +9,7 @@ export default async function handler(
   res: NextApiResponseServerIo,
 ) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowedz" });
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
