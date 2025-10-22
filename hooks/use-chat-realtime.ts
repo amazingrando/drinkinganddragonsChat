@@ -17,6 +17,16 @@ type MessageWithMemberWithProfile = Message & {
   }
 }
 
+type RealtimeBroadcastPayload<T> = {
+  type: "broadcast";
+  event: string;
+  meta?: {
+    replayed?: boolean;
+    id: string;
+  };
+  payload: T;
+};
+
 export const useChatRealtime = ({
   addKey,
   updateKey,
@@ -31,7 +41,7 @@ export const useChatRealtime = ({
     }
 
     // Subscribe to add messages
-    const addChannel = subscribe(addKey, addKey, (payload: any) => {
+    const addChannel = subscribe(addKey, addKey, (payload: RealtimeBroadcastPayload<MessageWithMemberWithProfile>) => {
       const message: MessageWithMemberWithProfile = payload.payload;
       queryClient.setQueryData([queryKey], (oldData: { pages?: Array<{ items: MessageWithMemberWithProfile[] }> } | undefined) => {
         if (!oldData || !Array.isArray(oldData.pages) || oldData.pages.length === 0) {
@@ -60,7 +70,7 @@ export const useChatRealtime = ({
     });
 
     // Subscribe to update messages
-    const updateChannel = subscribe(updateKey, updateKey, (payload: any) => {
+    const updateChannel = subscribe(updateKey, updateKey, (payload: RealtimeBroadcastPayload<MessageWithMemberWithProfile>) => {
       const message: MessageWithMemberWithProfile = payload.payload;
       queryClient.setQueryData([queryKey], (oldData: { pages?: Array<{ items: MessageWithMemberWithProfile[] }> } | undefined) => {
         if (

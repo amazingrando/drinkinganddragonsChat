@@ -4,15 +4,25 @@ import { createContext, useContext, useEffect, useState, useRef } from "react"
 import { RealtimeChannel } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/client"
 
+type RealtimeBroadcastPayload<T> = {
+  type: "broadcast";
+  event: string;
+  meta?: {
+    replayed?: boolean;
+    id: string;
+  };
+  payload: T;
+};
+
 type RealtimeContextType = {
-  subscribe: (channelName: string, event: string, callback: (payload: any) => void) => RealtimeChannel
+  subscribe: (channelName: string, event: string, callback: (payload: RealtimeBroadcastPayload<unknown>) => void) => RealtimeChannel
   unsubscribe: (channel: RealtimeChannel) => void
-  broadcast: (channelName: string, event: string, payload: any) => Promise<void>
+  broadcast: (channelName: string, event: string, payload: Record<string, unknown>) => Promise<void>
   isConnected: boolean
 }
 
 const RealtimeContext = createContext<RealtimeContextType>({
-  subscribe: () => null as any,
+  subscribe: () => null as unknown as RealtimeChannel,
   unsubscribe: () => { },
   broadcast: async () => { },
   isConnected: false,
@@ -43,7 +53,7 @@ export const RealtimeProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, [supabase])
 
-  const subscribe = (channelName: string, event: string, callback: (payload: any) => void) => {
+  const subscribe = (channelName: string, event: string, callback: (payload: RealtimeBroadcastPayload<unknown>) => void) => {
     // Clean up existing channel if it exists
     const existingChannel = channelsRef.current.get(channelName)
     if (existingChannel) {
@@ -78,7 +88,7 @@ export const RealtimeProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }
 
-  const broadcast = async (channelName: string, event: string, payload: any) => {
+  const broadcast = async (channelName: string, event: string, payload: Record<string, unknown>) => {
     const channel = supabase.channel(channelName)
     await channel.subscribe()
     await channel.send({

@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 export async function broadcastMessage(
   channelName: string,
   event: string,
-  payload: any
+  payload: Record<string, unknown>
 ) {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
