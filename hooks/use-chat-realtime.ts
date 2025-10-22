@@ -41,8 +41,8 @@ export const useChatRealtime = ({
     }
 
     // Subscribe to add messages
-    const addChannel = subscribe(addKey, addKey, (payload: RealtimeBroadcastPayload<MessageWithMemberWithProfile>) => {
-      const message: MessageWithMemberWithProfile = payload.payload;
+    const addChannel = subscribe(addKey, addKey, (payload: RealtimeBroadcastPayload<unknown>) => {
+      const message = payload.payload as MessageWithMemberWithProfile;
       queryClient.setQueryData([queryKey], (oldData: { pages?: Array<{ items: MessageWithMemberWithProfile[] }> } | undefined) => {
         if (!oldData || !Array.isArray(oldData.pages) || oldData.pages.length === 0) {
           return {
@@ -70,8 +70,8 @@ export const useChatRealtime = ({
     });
 
     // Subscribe to update messages
-    const updateChannel = subscribe(updateKey, updateKey, (payload: RealtimeBroadcastPayload<MessageWithMemberWithProfile>) => {
-      const message: MessageWithMemberWithProfile = payload.payload;
+    const updateChannel = subscribe(updateKey, updateKey, (payload: RealtimeBroadcastPayload<unknown>) => {
+      const message = payload.payload as MessageWithMemberWithProfile;
       queryClient.setQueryData([queryKey], (oldData: { pages?: Array<{ items: MessageWithMemberWithProfile[] }> } | undefined) => {
         if (
           !oldData ||
