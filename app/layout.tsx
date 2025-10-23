@@ -1,12 +1,4 @@
 import type { Metadata } from "next";
-import {
-  ClerkProvider,
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from '@clerk/nextjs'
 import { Open_Sans } from "next/font/google";
 import { cn } from "@/lib/utils"
 import "./globals.css";
@@ -14,6 +6,7 @@ import { ThemeProvider } from "@/components/providers/theme-provider"
 import { ModalProvider } from "@/components/providers/modal-provider"
 import { RealtimeProvider } from "@/components/providers/realtime-provider"
 import { QueryProvider } from "@/components/providers/query-provider"
+import { UserButton } from "@/components/user-button"
 
 const openSans = Open_Sans({
   variable: "--font-open-sans",
@@ -31,39 +24,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-
-      <html lang="en" suppressHydrationWarning>
-        <body className={cn(`${openSans.variable} antialiased font-sans`, "bg-white dark:bg-[#313338]")}>
-          <header className="flex justify-end items-center p-4 gap-4 h-16">
-            <SignedOut>
-              <SignInButton />
-              <SignUpButton>
-                <button className="bg-[#6c47ff] text-ceramic-white rounded-full font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 cursor-pointer">
-                  Sign Up
-                </button>
-              </SignUpButton>
-            </SignedOut>
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
-          </header>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem
-            disableTransitionOnChange
-            storageKey="discord-theme"
-          >
-            <RealtimeProvider>
-              <ModalProvider />
-              <QueryProvider>
-                {children}
-              </QueryProvider>
-            </RealtimeProvider>
-          </ThemeProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className={cn(`${openSans.variable} antialiased font-sans`, "bg-white dark:bg-[#313338]")}>
+        <header className="flex justify-end items-center p-4 gap-4 h-16">
+          <UserButton />
+        </header>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+          storageKey="discord-theme"
+        >
+          <RealtimeProvider>
+            <ModalProvider />
+            <QueryProvider>
+              {children}
+            </QueryProvider>
+          </RealtimeProvider>
+        </ThemeProvider>
+      </body>
+    </html>
   );
 }
