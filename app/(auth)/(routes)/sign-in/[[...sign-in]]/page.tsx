@@ -3,9 +3,25 @@
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import { createClient } from '@/lib/supabase/client'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function Page() {
   const supabase = createClient()
+  const router = useRouter()
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          // Redirect to root path where setup page is located
+          router.push('/')
+        }
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [supabase.auth, router])
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-white dark:bg-[#313338]">
@@ -24,7 +40,7 @@ export default function Page() {
             },
           }}
           providers={['google', 'github']}
-          redirectTo={`${window.location.origin}/`}
+          redirectTo={`${typeof window !== 'undefined' ? window.location.origin : ''}/`}
         />
       </div>
     </div>
