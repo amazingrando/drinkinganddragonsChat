@@ -3,10 +3,8 @@
 import { useEffect, useState } from "react"
 import { LiveKitRoom, VideoConference } from "@livekit/components-react"
 import "@livekit/components-styles"
-import { Channel } from "@prisma/client"
-import { useUser } from "@clerk/nextjs"
+import { useSupabaseUser } from "@/hooks/use-supabase-user"
 import { Loader2 } from "lucide-react"
-import axios from "axios"
 
 interface MediaRoomProps {
   chatId: string
@@ -15,13 +13,13 @@ interface MediaRoomProps {
 }
 
 export const MediaRoom = ({ chatId, video, audio }: MediaRoomProps) => {
-  const { user } = useUser()
+  const { user } = useSupabaseUser()
   const [token, setToken] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!user?.firstName || !user?.lastName) return;
+    if (!user) return;
 
-    const name = `${user.firstName} ${user.lastName}`;
+    const name = user.user_metadata?.full_name || user.email || "Anonymous";
 
     (async () => {
       try {
@@ -32,7 +30,7 @@ export const MediaRoom = ({ chatId, video, audio }: MediaRoomProps) => {
         console.error("[MEDIA_ROOM_ERROR]", error)
       }
     })()
-  }, [user?.firstName, user?.lastName, chatId])
+  }, [user, chatId])
 
   if (token === "") {
     return (
