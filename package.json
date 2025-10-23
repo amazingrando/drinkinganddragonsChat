@@ -6,7 +6,20 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:pull": "prisma db pull",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:reset": "prisma migrate reset",
+    "db:migrate:status": "prisma migrate status",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio",
+    "db:backup": "pg_dump $DATABASE_URL > backup-$(date +%Y%m%d-%H%M%S).sql",
+    "db:restore": "psql $DATABASE_URL <",
+    "db:reset": "prisma migrate reset --force",
+    "db:setup": "prisma generate && prisma db push"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
