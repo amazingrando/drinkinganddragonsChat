@@ -1,15 +1,17 @@
-import { currentUser, auth } from "@clerk/nextjs/server"
+import { createClient } from "@/lib/supabase/server"
 import { db } from "@/lib/db"
 
 export const currentProfile = async () => {
-  const { userId } = await auth();
+  const supabase = await createClient()
+  
+  const { data: { user }, error } = await supabase.auth.getUser()
 
-  if (!userId) {
+  if (error || !user) {
     return null;
   }
 
   const profile = await db.profile.findUnique({
-    where: { userId }
+    where: { userId: user.id }
   })
 
   return profile
