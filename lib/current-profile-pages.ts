@@ -14,7 +14,7 @@ export const currentProfilePages = async (req: NextApiRequest) => {
             value: value || '',
           }))
         },
-        setAll(cookiesToSet) {
+        setAll() {
           // For API routes, we can't set cookies directly
           // This is handled by the client-side auth flow
         },
