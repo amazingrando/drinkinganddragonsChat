@@ -114,7 +114,7 @@ export const ServerSidebar = async ({ serverId }: ServerSidebarProps) => {
             ]} />
         </div>
 
-        <Separator className="h-[2px] bg-zinc-200 dark:bg-zinc-700 rounded-md my-4" />
+        <Separator className="h-[2px] bg-border rounded-md my-4" />
         {!!textChannels?.length && (
           <div className="mb-4">
             <ServerSection label="Text Channels" sectionType="channels" channelType={ChannelType.TEXT} role={role} />

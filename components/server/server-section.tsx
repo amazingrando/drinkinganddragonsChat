@@ -23,7 +23,7 @@ export const ServerSection = ({ label, role, sectionType, channelType, server }:
 
       {role !== MemberRole.MEMBER && sectionType === "channels" && (
         <ActionTooltip label="Create Channel" side="top">
-          <button onClick={() => onOpen("createChannel", { server, channelType })} className="text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition">
+          <button onClick={() => onOpen("createChannel", { server, channelType })} className="text-mana-500 hover:text-mana-600 transition">
             <Plus className="w-4 h-4" />
           </button>
         </ActionTooltip>

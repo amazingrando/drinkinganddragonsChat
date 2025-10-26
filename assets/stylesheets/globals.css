@@ -90,9 +90,9 @@ body {
   --color-primary-foreground: var(--color-white);
   --color-secondary: #ff0000ff;
   --color-secondary-foreground: var(--color-white);
-  --color-muted: #ff0000ff;
+  --color-muted: var(--color-lavender-900);
   --color-muted-foreground: var(--color-mana-300);
-  --color-accent: var(--color-lavender-800);
+  --color-accent: var(--color-mana-700);
   --color-accent-foreground: var(--color-mana-100);
   --color-destructive: #9e4042ff;
   --color-border: var(--color-lavender-900);

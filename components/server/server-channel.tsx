@@ -14,9 +14,9 @@ interface ServerChannelProps {
 }
 
 const iconMap = {
-  [ChannelType.TEXT]: <Hash className="w-4 h-4 mr-2" />,
-  [ChannelType.AUDIO]: <Mic className="w-4 h-4 mr-2" />,
-  [ChannelType.VIDEO]: <Video className="w-4 h-4 mr-2" />,
+  [ChannelType.TEXT]: <Hash className="w-4 h-4 mr-2 text-muted-foreground" />,
+  [ChannelType.AUDIO]: <Mic className="w-4 h-4 mr-2 text-muted-foreground" />,
+  [ChannelType.VIDEO]: <Video className="w-4 h-4 mr-2 text-muted-foreground" />,
 }
 
 export const ServerChannel = ({ channel, server, role }: ServerChannelProps) => {
@@ -37,13 +37,13 @@ export const ServerChannel = ({ channel, server, role }: ServerChannelProps) => 
     <button
       onClick={onClick}
       className={cn(
-        "group px-2 py-2 rounded-md flex items-center gap-x-2 w-full hover:bg-zinc-700/10 dark:hover:bg-zinc-700/50 transition mb-1",
-        params?.channelId === channel.id && "bg-zinc-700/20 dark:bg-zinc-700",
+        "group px-2 py-2 rounded-md flex items-center gap-x-2 w-full hover:bg-accent transition mb-1",
+        params?.channelId === channel.id && "bg-muted",
       )}
     >
       {iconMap[channel.type]}
-      <p className={cn("font-semibold text-sm text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition",
-        params?.channelId === channel.id && "text-primary dark:text-zinc-200 dark:group-hover:text-white",
+      <p className={cn("font-semibold text-sm text-muted-foreground group-hover:text-foreground transition",
+        params?.channelId === channel.id && "text-foreground",
       )}>
         {channel.name}
       </p>
@@ -51,16 +51,16 @@ export const ServerChannel = ({ channel, server, role }: ServerChannelProps) => 
       {channel.name !== "general" && role !== MemberRole.MEMBER && (
         <div className="ml-auto flex items-center gap-x-2">
           <ActionTooltip label="Edit">
-            <Edit onClick={(e) => onAction(e, "editChannel")} className="hidden group-hover:block w-4 h-4 text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition" />
+            <Edit onClick={(e) => onAction(e, "editChannel")} className="hidden group-hover:block w-4 h-4 text-muted-foreground transition" />
           </ActionTooltip>
           <ActionTooltip label="Delete">
-            <Trash onClick={(e) => onAction(e, "deleteChannel")} className="hidden group-hover:block w-4 h-4 text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition" />
+            <Trash onClick={(e) => onAction(e, "deleteChannel")} className="hidden group-hover:block w-4 h-4 text-muted-foreground transition" />
           </ActionTooltip>
         </div>
       )}
 
       {channel.name === "general" && (
-        <Lock className="ml-auto w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+        <Lock className="ml-auto w-4 h-4 text-muted-foreground/60" />
       )}
     </button>
   )
