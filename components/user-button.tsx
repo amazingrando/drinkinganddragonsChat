@@ -78,7 +78,7 @@ export function UserButton() {
         <Button variant="ghost" className="relative h-[48px] w-[48px] rounded-full">
           <Avatar className="h-[48px] w-[48px]">
             <AvatarImage src={user.user_metadata?.avatar_url} alt={user.email} />
-            <AvatarFallback>
+            <AvatarFallback className="bg-lavender-700">
               {user.email?.charAt(0).toUpperCase() || <UserIcon className="h-6 w-6" />}
             </AvatarFallback>
           </Avatar>

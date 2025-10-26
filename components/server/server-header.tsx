@@ -19,54 +19,54 @@ export const ServerHeader = ({ server, role }: ServerHeaderProps) => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="focus:outline-none" asChild>
-        <button className="w-full text-md font-semibold px-3 h-12 border-neutral-200 dark:border-neutral-800 border-b-2 flex items-center hover:bg-zinc-700/10 dark:hover:bg-zinc-700/50 transition">
+        <button className="w-full text-md font-semibold px-3 h-12 border-lavender-900 border-b-1 flex items-center hover:bg-lavender-950 transition">
           {server.name}
-          <ChevronDownIcon className="w-5 h-5 ml-auto" />
+          <ChevronDownIcon className="w-5 h-5 ml-auto text-mana-500" />
         </button>
 
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56 text-xs font-medium text-black dark:text-neutral-400 space-y-[2px]">
+      <DropdownMenuContent className="w-56 text-xs font-medium text-foreground space-y-[2px]">
         {isModerator && (
-          <DropdownMenuItem className="text-indigo-600 dark:text-indigo-400 px-3 py-2 text-sm cursor-pointer" onClick={() => onOpen("invite", { server })}>
+          <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer group" onClick={() => onOpen("invite", { server })}>
             Invite People
-            <UserPlus className="w-4 h-4 ml-auto" />
+            <UserPlus className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-300 " />
           </DropdownMenuItem>
         )}
         {isAdmin && (
-          <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer"
+          <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer group"
             onClick={() => onOpen("editServer", { server })}
           >
             Server Settings
-            <Settings className="w-4 h-4 ml-auto" />
+            <Settings className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-300 " />
           </DropdownMenuItem>
         )}
         {isAdmin && (
-          <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer"
+          <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer group"
             onClick={() => onOpen("members", { server })}
           >
             Manage Members
-            <Users className="w-4 h-4 ml-auto" />
+            <Users className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-300" />
           </DropdownMenuItem>
         )}
         {isModerator && (
-          <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer" onClick={() => onOpen("createChannel", { server })}>
+          <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer group" onClick={() => onOpen("createChannel", { server })}>
             Create Channel
-            <Plus className="w-4 h-4 ml-auto" />
+            <Plus className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-300" />
           </DropdownMenuItem>
         )}
         {isModerator && (
           <DropdownMenuSeparator />
         )}
         {isAdmin && (
-          <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer text-rose-500 hover:text-rose-600 dark:hover:text-rose-400" onClick={() => onOpen("deleteServer", { server })}>
+          <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer text-rose-500 hover:bg-rose-600 group" onClick={() => onOpen("deleteServer", { server })}>
             Delete Server
-            <Trash className="w-4 h-4 ml-auto" />
+            <Trash className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-300" />
           </DropdownMenuItem>
         )}
         {!isAdmin && (
-          <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer text-rose-500 hover:text-rose-600 dark:hover:text-rose-400" onClick={() => onOpen("leaveServer", { server })}>
+          <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 group" onClick={() => onOpen("leaveServer", { server })}>
             Leave Server
-            <LogOut className="w-4 h-4 ml-auto" />
+            <LogOut className="w-4 h-4 ml-auto text-mana-500 group-hover:text-white" />
           </DropdownMenuItem>
         )}
 

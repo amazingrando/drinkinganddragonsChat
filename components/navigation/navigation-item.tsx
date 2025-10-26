@@ -26,7 +26,7 @@ export const NavigationItem = ({
   return (
     <ActionTooltip label={name} side='right' align='center'>
       <button className='group flex items-center' onClick={handleClick}>
-        <div className={cn("absolute left-0 bg-primary rounded-r-full transition-all w-[4px]",
+        <div className={cn("absolute left-0 bg-lavender-500 rounded-r-full transition-all w-[4px]",
           params?.serverId != id && "group-hover:h-[20px]",
           params?.serverId === id ? "h-[36px]" : "h-[8px]",
         )} />

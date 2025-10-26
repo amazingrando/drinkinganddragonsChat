@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Open_Sans } from "next/font/google";
 import { cn } from "@/lib/utils"
-import "./globals.css";
+import "@/assets/stylesheets/globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import { ModalProvider } from "@/components/providers/modal-provider"
 import { RealtimeProvider } from "@/components/providers/realtime-provider"
@@ -25,13 +25,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn(`${openSans.variable} antialiased font-sans`, "bg-white dark:bg-[#313338]")}>
-        <header className="flex justify-end items-center p-4 gap-4 h-16">
-          <UserButton />
-        </header>
+      <body className={cn(`${openSans.variable} antialiased font-sans`, "")}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
           storageKey="discord-theme"
