@@ -68,7 +68,7 @@ export const ServerSidebar = async ({ serverId }: ServerSidebarProps) => {
   const role = server?.members.find((member) => member.profileID === profile?.id)?.role
 
   return (
-    <div className="flex flex-col h-full w-full bg-background text-foreground">
+    <div className="flex flex-col h-full w-full bg-lavender-200 dark:bg-background text-foreground border-r border-border/60">
 
       <ServerHeader server={server} role={role} />
       <ScrollArea className="flex-1 px-3">

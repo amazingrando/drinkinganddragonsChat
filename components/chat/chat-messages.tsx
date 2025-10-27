@@ -60,8 +60,8 @@ const ChatMessages = ({ name, member, chatId, apiUrl, socketUrl, socketQuery, pa
   if (status === "pending") {
     return (
       <div className="flex flex-col flex-1 justify-center items-center">
-        <Loader2 className="w-6 h-6 text-zinc-500 animate-spin" />
-        <p className="text-sm text-zinc-500">Loading messages...</p>
+        <Loader2 className="w-6 h-6 text-icon-foreground animate-spin" />
+        <p className="text-sm text-foreground">Loading messages...</p>
       </div>
     )
   }
@@ -69,14 +69,14 @@ const ChatMessages = ({ name, member, chatId, apiUrl, socketUrl, socketQuery, pa
   if (status === "error") {
     return (
       <div className="flex flex-col flex-1 justify-center items-center">
-        <ServerCrash className="w-6 h-6 text-zinc-500" />
-        <p className="text-sm text-zinc-500">Something went wrong!</p>
+        <ServerCrash className="w-6 h-6 text-icon-foreground" />
+        <p className="text-sm text-foreground">Something went wrong!</p>
       </div>
     )
   }
 
   return (
-    <div ref={chatRef} className="flex-1 flex flex-col py-4 overflow-y-auto bg-lavender-900">
+    <div ref={chatRef} className="flex-1 flex flex-col py-4 overflow-y-auto ">
       <div className="flex-1" />
       {!hasNextPage && (
         <div className="flex-1" />
@@ -87,9 +87,9 @@ const ChatMessages = ({ name, member, chatId, apiUrl, socketUrl, socketQuery, pa
       {hasNextPage && (
         <div className="flex justify-center">
           {isFetchingNextPage ?
-            <Loader2 className="w-4 h-4 animate-spin text-zinc-500" /> :
+            <Loader2 className="w-4 h-4 animate-spin text-icon-foreground" /> :
             <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-              <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
+              <Loader2 className="w-4 h-4 animate-spin text-foreground" />
               Load more
             </Button>
           }

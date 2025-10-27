@@ -106,7 +106,7 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
   const isImage = fileUrl;
 
   return (
-    <div className="relative group flex items-center hover:bg-black/5 p-4 transition w-full">
+    <div className="relative group flex items-center hover:bg-muted/60 p-4 transition w-full">
       <div className="group flex gap-x-2 items-start w-full">
         <div className="cursor-pointer hover:drop-shadow-md transition" onClick={onMemberClick}>
           <UserAvatar src={member.profile.imageUrl} />
@@ -114,14 +114,14 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
         <div className="flex flex-col w-full">
           <div className="flex items-center gap-x-2">
             <div className="flex items-center gap-x-2">
-              <p className="font-semibold text-sm hover:underline cursor-pointer" onClick={onMemberClick}>
+              <p className="font-semibold text-sm hover:underline cursor-pointer text-muted-foreground" onClick={onMemberClick}>
                 {member.profile.name}
               </p>
               <ActionTooltip label={member.role}>
                 {roleIconMap[member.role]}
               </ActionTooltip>
             </div>
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            <span className="text-xs font-medium text-muted-foreground">
               {timestamp}
             </span>
           </div>
@@ -134,12 +134,12 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
 
           {!fileUrl && !isEditing && (
             <p className={cn(
-              "text-sm text-zinc-600 dark:text-zinc-300",
+              "text-sm text-foreground",
               deleted && "line-through cursor-not-allowed"
             )}>
               {content}
               {isUpdated && !deleted && (
-                <span className="text-[10px] mx-2 text-zinc-500 dark:text-zinc-400">
+                <span className="text-[12px] mx-2 text-foreground/80">
                   (edited)
                 </span>
               )}
