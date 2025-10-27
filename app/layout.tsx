@@ -32,6 +32,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
           storageKey="discord-theme"
+          forcedTheme="dark"
         >
           <RealtimeProvider>
             <ModalProvider />
