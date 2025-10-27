@@ -26,8 +26,8 @@
   --accent-foreground: var(--color-lavender-900);
   --destructive: var(--color-rose-500);
   --destructive-foreground: var(--color-lavender-100);
-  --border: var(--color-lavender-300);
-  --border-dark: var(--color-lavender-400);
+  --border: var(--color-lavender-400);
+  --border-dark: var(--color-lavender-600);
   --input: var(--color-lavender-300);
   --ring: var(--color-mana-500);
   --chart-1: oklch(0.646 0.222 41.116);

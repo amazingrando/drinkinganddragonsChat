@@ -5,6 +5,7 @@ import * as z from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import axios from "axios"
 import qs from "query-string"
+import { cn } from "@/lib/utils"
 
 import {
   Form,
@@ -59,7 +60,7 @@ export const ChatInput = ({ apiUrl, query, name, type }: ChatInputProps) => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="border-t border-neutral-200 dark:border-neutral-800 px-4 py-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="border-t border-border px-4 py-4">
         <FormField control={form.control} name="content" render={({ field }) => (
           <FormItem>
             <FormControl>
@@ -67,11 +68,14 @@ export const ChatInput = ({ apiUrl, query, name, type }: ChatInputProps) => {
                 <button
                   type="button"
                   onClick={() => { onOpen("messageFile", { apiUrl, query }); }}
-                  className="absolute top-7 left-8 h-[24px] w-[24px] bg-zinc-500 dark:bg-zinc-400 hover:bg-zinc-600 dark:hover:bg-zinc-300 transition rounded-full p-1 flex items-center justify-center" >
-                  <Plus className="w-4 h-4 text-white" />
+                  className="absolute top-7 left-8 h-[24px] w-[24px] bg-icon-background hover:bg-mana-600 transition rounded-full p-1 flex items-center justify-center" >
+                  <Plus className="w-4 h-4 text-white " />
                 </button>
 
-                <Input disabled={isLoading} className="px-14 py-6 bg-zinc-200/90 dark:bg-zinc-700/75 border-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-zinc-600 dark:text-zinc-200"
+                <Input disabled={isLoading} className={cn(
+                  "px-14 py-6 bg-muted/50 border-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 font-medium",
+                  "text-foreground placeholder:text-muted-foreground/70"
+                )}
                   placeholder={`Message ${type === "conversation" ? name : "#" + name}`} {...field} />
 
                 <div className="absolute top-7 right-8">

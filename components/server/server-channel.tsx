@@ -51,10 +51,10 @@ export const ServerChannel = ({ channel, server, role }: ServerChannelProps) => 
       {channel.name !== "general" && role !== MemberRole.MEMBER && (
         <div className="ml-auto flex items-center gap-x-2">
           <ActionTooltip label="Edit">
-            <Edit onClick={(e) => onAction(e, "editChannel")} className="hidden group-hover:block w-4 h-4 text-icon-muted-foreground transition" />
+            <Edit onClick={(e) => onAction(e, "editChannel")} className="hidden group-hover:block w-4 h-4 text-icon-muted-foreground hover:text-white transition" />
           </ActionTooltip>
           <ActionTooltip label="Delete">
-            <Trash onClick={(e) => onAction(e, "deleteChannel")} className="hidden group-hover:block w-4 h-4 text-icon-muted-foreground transition" />
+            <Trash onClick={(e) => onAction(e, "deleteChannel")} className="hidden group-hover:block w-4 h-4 text-icon-muted-foreground hover:text-white transition" />
           </ActionTooltip>
         </div>
       )}

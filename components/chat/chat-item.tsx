@@ -32,8 +32,8 @@ interface ChatItemProps {
 }
 
 const roleIconMap = {
-  [MemberRole.ADMIN]: <ShieldAlert className="h-4 w-4 mr-2 text-indigo-500" />,
-  [MemberRole.MODERATOR]: <ShieldCheck className="h-4 w-4 mr-2 text-purple-500" />,
+  [MemberRole.ADMIN]: <ShieldAlert className="h-4 w-4 mr-2 text-jelly-600" />,
+  [MemberRole.MODERATOR]: <ShieldCheck className="h-4 w-4 mr-2 text-atomicorange-600" />,
   [MemberRole.MEMBER]: <Users className="h-4 w-4 mr-2 text-gray-500" />,
 }
 
@@ -106,7 +106,7 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
   const isImage = fileUrl;
 
   return (
-    <div className="relative group flex items-center hover:bg-muted/60 p-4 transition w-full">
+    <div className="relative group flex items-center dark:hover:bg-background/70 hover:bg-lavender-200 p-4 transition w-full">
       <div className="group flex gap-x-2 items-start w-full">
         <div className="cursor-pointer hover:drop-shadow-md transition" onClick={onMemberClick}>
           <UserAvatar src={member.profile.imageUrl} />
@@ -170,16 +170,19 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
       </div>
 
       {canDeleteMessage && (
-        <div className="hidden group-hover:flex items-center gap-x-2 absolute p-1 -top-2 right-5 bg-white dark:bg-zinc-800 rounded-sm border">
+        <div className={cn(
+          "hidden group-hover:flex items-center gap-x-2 absolute p-1 -top-2 right-5 rounded-sm border border-border",
+          "bg-lavender-200",
+          "dark:bg-background/70",
+        )}>
           {canEditMessage && (
             <ActionTooltip label="Edit">
-              <Pencil className="w-4 h-4 text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition cursor-pointer" onClick={() => setIsEditing(true)} />
+              <Pencil className="w-4 h-4 text-icon-muted-foreground hover:text-lavender-800 dark:hover:text-white transition cursor-pointer" onClick={() => setIsEditing(true)} />
             </ActionTooltip>
           )}
           <ActionTooltip label="Delete">
-            <Trash className="w-4 h-4 text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition cursor-pointer" onClick={() => onOpen("deleteMessage", { apiUrl: `${socketUrl}/${id}`, query: socketQuery })} />
+            <Trash className="w-4 h-4 text-icon-muted-foreground hover:text-lavender-800 dark:hover:text-white transition cursor-pointer" onClick={() => onOpen("deleteMessage", { apiUrl: `${socketUrl}/${id}`, query: socketQuery })} />
           </ActionTooltip>
-
         </div>
       )}
     </div>
