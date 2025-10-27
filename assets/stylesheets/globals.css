@@ -6,7 +6,11 @@
 
 :root {
   --background: var(--color-lavender-100);
+  --background-dark: var(--color-lavender-300);
   --foreground: var(--color-lavender-900);
+  --icon-foreground: var(--color-mana-500);
+  --icon-background: var(--color-mana-500);
+  --icon-muted-foreground: var(--color-lavender-600);
   --card: var(--color-lavender-100);
   --card-foreground: var(--color-lavender-900);
   --popover: var(--color-lavender-100);
@@ -15,13 +19,15 @@
   --primary-foreground: var(--color-lavender-100);
   --secondary: var(--color-lavender-200);
   --secondary-foreground: var(--color-lavender-900);
-  --muted: var(--color-lavender-200);
+  --muted: var(--color-lavender-300);
+  --muted-dark: var(--color-lavender-400);
   --muted-foreground: var(--color-lavender-900);
   --accent: var(--color-lavender-200);
   --accent-foreground: var(--color-lavender-900);
   --destructive: var(--color-rose-500);
   --destructive-foreground: var(--color-lavender-100);
   --border: var(--color-lavender-300);
+  --border-dark: var(--color-lavender-400);
   --input: var(--color-lavender-300);
   --ring: var(--color-mana-500);
   --chart-1: oklch(0.646 0.222 41.116);
@@ -42,7 +48,11 @@
 
 .dark {
   --background: var(--color-lavender-950);
+  --background-dark: var(--color-lavender-1000);
   --foreground: var(--color-lavender-100);
+  --icon-foreground: var(--color-mana-500);
+  --icon-background: var(--color-mana-500);
+  --icon-muted-foreground: var(--color-lavender-500);
   --card: var(--color-lavender-950);
   --card-foreground: var(--color-lavender-100);
   --popover: var(--color-lavender-950);
@@ -52,12 +62,14 @@
   --secondary: var(--color-lavender-700);
   --secondary-foreground: var(--color-lavender-900);
   --muted: var(--color-lavender-800);
+  --muted-dark: var(--color-lavender-900);
   --muted-foreground: var(--color-lavender-400);
   --accent: var(--color-mana-600);
   --accent-foreground: var(--color-mana-100);
   --destructive: oklch(0.396 0.141 25.723);
   --destructive-foreground: var(--color-lavender-100);
   --border: var(--color-lavender-800);
+  --border-dark: var(--color-lavender-900);
   --input: var(--color-lavender-800);
   --ring: var(--color-mana-500);
   --chart-1: oklch(0.488 0.243 264.376);
@@ -151,7 +163,11 @@
   --font-mono: var(--font-open-sans);
 
   --color-background: var(--background);
+  --color-background-dark: var(--background-dark);
   --color-foreground: var(--foreground);
+  --color-icon-foreground: var(--icon-foreground);
+  --color-icon-background: var(--icon-background);
+  --color-icon-muted-foreground: var(--icon-muted-foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -161,12 +177,14 @@
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
+  --color-muted-dark: var(--muted-dark);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
+  --color-border-dark: var(--border-dark);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-chart-1: var(--chart-1);

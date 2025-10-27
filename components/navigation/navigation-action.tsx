@@ -15,8 +15,8 @@ const NavigationAction = () => {
     <div>
       <ActionTooltip label='Add a server' side='right' align='center'>
         <button className='group flex items-center' onClick={handleClick}>
-          <div className='flex mx-3 h-[48px] w-[48px] rounded-[24px] group-hover:rounded-[16px] transition-all items-center justify-center bg-lavender-900 group-hover:bg-mana-400'>
-            <Plus className='group-hover:text-white transition text-mana-400' size={25} />
+          <div className='flex mx-3 h-[48px] w-[48px] rounded-[24px] group-hover:rounded-[16px] transition-all items-center justify-center bg-primary '>
+            <Plus className=' transition text-primary-foreground group-hover:scale-125' />
           </div>
         </button>
       </ActionTooltip>
