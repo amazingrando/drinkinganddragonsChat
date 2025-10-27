@@ -13,6 +13,7 @@ import { useModal } from "@/hooks/use-modal-store"
 import { Button } from "@/components/ui/button"
 import axios from "axios"
 import { useRouter } from "next/navigation"
+import { ModalHeader } from "./_modal-header"
 
 const DeleteServerModal = () => {
   const { isOpen, type, onClose, data } = useModal()
@@ -39,12 +40,7 @@ const DeleteServerModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={onClose}>
       <DialogContent>
-        <DialogHeader className="pt-8 px-6">
-          <DialogTitle className="text-2xl text-center font-bold">Delete Server</DialogTitle>
-          <DialogDescription className="text-center text-sm text-muted-foreground">
-            You are currently deleting <span className="font-semibold text-indigo-500">{server?.name}</span>. Are you sure you want to delete it?
-          </DialogDescription>
-        </DialogHeader>
+        <ModalHeader title="Delete Server" description={`You are currently deleting <strong>${server?.name}</strong>. Are you sure you want to delete it?`} />
         <DialogFooter className="bg-gray-100 px-6 py-4">
           <div className="flex items-center justify-between w-full">
             <Button variant="secondary" disabled={isLoading} onClick={onClose}>Cancel</Button>

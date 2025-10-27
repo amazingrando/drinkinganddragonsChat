@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import axios from "axios"
 import { useRouter } from "next/navigation"
 import qs from "query-string"
+import { ModalHeader } from "./_modal-header"
 
 const DeleteChannelModal = () => {
   const { isOpen, type, onClose, data } = useModal()
@@ -48,12 +49,7 @@ const DeleteChannelModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={onClose}>
       <DialogContent>
-        <DialogHeader className="pt-8 px-6">
-          <DialogTitle className="text-2xl text-center font-bold">Delete Channel</DialogTitle>
-          <DialogDescription className="text-center text-sm text-muted-foreground">
-            You are currently deleting <span className="font-semibold text-indigo-500">{channel?.name}</span>. Are you sure you want to delete it?
-          </DialogDescription>
-        </DialogHeader>
+        <ModalHeader title="Delete Channel" description={`You are currently deleting <strong>{channel?.name}</strong>. Are you sure you want to delete it?`} />
         <DialogFooter className="bg-gray-100 px-6 py-4">
           <div className="flex items-center justify-between w-full">
             <Button variant="secondary" disabled={isLoading} onClick={onClose}>Cancel</Button>

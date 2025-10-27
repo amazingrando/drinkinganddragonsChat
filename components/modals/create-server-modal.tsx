@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useFileUpload } from '@/hooks/use-file-upload'
 import axios from "axios"
+import { ModalHeader } from "./_modal-header"
 
 import {
   Dialog,
@@ -104,12 +105,7 @@ const CreateServerModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
       <DialogContent>
-        <DialogHeader className="pt-8 px-6">
-          <DialogTitle className="text-2xl text-center font-bold">Create a server</DialogTitle>
-          <DialogDescription className="text-center text-sm text-muted-foreground">
-            Create a server to get started.
-          </DialogDescription>
-        </DialogHeader>
+        <ModalHeader title="Create a Server" description="Create a server to get started." />
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">

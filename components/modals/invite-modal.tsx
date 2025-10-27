@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Check, Copy, RefreshCcw } from "lucide-react"
 import { useOrigin } from "@/hooks/use-origin"
 import axios from "axios"
+import { ModalHeader } from "./_modal-header"
 
 const InviteModal = () => {
   const { isOpen, type, onOpen, onClose, data } = useModal()
@@ -52,9 +53,7 @@ const InviteModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={onClose}>
       <DialogContent>
-        <DialogHeader className="pt-8 px-6">
-          <DialogTitle className="text-2xl text-center font-bold">Invite Friends</DialogTitle>
-        </DialogHeader>
+        <ModalHeader title="Invite Friends" description="Invite friends to your server." />
         <div className="space-y-6 px-6">
           <Label className="text-xs font-bold text-zinc-500 dark:text-white uppercase">Server Invite Link</Label>
           <div className="flex items-center gap-x-2">

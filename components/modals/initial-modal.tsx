@@ -25,8 +25,8 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone'
-import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 import { useRouter } from "next/navigation"
+import { ModalHeader } from "./_modal-header"
 
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -104,12 +104,7 @@ const InitialModal = () => {
   return (
     <Dialog open={true} onOpenChange={() => { }}>
       <DialogContent>
-        <DialogHeader className="pt-8 px-6">
-          <DialogTitle className="text-2xl text-center font-bold">Create a server</DialogTitle>
-          <DialogDescription className="text-center text-sm text-muted-foreground">
-            Create a server to get started.
-          </DialogDescription>
-        </DialogHeader>
+        <ModalHeader title="Create a Server" description="Create a server to get started." />
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">

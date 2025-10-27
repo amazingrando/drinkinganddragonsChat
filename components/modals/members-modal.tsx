@@ -18,6 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import qs from "query-string"
 import axios from "axios"
 import { useRouter } from "next/navigation"
+import { ModalHeader } from "./_modal-header"
 
 const roleIconMap = {
   [MemberRole.ADMIN]: <ShieldAlert className="h-4 w-4 mr-2 text-indigo-500" />,
@@ -81,12 +82,7 @@ const MembersModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={onClose}>
       <DialogContent>
-        <DialogHeader className="pt-8 px-6">
-          <DialogTitle className="text-2xl text-center font-bold">Manage Members</DialogTitle>
-          <DialogDescription className="text-center text-sm text-muted-foreground">
-            {server?.members.length} members
-          </DialogDescription>
-        </DialogHeader>
+        <ModalHeader title="Manage Members" description={`${server?.members.length} members`} />
 
         <ScrollArea className="mt-8 max-h-[480px] px-3">
           {server?.members.map((member) => (

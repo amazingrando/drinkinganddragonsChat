@@ -27,6 +27,7 @@ import {
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone'
 import { useRouter } from "next/navigation"
 import { useModal } from "@/hooks/use-modal-store"
+import { ModalHeader } from "./_modal-header"
 
 const formSchema = z.object({
   fileUrl: z.string().min(1, {
@@ -109,12 +110,7 @@ const MessageFileModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
       <DialogContent>
-        <DialogHeader className="pt-8 px-6">
-          <DialogTitle className="text-2xl text-center font-bold">Add an attachment</DialogTitle>
-          <DialogDescription className="text-center text-sm text-muted-foreground">
-            Add a file to your message.
-          </DialogDescription>
-        </DialogHeader>
+        <ModalHeader title="Add an attachment" description="Add a file to your message." />
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">

@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import axios from "axios"
 import { useParams, useRouter } from "next/navigation"
+import { ModalHeader } from "./_modal-header"
 
 import {
   Dialog,
@@ -99,23 +100,17 @@ const CreateChannelModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
       <DialogContent>
-        <DialogHeader className="pt-8 px-6">
-          <DialogTitle className="text-2xl text-center font-bold">Create a Channel</DialogTitle>
-          <DialogDescription className="text-center text-sm text-muted-foreground">
-            Create a channel to get started.
-          </DialogDescription>
-        </DialogHeader>
+        <ModalHeader title="Create a Channel" description="Create a channel to get started." />
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="space-y-8 px-6">
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Channel name</FormLabel>
+                  <FormLabel className="uppercase text-xs font-bold">Channel name</FormLabel>
                   <FormControl>
                     <Input
                       disabled={isLoading}
-                      className="bg-zinc-300/50 border-0 focus-visible:ring-0 text-black focus-visible:ring-offset-0"
                       placeholder="Enter channel name" {...field} />
                   </FormControl>
                   <FormMessage />
@@ -124,10 +119,10 @@ const CreateChannelModal = () => {
 
               <FormField control={form.control} name="type" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Channel type</FormLabel>
+                  <FormLabel className="uppercase text-xs font-bold">Channel type</FormLabel>
                   <Select disabled={isLoading} onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger className="bg-zinc-300/50 border-0 focus-visible:ring-0 text-black focus-visible:ring-offset-0 capitalize outline-none">
+                      <SelectTrigger className="capitalize outline-none">
                         <SelectValue placeholder="Select channel type" />
                       </SelectTrigger>
                     </FormControl>
@@ -144,10 +139,9 @@ const CreateChannelModal = () => {
                 </FormItem>
               )} />
             </div>
-            <DialogFooter className="bg-gray-100 px-6 py-4">
+            <DialogFooter className="px-6 py-4">
               <Button disabled={isLoading} variant="primary">Create Server</Button>
             </DialogFooter>
-
           </form>
         </Form>
       </DialogContent>

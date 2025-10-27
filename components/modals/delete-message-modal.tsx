@@ -13,6 +13,7 @@ import { useModal } from "@/hooks/use-modal-store"
 import { Button } from "@/components/ui/button"
 import axios from "axios"
 import qs from "query-string"
+import { ModalHeader } from "./_modal-header"
 
 const DeleteMessageModal = () => {
   const { isOpen, type, onClose, data } = useModal()
@@ -42,12 +43,7 @@ const DeleteMessageModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={onClose}>
       <DialogContent>
-        <DialogHeader className="pt-8 px-6">
-          <DialogTitle className="text-2xl text-center font-bold">Delete Message</DialogTitle>
-          <DialogDescription className="text-center text-sm text-muted-foreground">
-            Are you sure you want to delete this message? This action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
+        <ModalHeader title="Delete Message" description="Are you sure you want to delete this message? This action cannot be undone." />
         <DialogFooter className="bg-gray-100 px-6 py-4">
           <div className="flex items-center justify-between w-full">
             <Button variant="secondary" disabled={isLoading} onClick={onClose}>Cancel</Button>
