@@ -32,7 +32,7 @@ const MembersModal = () => {
   const [loadingId, setLoadingId] = useState<string>("")
 
   const isModalOpen = isOpen && type === "members"
-  const { server } = data as { server: ServerWithMembersWithProfiles }
+  const server = data?.server as ServerWithMembersWithProfiles | undefined
 
   const onKick = async (memberId: string) => {
     try {

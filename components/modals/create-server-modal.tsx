@@ -112,11 +112,11 @@ const CreateServerModal = () => {
             <div className="space-y-8 px-6">
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Server name</FormLabel>
+                  <FormLabel className="uppercase text-xs font-bold">Server name</FormLabel>
                   <FormControl>
                     <Input
                       disabled={isLoading}
-                      className="bg-zinc-300/50 border-0 focus-visible:ring-0 text-black focus-visible:ring-offset-0"
+                      className=""
                       placeholder="Enter server name" {...field} />
                   </FormControl>
                   <FormMessage />
@@ -125,7 +125,7 @@ const CreateServerModal = () => {
 
               <FormField control={form.control} name="imageUrl" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Server image</FormLabel>
+                  <FormLabel className="uppercase text-xs font-bold ">Server image</FormLabel>
                   <FormControl>
                     <Dropzone {...dropzoneProps} >
                       <DropzoneEmptyState />
@@ -136,7 +136,7 @@ const CreateServerModal = () => {
                 </FormItem>
               )} />
             </div>
-            <DialogFooter className="bg-gray-100 px-6 py-4">
+            <DialogFooter className="px-6 py-4">
               <Button disabled={isLoading} variant="primary">Create Server</Button>
             </DialogFooter>
 
