@@ -10,7 +10,7 @@ export async function updateSession(request: NextRequest) {
   // variable. Always create a new one on each request.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
     {
       cookies: {
         getAll() {
@@ -38,19 +38,14 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims()
   const user = data?.claims
 
-  // Define public routes that don't require authentication
-  const publicRoutes = ['/sign-in', '/sign-up', '/']
-  const isPublicRoute = publicRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
-  )
-
   if (
     !user &&
-    !isPublicRoute
+    !request.nextUrl.pathname.startsWith('/login') &&
+    !request.nextUrl.pathname.startsWith('/auth')
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
-    url.pathname = '/sign-in'
+    url.pathname = '/auth/login'
     return NextResponse.redirect(url)
   }
 
