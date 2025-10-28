@@ -41,10 +41,10 @@ const DeleteServerModal = () => {
     <Dialog open={isModalOpen} onOpenChange={onClose}>
       <DialogContent>
         <ModalHeader title="Delete Server" description={`You are currently deleting <strong>${server?.name}</strong>. Are you sure you want to delete it?`} />
-        <DialogFooter className="bg-gray-100 px-6 py-4">
+        <DialogFooter className="px-6 py-4">
           <div className="flex items-center justify-between w-full">
             <Button variant="secondary" disabled={isLoading} onClick={onClose}>Cancel</Button>
-            <Button variant="destructive" disabled={isLoading} onClick={onClick}>Leave Server</Button>
+            <Button variant="destructive" disabled={isLoading} onClick={onClick}>Delete Server</Button>
           </div>
         </DialogFooter>
       </DialogContent>

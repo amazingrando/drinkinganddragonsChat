@@ -73,7 +73,7 @@ export const ChatInput = ({ apiUrl, query, name, type }: ChatInputProps) => {
                 </button>
 
                 <Input disabled={isLoading} className={cn(
-                  "px-14 py-6 bg-muted/50 border-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 font-medium",
+                  "px-14 py-6 bg-muted/50 font-medium",
                   "text-foreground placeholder:text-muted-foreground/70"
                 )}
                   placeholder={`Message ${type === "conversation" ? name : "#" + name}`} {...field} />

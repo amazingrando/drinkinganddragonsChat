@@ -24,8 +24,8 @@
   --muted-foreground: var(--color-lavender-900);
   --accent: var(--color-lavender-200);
   --accent-foreground: var(--color-lavender-900);
-  --destructive: var(--color-rose-500);
-  --destructive-foreground: var(--color-lavender-100);
+  --destructive: var(--color-jelly-600);
+  --destructive-foreground: var(--color-jelly-100);
   --border: var(--color-lavender-400);
   --border-dark: var(--color-lavender-600);
   --input: var(--color-lavender-300);
@@ -60,14 +60,14 @@
   --primary: var(--color-mana-600);
   --primary-foreground: var(--color-lavender-100);
   --secondary: var(--color-lavender-700);
-  --secondary-foreground: var(--color-lavender-900);
+  --secondary-foreground: var(--color-lavender-100);
   --muted: var(--color-lavender-800);
   --muted-dark: var(--color-lavender-900);
   --muted-foreground: var(--color-lavender-400);
   --accent: var(--color-mana-600);
   --accent-foreground: var(--color-mana-100);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: var(--color-lavender-100);
+  --destructive: var(--color-jelly-600);
+  --destructive-foreground: var(--color-jelly-100);
   --border: var(--color-lavender-800);
   --border-dark: var(--color-lavender-900);
   --input: var(--color-lavender-800);

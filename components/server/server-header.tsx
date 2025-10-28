@@ -29,7 +29,7 @@ export const ServerHeader = ({ server, role }: ServerHeaderProps) => {
         {isModerator && (
           <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer group" onClick={() => onOpen("invite", { server })}>
             Invite People
-            <UserPlus className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-300 " />
+            <UserPlus className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-600 dark:group-hover:text-mana-300" />
           </DropdownMenuItem>
         )}
         {isAdmin && (
@@ -37,7 +37,7 @@ export const ServerHeader = ({ server, role }: ServerHeaderProps) => {
             onClick={() => onOpen("editServer", { server })}
           >
             Server Settings
-            <Settings className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-300 " />
+            <Settings className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-600 dark:group-hover:text-mana-300" />
           </DropdownMenuItem>
         )}
         {isAdmin && (
@@ -45,13 +45,13 @@ export const ServerHeader = ({ server, role }: ServerHeaderProps) => {
             onClick={() => onOpen("members", { server })}
           >
             Manage Members
-            <Users className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-300" />
+            <Users className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-600 dark:group-hover:text-mana-300" />
           </DropdownMenuItem>
         )}
         {isModerator && (
           <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer group" onClick={() => onOpen("createChannel", { server })}>
             Create Channel
-            <Plus className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-300" />
+            <Plus className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-600 dark:group-hover:text-mana-300" />
           </DropdownMenuItem>
         )}
         {isModerator && (
@@ -60,13 +60,13 @@ export const ServerHeader = ({ server, role }: ServerHeaderProps) => {
         {isAdmin && (
           <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer text-rose-500 hover:bg-rose-600 group" onClick={() => onOpen("deleteServer", { server })}>
             Delete Server
-            <Trash className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-300" />
+            <Trash className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-600 dark:group-hover:text-mana-300" />
           </DropdownMenuItem>
         )}
         {!isAdmin && (
           <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 group" onClick={() => onOpen("leaveServer", { server })}>
             Leave Server
-            <LogOut className="w-4 h-4 ml-auto text-mana-500 group-hover:text-white" />
+            <LogOut className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-600 dark:group-hover:text-mana-300" />
           </DropdownMenuItem>
         )}
 

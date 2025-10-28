@@ -134,7 +134,7 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
 
           {!fileUrl && !isEditing && (
             <p className={cn(
-              "text-sm text-foreground",
+              "text-sm text-foreground font-medium",
               deleted && "line-through cursor-not-allowed"
             )}>
               {content}
