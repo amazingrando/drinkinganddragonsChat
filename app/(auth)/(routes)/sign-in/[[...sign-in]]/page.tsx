@@ -24,7 +24,7 @@ export default function Page() {
   }, [supabase.auth, router])
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-white dark:bg-[#313338]">
+    <div className="flex items-center justify-center min-h-screen">
       <div className="w-full max-w-md p-8">
         <Auth
           supabaseClient={supabase}

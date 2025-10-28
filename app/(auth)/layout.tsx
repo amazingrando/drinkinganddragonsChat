@@ -1,9 +1,9 @@
 import React from 'react'
 
-const layout = ({ children }: { children: React.ReactNode }) => {
+const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className='flex items-center justify-center h-screen'>{children}</div>
+    <div className='flex items-center justify-center h-screen bg-muted text-muted-foreground'>{children}</div>
   )
 }
 
-export default layout
+export default Layout
