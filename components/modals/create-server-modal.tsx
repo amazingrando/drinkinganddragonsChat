@@ -9,9 +9,6 @@ import { ModalHeader } from "./_modal-header"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -25,7 +22,6 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone'
-import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 import { useRouter } from "next/navigation"
 import { useModal } from "@/hooks/use-modal-store"
 import { useEffect } from "react"
@@ -83,7 +79,7 @@ const CreateServerModal = () => {
     if (filesWithoutErrors.length > 0 && !dropzoneProps.loading && !dropzoneProps.isSuccess) {
       dropzoneProps.onUpload()
     }
-  }, [dropzoneProps.files.length])
+  }, [dropzoneProps, dropzoneProps.files.length])
 
   // Watch for successful uploads and update the form field
   useEffect(() => {

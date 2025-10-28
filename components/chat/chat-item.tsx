@@ -3,11 +3,11 @@
 import { Member, MemberRole, Profile } from "@prisma/client"
 import UserAvatar from "@/components//user-avatar"
 import { ActionTooltip } from "@/components//action-tooltip"
-import { Copy, ShieldCheck, ShieldAlert, UserIcon, Users, Pencil, Trash } from "lucide-react"
+import { ShieldCheck, ShieldAlert, Users, Pencil, Trash } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form"
+import { Form, FormControl, FormField, FormItem } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import * as z from "zod"
@@ -94,12 +94,11 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
     form.reset({
       content: content,
     });
-  }, [content]);
+  }, [content, form]);
 
 
   const isAdmin = member.role === MemberRole.ADMIN;
   const isModerator = member.role === MemberRole.MODERATOR;
-  const isMember = member.role === MemberRole.MEMBER;
   const isOwner = currentMember.id === member.id;
   const canDeleteMessage = !deleted && (isAdmin || isModerator || isOwner);
   const canEditMessage = !deleted && isOwner && !fileUrl;

@@ -17,7 +17,7 @@ const roleIconMap = {
   [MemberRole.MEMBER]: <Users className="w-4 h-4 mr-2" />,
 }
 
-export const ServerMember = ({ member, server }: ServerMemberProps) => {
+export const ServerMember = ({ member }: ServerMemberProps) => {
   const params = useParams()
   const router = useRouter()
 

@@ -187,7 +187,7 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
         setFiles(newFiles)
       }
     }
-  }, [files.length, setFiles, maxFiles])
+  }, [files.length, setFiles, maxFiles, files])
 
   return {
     files,

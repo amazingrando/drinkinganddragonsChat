@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef } from "react"
+import React, { useRef } from "react"
 import { Member, Message, Profile } from "@prisma/client"
 import ChatWelcome from "@/components/chat/chat-welcome"
 import { useChatQuery } from "@/hooks/use-chat-query"

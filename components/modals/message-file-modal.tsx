@@ -10,9 +10,6 @@ import qs from "query-string"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -36,7 +33,7 @@ const formSchema = z.object({
 })
 
 const MessageFileModal = () => {
-  const { isOpen, type, onOpen, onClose, data } = useModal()
+  const { isOpen, type, onClose, data } = useModal()
   const router = useRouter()
 
   const isModalOpen = isOpen && type === "messageFile"
@@ -93,7 +90,7 @@ const MessageFileModal = () => {
     if (filesWithoutErrors.length > 0 && !dropzoneProps.loading && !dropzoneProps.isSuccess) {
       dropzoneProps.onUpload()
     }
-  }, [dropzoneProps.files.length])
+  }, [dropzoneProps, dropzoneProps.files.length])
 
   // Watch for successful uploads and update the form field
   useEffect(() => {
@@ -117,7 +114,7 @@ const MessageFileModal = () => {
             <div className="space-y-8 px-6">
               <FormField control={form.control} name="fileUrl" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Server image</FormLabel>
+                  <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Attachment</FormLabel>
                   <FormControl>
                     <Dropzone {...dropzoneProps} >
                       <DropzoneEmptyState />

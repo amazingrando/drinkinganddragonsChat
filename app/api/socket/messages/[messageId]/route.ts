@@ -4,12 +4,14 @@ import { db } from "@/lib/db"
 import { MemberRole } from "@prisma/client"
 import { broadcastMessage } from "@/lib/supabase/server-broadcast"
 
-export async function DELETE(request: NextRequest, { params }: { params: { messageId: string } }) {
-  return handleModify(request, params, "DELETE")
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ messageId: string }> }) {
+  const { messageId } = await params
+  return handleModify(request, { messageId }, "DELETE")
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { messageId: string } }) {
-  return handleModify(request, params, "PATCH")
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ messageId: string }> }) {
+  const { messageId } = await params
+  return handleModify(request, { messageId }, "PATCH")
 }
 
 async function handleModify(request: NextRequest, { messageId }: { messageId: string }, method: "DELETE" | "PATCH") {
@@ -18,8 +20,9 @@ async function handleModify(request: NextRequest, { messageId }: { messageId: st
     const { searchParams } = new URL(request.url)
     const serverId = searchParams.get("serverId")
     const channelId = searchParams.get("channelId")
-    const body = method === "PATCH" ? await request.json() : {}
-    const content: string | undefined = (body as any).content
+    const content: string | undefined = method === "PATCH"
+      ? ((await request.json()) as { content?: string }).content
+      : undefined
 
     if (!profile) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

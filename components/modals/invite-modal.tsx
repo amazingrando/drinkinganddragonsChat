@@ -3,8 +3,6 @@
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog"
 import { useState } from "react"
 import { useModal } from "@/hooks/use-modal-store"

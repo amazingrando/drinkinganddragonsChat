@@ -104,5 +104,5 @@ export const useChatRealtime = ({
       if (addChannel) unsubscribe(addChannel);
       if (updateChannel) unsubscribe(updateChannel);
     }
-  }, [queryClient, addKey, queryKey, updateKey]);
+  }, [queryClient, addKey, queryKey, updateKey, unsubscribe, subscribe]);
 }

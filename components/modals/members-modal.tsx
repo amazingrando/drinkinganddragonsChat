@@ -3,15 +3,12 @@
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog"
 import { useModal } from "@/hooks/use-modal-store"
 import { ServerWithMembersWithProfiles } from "@/types"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import UserAvatar from "@/components/user-avatar"
-import { Check, Loader2, MoreVertical, Shield, ShieldQuestion, ShieldCheck, User, Users, Trash, ShieldAlert } from "lucide-react"
+import { Check, Loader2, MoreVertical, Shield, ShieldQuestion, ShieldCheck, Users, Trash, ShieldAlert } from "lucide-react"
 import { MemberRole } from "@prisma/client"
 import { useState } from "react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from "@/components/ui/dropdown-menu"

@@ -4,12 +4,14 @@ import { db } from "@/lib/db"
 import { MemberRole } from "@prisma/client"
 import { broadcastMessage } from "@/lib/supabase/server-broadcast"
 
-export async function DELETE(request: NextRequest, { params }: { params: { directMessageId: string } }) {
-  return handleModify(request, params, "DELETE")
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ directMessageId: string }> }) {
+  const { directMessageId } = await params
+  return handleModify(request, { directMessageId }, "DELETE")
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { directMessageId: string } }) {
-  return handleModify(request, params, "PATCH")
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ directMessageId: string }> }) {
+  const { directMessageId } = await params
+  return handleModify(request, { directMessageId }, "PATCH")
 }
 
 async function handleModify(
@@ -21,8 +23,9 @@ async function handleModify(
     const profile = await currentProfile()
     const { searchParams } = new URL(request.url)
     const conversationId = searchParams.get("conversationId")
-    const body = method === "PATCH" ? await request.json() : {}
-    const content: string | undefined = (body as any).content
+    const content: string | undefined = method === "PATCH"
+      ? ((await request.json()) as { content?: string }).content
+      : undefined
 
     if (!profile) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

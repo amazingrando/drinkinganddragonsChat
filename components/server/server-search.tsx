@@ -2,7 +2,7 @@
 
 import { Search } from "lucide-react"
 import { useEffect, useState } from "react"
-import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandSeparator } from "../ui/command"
+import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "../ui/command"
 import { useParams, useRouter } from "next/navigation"
 
 interface ServerSearchProps {

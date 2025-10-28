@@ -8,9 +8,6 @@ import axios from "axios"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -24,12 +21,12 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone'
-import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 import { useRouter } from "next/navigation"
 import { useModal } from "@/hooks/use-modal-store"
 import { useEffect } from "react"
 import { X } from 'lucide-react'
 import { ModalHeader } from "./_modal-header"
+import Image from "next/image"
 
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -92,7 +89,7 @@ const EditServerModal = () => {
     if (filesWithoutErrors.length > 0 && !dropzoneProps.loading && !dropzoneProps.isSuccess) {
       dropzoneProps.onUpload()
     }
-  }, [dropzoneProps.files.length])
+  }, [dropzoneProps, dropzoneProps.files.length])
 
   // Watch for successful uploads and update the form field
   useEffect(() => {
@@ -141,7 +138,7 @@ const EditServerModal = () => {
                       {server?.imageUrl && field.value === server.imageUrl && !dropzoneProps.isSuccess && (
                         <div className="relative">
                           <div className="flex items-center justify-center w-full h-48 bg-zinc-100 dark:bg-zinc-800 rounded-lg overflow-hidden">
-                            <img
+                            <Image
                               src={server.imageUrl}
                               alt="Server image"
                               className="max-w-full max-h-full object-contain"

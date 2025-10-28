@@ -6,7 +6,6 @@ import { ThemeProvider } from "@/components/providers/theme-provider"
 import { ModalProvider } from "@/components/providers/modal-provider"
 import { RealtimeProvider } from "@/components/providers/realtime-provider"
 import { QueryProvider } from "@/components/providers/query-provider"
-import { UserButton } from "@/components/user-button"
 
 const openSans = Open_Sans({
   variable: "--font-open-sans",

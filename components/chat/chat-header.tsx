@@ -1,4 +1,4 @@
-import { Hash, Menu, UserIcon } from "lucide-react"
+import { Hash } from "lucide-react"
 import { MobileToggle } from "../mobile-toggle"
 import UserAvatar from "@/components/user-avatar"
 import { SocketIndicator } from "@/components/socket-indicator"

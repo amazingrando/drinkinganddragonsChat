@@ -9,9 +9,6 @@ import axios from "axios"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -83,7 +80,7 @@ const InitialModal = () => {
     if (filesWithoutErrors.length > 0 && !dropzoneProps.loading && !dropzoneProps.isSuccess) {
       dropzoneProps.onUpload()
     }
-  }, [dropzoneProps.files.length])
+  }, [dropzoneProps, dropzoneProps.files.length])
 
   // Watch for successful uploads and update the form field
   useEffect(() => {

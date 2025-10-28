@@ -2,7 +2,7 @@
 
 import { ServerWithMembersWithProfiles } from "@/types"
 import { ChannelType, MemberRole } from "@prisma/client"
-import { ChevronDownIcon, Plus, Settings } from "lucide-react"
+import { Plus, Settings } from "lucide-react"
 import { ActionTooltip } from "../action-tooltip"
 import { useModal } from "@/hooks/use-modal-store"
 
