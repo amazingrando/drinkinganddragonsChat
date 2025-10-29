@@ -118,11 +118,11 @@ const EditServerModal = () => {
             <div className="space-y-8 px-6">
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Server name</FormLabel>
+                  <FormLabel className="uppercase text-xs font-bold">Server name</FormLabel>
                   <FormControl>
                     <Input
                       disabled={isLoading}
-                      className="bg-zinc-300/50 border-0 focus-visible:ring-0 text-black focus-visible:ring-offset-0"
+                      className=""
                       placeholder="Enter server name" {...field} />
                   </FormControl>
                   <FormMessage />
@@ -131,7 +131,7 @@ const EditServerModal = () => {
 
               <FormField control={form.control} name="imageUrl" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Server image</FormLabel>
+                  <FormLabel className="uppercase text-xs font-bold">Server image</FormLabel>
                   <FormControl>
                     <div className="space-y-4">
                       {/* Show existing image if present and no new upload is in progress */}
@@ -141,7 +141,8 @@ const EditServerModal = () => {
                             <Image
                               src={server.imageUrl}
                               alt="Server image"
-                              className="max-w-full max-h-full object-contain"
+                              fill
+                              className="object-contain"
                             />
                           </div>
                           <Button

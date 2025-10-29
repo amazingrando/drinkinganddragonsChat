@@ -50,7 +50,7 @@ const DeleteChannelModal = () => {
         <DialogFooter className="px-6 py-4">
           <div className="flex items-center justify-between w-full">
             <Button variant="secondary" disabled={isLoading} onClick={onClose}>Cancel</Button>
-            <Button variant="destructive" disabled={isLoading} onClick={onClick}>Leave Server</Button>
+            <Button variant="destructive" disabled={isLoading} onClick={onClick}>Delete Channel</Button>
           </div>
         </DialogFooter>
       </DialogContent>
