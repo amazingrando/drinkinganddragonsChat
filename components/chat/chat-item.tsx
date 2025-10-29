@@ -1,7 +1,7 @@
 "use client"
 
 import { Member, MemberRole, Profile } from "@prisma/client"
-import UserAvatar from "@/components//user-avatar"
+import UserAvatar from "@/components/user-avatar"
 import { ActionTooltip } from "@/components//action-tooltip"
 import { ShieldCheck, ShieldAlert, Users, Pencil, Trash } from "lucide-react"
 import Image from "next/image"
@@ -108,7 +108,7 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
     <div className="relative group flex items-center dark:hover:bg-background/70 hover:bg-lavender-200 p-4 transition w-full">
       <div className="group flex gap-x-2 items-start w-full">
         <div className="cursor-pointer hover:drop-shadow-md transition" onClick={onMemberClick}>
-          <UserAvatar src={member.profile.imageUrl} />
+          <UserAvatar src={member.profile.email} />
         </div>
         <div className="flex flex-col w-full">
           <div className="flex items-center gap-x-2">

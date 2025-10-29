@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { User } from "@supabase/supabase-js"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import UserAvatar from "@/components/user-avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,13 +75,8 @@ export function UserButton() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-[48px] w-[48px] rounded-full">
-          <Avatar className="h-[48px] w-[48px]">
-            <AvatarImage src={user.user_metadata?.avatar_url} alt={user.email} />
-            <AvatarFallback className="bg-lavender-700">
-              {user.email?.charAt(0).toUpperCase() || <UserIcon className="h-6 w-6" />}
-            </AvatarFallback>
-          </Avatar>
+        <Button variant="ghost" className="relative rounded-full size-11">
+          <UserAvatar src={user.email} size={100} className="size-8" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
