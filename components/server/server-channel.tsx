@@ -14,7 +14,7 @@ interface ServerChannelProps {
 }
 
 const iconMap = {
-  [ChannelType.TEXT]: <Hash className="w-4 h-4 mr-2 text-icon-foreground" />,
+  [ChannelType.TEXT]: <Hash className="flex-shrink-0 w-4 h-4 mr-2 text-icon-foreground" />,
   [ChannelType.AUDIO]: <Mic className="w-4 h-4 mr-2 text-icon-foreground" />,
   [ChannelType.VIDEO]: <Video className="w-4 h-4 mr-2 text-icon-foreground" />,
 }
@@ -42,7 +42,7 @@ export const ServerChannel = ({ channel, server, role }: ServerChannelProps) => 
       )}
     >
       {iconMap[channel.type]}
-      <p className={cn("font-semibold text-sm text-muted-foreground group-hover:text-foreground transition",
+      <p className={cn("font-semibold text-sm text-muted-foreground group-hover:text-foreground transition whitespace-nowrap text-ellipsis max-w-full overflow-hidden",
         params?.channelId === channel.id && "text-foreground",
       )}>
         {channel.name}
