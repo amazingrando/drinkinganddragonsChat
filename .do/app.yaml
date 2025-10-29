@@ -1,0 +1,129 @@
+# DigitalOcean App Platform Configuration
+# Note: Update the github.repo field with your actual repository path
+# Example: username/chat or organization/chat
+
+name: chat
+region: nyc # Change to your preferred region (nyc, sfo, ams, sgp, blr, fra)
+
+services:
+  - name: web
+    # GitHub repository configuration
+    github:
+      repo: amazingrando/drinkinganddragonsChat
+      branch: main
+      deploy_on_push: true
+
+    # Build configuration
+    build_command: npm ci && npx prisma generate && npm run build
+    run_command: npm start
+    environment_slug: node-js
+
+    # Instance configuration
+    instance_count: 1
+    instance_size_slug: professional-xs # Options: basic-xxs, basic-xs, basic-s, professional-xs, professional-s, etc.
+
+    # Port and health check
+    http_port: 3000
+    health_check:
+      http_path: /
+      initial_delay_seconds: 10
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+    # Environment variables
+    # Note: These should be set in DigitalOcean App Platform dashboard
+    # SECRET type variables must be added via the dashboard, not directly in this file
+    envs:
+      - key: NODE_ENV
+        value: production
+        scope: RUN_AND_BUILD_TIME
+
+      # Database (Prisma)
+      - key: DATABASE_URL
+        scope: RUN_AND_BUILD_TIME # Needed for Prisma during build
+        type: SECRET
+
+      - key: DIRECT_URL
+        scope: RUN_AND_BUILD_TIME # Prisma direct connection URL
+        type: SECRET
+
+      # Supabase
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        scope: RUN_AND_BUILD_TIME # Public URLs needed at build time
+        type: SECRET
+
+      - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        scope: RUN_TIME # Only needed at runtime, not build time
+        type: SECRET
+
+      # Clerk Authentication
+      - key: CLERK_SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET
+
+      - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+
+      - key: NEXT_PUBLIC_CLERK_SIGN_IN_URL
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+
+      - key: NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+
+      # LiveKit (Video/Audio)
+      - key: LIVEKIT_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+
+      - key: LIVEKIT_API_SECRET
+        scope: RUN_TIME
+        type: SECRET
+
+      - key: NEXT_PUBLIC_LIVEKIT_URL
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+
+      # Site Configuration
+      - key: NEXT_PUBLIC_SITE_URL
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+
+    # Routes
+    routes:
+      - path: /
+
+    # CORS configuration (if needed for API routes)
+    # cors:
+    #   allow_origins:
+    #     exact: https://yourdomain.com
+
+    # Database migrations (if using DigitalOcean managed database)
+    # Uncomment and configure if you want automatic migrations
+    # database_migration:
+    #   command: npx prisma migrate deploy
+    #   run_on_deploy: true
+# Optional: Add a PostgreSQL database
+# databases:
+#   - name: chat-db
+#     engine: PG
+#     production: false
+#     version: "15"
+
+# Optional: Worker services (for background jobs)
+# workers:
+#   - name: worker
+#     github:
+#       repo: your-username/chat
+#       branch: main
+#     run_command: npm run worker
+#     instance_count: 1
+#     instance_size_slug: basic-xxs
