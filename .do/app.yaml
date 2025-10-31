@@ -97,6 +97,10 @@ services:
         scope: RUN_AND_BUILD_TIME
         type: SECRET
 
+      - key: INVITE_CODES
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+
     # Routes
     routes:
       - path: /

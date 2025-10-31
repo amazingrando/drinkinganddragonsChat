@@ -34,3 +34,22 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Environment
+
+Set the following environment variables:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY`
+- `DATABASE_URL`
+- `DIRECT_URL`
+
+### Invite codes for sign-up
+
+To require an invite code during sign-up, define a comma-separated list:
+
+```
+INVITE_CODES=alpha2025,beta2025
+```
+
+The sign-up form validates codes via `@/app/api/invite/validate/route.ts` before creating the account. Do not expose codes with `NEXT_PUBLIC_`.

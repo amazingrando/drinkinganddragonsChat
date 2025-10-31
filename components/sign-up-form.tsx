@@ -20,6 +20,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
+  const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -36,7 +37,25 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
       return
     }
 
+    if (!inviteCode.trim()) {
+      setError('Invite code is required')
+      setIsLoading(false)
+      return
+    }
+
     try {
+      const res = await fetch('/api/invite/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: inviteCode.trim() }),
+      })
+
+      if (!res.ok) {
+        setError('Invalid invite code')
+        setIsLoading(false)
+        return
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -96,6 +115,18 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                   required
                   value={repeatPassword}
                   onChange={(e) => setRepeatPassword(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <div className="flex items-center">
+                  <Label htmlFor="invite-code">Invite Code</Label>
+                </div>
+                <Input
+                  id="invite-code"
+                  type="text"
+                  required
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
