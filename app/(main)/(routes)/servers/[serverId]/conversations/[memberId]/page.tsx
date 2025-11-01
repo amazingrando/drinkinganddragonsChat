@@ -48,7 +48,7 @@ const MemberIdPage = async ({ params, searchParams }: MemberIdPageProps) => {
 
 
   return (
-    <div className="bg-white dark:bg-[#313338] flex flex-col h-full">
+    <div className="bg-lavender-100 dark:bg-lavender-900 text-foreground flex flex-col h-full">
       <ChatHeader imageUrl={otherMember.profile.imageUrl} name={otherMember.profile.name} type="conversation" serverId={(await params).serverId} />
       {(await searchParams).video && (
         <MediaRoom chatId={conversation.id} video={true} audio={true} />
