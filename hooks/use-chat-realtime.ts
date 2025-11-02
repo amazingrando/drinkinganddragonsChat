@@ -52,6 +52,15 @@ export const useChatRealtime = ({
           }
         }
 
+        // Check if message already exists in any page to prevent duplicates
+        const messageExists = oldData.pages.some(page => 
+          page.items.some(item => item.id === message.id)
+        );
+
+        if (messageExists) {
+          return oldData;
+        }
+
         const newData = [...oldData.pages];
 
         newData[0] = {

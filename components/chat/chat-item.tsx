@@ -17,6 +17,8 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useModal } from "@/hooks/use-modal-store"
 import { useRouter, useParams } from "next/navigation"
+import { PollDisplay } from "@/components/poll/poll-display"
+import { PollWithOptionsAndVotes } from "@/types"
 
 interface ChatItemProps {
   id: string,
@@ -29,6 +31,7 @@ interface ChatItemProps {
   isUpdated: boolean,
   socketUrl: string,
   socketQuery: Record<string, string>,
+  poll?: PollWithOptionsAndVotes | null,
 }
 
 const roleIconMap = {
@@ -41,7 +44,7 @@ const formSchema = z.object({
   content: z.string().min(1),
 })
 
-export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, currentMember, isUpdated, socketUrl, socketQuery }: ChatItemProps) => {
+export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, currentMember, isUpdated, socketUrl, socketQuery, poll }: ChatItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const { onOpen } = useModal();
   const router = useRouter();
@@ -131,7 +134,13 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
             </a>
           )}
 
-          {!fileUrl && !isEditing && (
+          {poll && (
+            <div className="mt-2">
+              <PollDisplay poll={poll} currentMemberId={currentMember.id} channelId={socketQuery.channelId || ""} />
+            </div>
+          )}
+
+          {!fileUrl && !poll && !isEditing && (
             <p className={cn(
               "text-sm text-foreground font-medium",
               deleted && "line-through cursor-not-allowed"

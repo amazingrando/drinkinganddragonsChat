@@ -71,6 +71,10 @@ model Member {
 
   DirectMessage DirectMessage[]
 
+  polls       Poll[]
+  pollOptions PollOption[]
+  pollVotes   PollVote[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -147,6 +151,8 @@ model Message {
 
   deleted Boolean @default(false)
 
+  poll Poll?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -191,4 +197,67 @@ model DirectMessage {
 
   @@index([memberId])
   @@index([conversationId])
+}
+
+model Poll {
+  id                   String    @id @default(uuid())
+  title                String
+  allowMultipleChoices Boolean   @default(false)
+  allowAddOptions      Boolean   @default(false)
+  endsAt               DateTime?
+  closedAt             DateTime?
+
+  creatorId String
+  creator   Member @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  messageId String  @unique
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  options PollOption[]
+  votes   PollVote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([creatorId])
+  @@index([messageId])
+}
+
+model PollOption {
+  id   String @id @default(uuid())
+  text String
+
+  pollId String
+  poll   Poll   @relation(fields: [pollId], references: [id], onDelete: Cascade)
+
+  createdBy       String?
+  createdByMember Member? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  votes PollVote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pollId])
+  @@index([createdBy])
+}
+
+model PollVote {
+  id String @id @default(uuid())
+
+  pollId String
+  poll   Poll   @relation(fields: [pollId], references: [id], onDelete: Cascade)
+
+  optionId String
+  option   PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([pollId, optionId, memberId])
+  @@index([pollId])
+  @@index([optionId])
+  @@index([memberId])
 }

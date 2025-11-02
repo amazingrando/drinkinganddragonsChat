@@ -14,7 +14,7 @@ import {
   FormItem,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Plus } from "lucide-react"
+import { Plus, BarChart3 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useModal } from "@/hooks/use-modal-store"
 import { EmojiPicker } from "@/components/emoji-picker"
@@ -71,9 +71,19 @@ export const ChatInput = ({ apiUrl, query, name, type }: ChatInputProps) => {
                   <Plus className="w-4 h-4 text-white " />
                 </button>
 
+                {type === "channel" && (
+                  <button
+                    type="button"
+                    onClick={() => { onOpen("createPoll", { apiUrl, query }); }}
+                    className="absolute top-7 left-[3.5rem] h-[24px] w-[24px] bg-icon-background hover:bg-mana-600 transition rounded-full p-1 flex items-center justify-center" >
+                    <BarChart3 className="w-4 h-4 text-white " />
+                  </button>
+                )}
+
                 <Input disabled={isLoading} className={cn(
                   "px-14 py-6 bg-muted/50 font-medium",
-                  "text-foreground placeholder:text-muted-foreground/70"
+                  "text-foreground placeholder:text-muted-foreground/70",
+                  type === "channel" && "pl-20"
                 )}
                   placeholder={`Message ${type === "conversation" ? name : "#" + name}`} {...field} />
 

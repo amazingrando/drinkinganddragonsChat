@@ -10,6 +10,7 @@ import { format } from "date-fns"
 import { useChatRealtime } from "@/hooks/use-chat-realtime"
 import { Button } from "../ui/button"
 import { useChatScroll } from "@/hooks/use-chat-scroll"
+import { MessageWithPoll } from "@/types"
 
 const DATE_FORMAT = "d MMM yyyy, HH:mm"
 
@@ -96,25 +97,40 @@ const ChatMessages = ({ name, member, chatId, apiUrl, socketUrl, socketQuery, pa
         </div>
       )}
       <div className="flex flex-col-reverse mt-auto">
-        {data?.pages?.map((group, i) => (
-          <React.Fragment key={i}>
-            {group.items.map((message: MessageWithMemberWithProfile) => (
-              <ChatItem
-                key={message.id}
-                id={message.id}
-                currentMember={member}
-                member={message.member}
-                content={message.content}
-                fileUrl={message.fileUrl}
-                deleted={message.deleted}
-                timestamp={format(new Date(message.createdAt || Date.now()), DATE_FORMAT)}
-                isUpdated={message.updatedAt !== message.createdAt}
-                socketUrl={socketUrl}
-                socketQuery={socketQuery}
-              />
-            ))}
-          </React.Fragment>
-        ))}
+        {(() => {
+          // Flatten and deduplicate messages from all pages, preserving order
+          const seenIds = new Set<string>();
+          const allMessages: (MessageWithPoll | MessageWithMemberWithProfile)[] = [];
+
+          // Iterate through pages in reverse to maintain correct order when flattened
+          // (since flex-col-reverse will reverse the visual order)
+          data?.pages?.forEach((group) => {
+            // Iterate items in the order they appear in the page
+            group.items.forEach((message: MessageWithPoll | MessageWithMemberWithProfile) => {
+              if (!seenIds.has(message.id)) {
+                seenIds.add(message.id);
+                allMessages.push(message);
+              }
+            });
+          });
+
+          return allMessages.map((message: MessageWithPoll | MessageWithMemberWithProfile) => (
+            <ChatItem
+              key={message.id}
+              id={message.id}
+              currentMember={member}
+              member={message.member}
+              content={message.content}
+              fileUrl={message.fileUrl}
+              deleted={message.deleted}
+              timestamp={format(new Date(message.createdAt || Date.now()), DATE_FORMAT)}
+              isUpdated={message.updatedAt !== message.createdAt}
+              socketUrl={socketUrl}
+              socketQuery={socketQuery}
+              poll={"poll" in message ? message.poll : undefined}
+            />
+          ));
+        })()}
       </div>
       <div ref={bottomRef} />
     </div>

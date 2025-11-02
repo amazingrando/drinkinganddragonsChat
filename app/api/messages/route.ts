@@ -38,7 +38,29 @@ export async function GET(request: NextRequest) {
             include: {
               profile: true,
             },
-          }
+          },
+          poll: {
+            include: {
+              options: {
+                include: {
+                  votes: {
+                    include: {
+                      member: {
+                        include: {
+                          profile: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              creator: {
+                include: {
+                  profile: true,
+                },
+              },
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc',
@@ -55,7 +77,29 @@ export async function GET(request: NextRequest) {
             include: {
               profile: true,
             },
-          }
+          },
+          poll: {
+            include: {
+              options: {
+                include: {
+                  votes: {
+                    include: {
+                      member: {
+                        include: {
+                          profile: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              creator: {
+                include: {
+                  profile: true,
+                },
+              },
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc',
