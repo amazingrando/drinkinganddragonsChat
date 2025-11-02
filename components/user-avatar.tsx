@@ -8,17 +8,14 @@ interface UserAvatarProps {
 
 const UserAvatar = ({ src, size, className }: UserAvatarProps) => {
   return (
-    <>
-      <Avatar
-        className={className}
-        size={size}
-        name={src}
-        variant="beam"
-        colors={["#9184f0ff", "#fb870aff", "#708bf9ff", "#d8116bff"]}
-        aria-label={`User avatar for ${src}`}
-      />
-      {console.log("src", src)}
-    </>
+    <Avatar
+      className={className}
+      size={size}
+      name={src}
+      variant="beam"
+      colors={["#9184f0ff", "#fb870aff", "#708bf9ff", "#d8116bff"]}
+      aria-label={`User avatar for ${src}`}
+    />
   )
 }
 

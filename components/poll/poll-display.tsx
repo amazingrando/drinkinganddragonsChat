@@ -2,14 +2,18 @@
 
 import { useEffect, useState } from "react"
 import { PollWithOptionsAndVotes } from "@/types"
-import { CheckSquare, Square, Clock, Lock } from "lucide-react"
+import { CheckSquare, Square, Clock, Lock, Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 import UserAvatar from "@/components/user-avatar"
 import { UseRealtime } from "@/components/providers/realtime-provider"
+import { useModal } from "@/hooks/use-modal-store"
+import { ActionTooltip } from "@/components/action-tooltip"
+import { MemberRole } from "@prisma/client"
 
 interface PollDisplayProps {
   poll: PollWithOptionsAndVotes
   currentMemberId: string
+  currentMemberRole?: MemberRole
   channelId: string
 }
 
@@ -23,11 +27,17 @@ type RealtimeBroadcastPayload<T> = {
   payload: T;
 };
 
-export const PollDisplay = ({ poll, currentMemberId, channelId }: PollDisplayProps) => {
+export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelId }: PollDisplayProps) => {
   const [localPoll, setLocalPoll] = useState<PollWithOptionsAndVotes>(poll)
   const [isClosed, setIsClosed] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState<string>("")
   const { subscribe, unsubscribe } = UseRealtime()
+  const { onOpen } = useModal()
+
+  // Check if current user can edit (owner or admin)
+  const isOwner = localPoll.creatorId === currentMemberId
+  const isAdmin = currentMemberRole === MemberRole.ADMIN
+  const canEdit = (isOwner || isAdmin) && !isClosed
 
   // Subscribe to poll vote updates
   useEffect(() => {
@@ -44,6 +54,25 @@ export const PollDisplay = ({ poll, currentMemberId, channelId }: PollDisplayPro
     return () => {
       if (voteChannel) {
         unsubscribe(voteChannel)
+      }
+    }
+  }, [poll.id, subscribe, unsubscribe])
+
+  // Subscribe to poll updates (for edits)
+  useEffect(() => {
+    if (!subscribe || !unsubscribe) {
+      return
+    }
+
+    const updateChannelKey = `poll:${poll.id}:update`
+    const updateChannel = subscribe(updateChannelKey, updateChannelKey, (payload: RealtimeBroadcastPayload<unknown>) => {
+      const updatedPoll = payload.payload as PollWithOptionsAndVotes
+      setLocalPoll(updatedPoll)
+    })
+
+    return () => {
+      if (updateChannel) {
+        unsubscribe(updateChannel)
       }
     }
   }, [poll.id, subscribe, unsubscribe])
@@ -115,6 +144,15 @@ export const PollDisplay = ({ poll, currentMemberId, channelId }: PollDisplayPro
     }
   }
 
+  const handleEdit = () => {
+    onOpen("editPoll", {
+      poll: localPoll,
+      query: {
+        channelId,
+      },
+    })
+  }
+
   return (
     <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -123,7 +161,19 @@ export const PollDisplay = ({ poll, currentMemberId, channelId }: PollDisplayPro
           {isClosed && <Lock className="h-4 w-4 text-muted-foreground" />}
           {!isClosed && localPoll.endsAt && <Clock className="h-4 w-4 text-muted-foreground" />}
         </div>
-        {!isClosed && localPoll.endsAt && <span className="text-xs text-muted-foreground">{timeRemaining}</span>}
+        <div className="flex items-center gap-2">
+          {!isClosed && localPoll.endsAt && <span className="text-xs text-muted-foreground">{timeRemaining}</span>}
+          {canEdit && (
+            <ActionTooltip label="Edit Poll">
+              <button
+                onClick={handleEdit}
+                className="p-1 rounded-md hover:bg-muted transition-colors"
+              >
+                <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+              </button>
+            </ActionTooltip>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">

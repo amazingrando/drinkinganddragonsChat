@@ -12,6 +12,7 @@ import EditChannelModal from '@/components/modals/edit-channel-modal'
 import MessageFileModal from '@/components/modals/message-file-modal'
 import DeleteMessageModal from '@/components/modals/delete-message-modal'
 import CreatePollModal from '@/components/modals/create-poll-modal'
+import EditPollModal from '@/components/modals/edit-poll-modal'
 
 import { useEffect, useState } from 'react'
 
@@ -40,6 +41,7 @@ export const ModalProvider = () => {
       <MessageFileModal />
       <DeleteMessageModal />
       <CreatePollModal />
+      <EditPollModal />
     </>
   )
 }

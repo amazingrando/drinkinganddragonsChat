@@ -136,7 +136,12 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
 
           {poll && (
             <div className="mt-2">
-              <PollDisplay poll={poll} currentMemberId={currentMember.id} channelId={socketQuery.channelId || ""} />
+              <PollDisplay
+                poll={poll}
+                currentMemberId={currentMember.id}
+                currentMemberRole={currentMember.role}
+                channelId={socketQuery.channelId || ""}
+              />
             </div>
           )}
 
