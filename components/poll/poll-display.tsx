@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { PollWithOptionsAndVotes } from "@/types"
-import { CheckSquare, Square, Clock, Lock, Pencil } from "lucide-react"
+import { CheckSquare, Square, Clock, Lock, Pencil, Circle, CircleCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
 import UserAvatar from "@/components/user-avatar"
 import { UseRealtime } from "@/components/providers/realtime-provider"
@@ -118,10 +118,14 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
   // Calculate total votes
   const totalVotes = localPoll.options.reduce((sum, option) => sum + option.votes.length, 0)
 
-  // Get votes for current member
-  const memberVotes = localPoll.options
-    .filter(option => option.votes.some(vote => vote.memberId === currentMemberId))
-    .map(option => option.id)
+  // Get votes for current member - recalculate when localPoll or currentMemberId changes
+  const memberVotes = useMemo(() => {
+    return localPoll.options
+      .filter(option => option.votes.some(vote =>
+        vote.memberId === currentMemberId || vote.member?.id === currentMemberId
+      ))
+      .map(option => option.id)
+  }, [localPoll, currentMemberId])
 
   const handleVote = async (optionId: string) => {
     if (isClosed) return
@@ -154,7 +158,7 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
   }
 
   return (
-    <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-4">
+    <div className="bg-muted/50 border border-border rounded p-4 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-base">{localPoll.title}</h3>
@@ -180,7 +184,10 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
         {localPoll.options.map((option) => {
           const voteCount = option.votes.length
           const percentage = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0
-          const isVoted = memberVotes.includes(option.id)
+          // Check if current member has voted for this option - check both memberId and nested member.id
+          const isVoted = option.votes.some(vote =>
+            vote.memberId === currentMemberId || vote.member?.id === currentMemberId
+          )
           const voters = option.votes.map(vote => vote.member)
 
           return (
@@ -189,22 +196,49 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
                 onClick={() => handleVote(option.id)}
                 disabled={isClosed}
                 className={cn(
-                  "w-full text-left p-3 rounded-md border transition-colors",
-                  "hover:bg-accent",
-                  isVoted && "bg-primary/10 border-primary",
+                  "w-full text-left p-3 rounded border transition-colors group/option-item",
+                  "hover:border-white/40",
+                  isVoted && " border-white/60",
                   isClosed && "opacity-50 cursor-not-allowed"
                 )}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  {localPoll.allowMultipleChoices ? (
-                    <CheckSquare className={cn("h-4 w-4", isVoted && "text-primary")} />
+                  {isVoted ? (
+                    localPoll.allowMultipleChoices ? (
+                      <CheckSquare className="h-4 w-4 text-white transition-colors group-hover/option-item:text-white" />
+                    ) : (
+                      <CircleCheck className="h-4 w-4 text-white transition-colors group-hover/option-item:text-white" />
+                    )
                   ) : (
-                    <Square className={cn("h-4 w-4", isVoted && "text-primary")} />
+                    localPoll.allowMultipleChoices ? (
+                      <Square className="h-4 w-4 text-muted-foreground transition-colors group-hover/option-item:text-white/80" />
+                    ) : (
+                      <Circle className="h-4 w-4 text-muted-foreground transition-colors group-hover/option-item:text-white/80" />
+                    )
                   )}
-                  <span className="font-medium">{option.text}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {voteCount} {voteCount === 1 ? "vote" : "votes"}
-                  </span>
+
+                  <span className={cn("font-medium", isVoted ? "text-white" : "text-muted-foreground transition-colors group-hover/option-item:text-white")}>{option.text}</span>
+
+                  <div className="flex items-center justify-center gap-2 ml-auto">
+                    {/* Show voters */}
+                    {voters.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        {voters.slice(0, 5).map((voter, idx) => (
+                          <div key={idx} className="w-5 h-5 rounded-full overflow-hidden">
+                            <UserAvatar src={voter.profile.email} />
+                          </div>
+                        ))}
+                        {voters.length > 5 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{voters.length - 5} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {voteCount} {voteCount === 1 ? "vote" : "votes"}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Progress bar */}
@@ -212,27 +246,10 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
                   <div className="w-full h-2 bg-background rounded-full overflow-hidden">
                     <div
                       className={cn(
-                        "h-full transition-all",
-                        isVoted ? "bg-primary" : "bg-muted-foreground/50"
+                        "h-full transition-all bg-muted-foreground/50",
                       )}
                       style={{ width: `${percentage}%` }}
                     />
-                  </div>
-                )}
-
-                {/* Show voters */}
-                {voters.length > 0 && (
-                  <div className="flex items-center gap-1 mt-2">
-                    {voters.slice(0, 5).map((voter, idx) => (
-                      <div key={idx} className="w-5 h-5 rounded-full overflow-hidden">
-                        <UserAvatar src={voter.profile.email} />
-                      </div>
-                    ))}
-                    {voters.length > 5 && (
-                      <span className="text-xs text-muted-foreground">
-                        +{voters.length - 5} more
-                      </span>
-                    )}
                   </div>
                 )}
               </button>

@@ -24,6 +24,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             profile: true,
           },
         },
+        message: {
+          include: {
+            channel: {
+              include: {
+                server: {
+                  include: {
+                    members: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     })
 
@@ -37,15 +50,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ message: "Poll is closed" }, { status: 400 })
     }
 
-    // Find the member through server membership
-    const server = await db.server.findFirst({
-      where: {
-        members: { some: { profileID: profile.id } },
-      },
-      include: { members: true },
-    })
+    // Find the member from the server that contains the channel containing this poll's message
+    const server = poll.message?.channel?.server
+    if (!server) {
+      return NextResponse.json({ message: "Server not found" }, { status: 404 })
+    }
 
-    const member = server?.members.find(m => m.profileID === profile.id)
+    const member = server.members.find(m => m.profileID === profile.id)
     if (!member) {
       return NextResponse.json({ message: "Member not found" }, { status: 404 })
     }
