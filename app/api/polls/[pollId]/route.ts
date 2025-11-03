@@ -163,13 +163,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           },
         })
 
-        // Create maps for easier lookup (case-sensitive matching for exact preservation)
-        const existingOptionsMap = new Map<string, typeof existingOptions[0]>()
+        // Create maps for easier lookup
+        const existingOptionsMapByText = new Map<string, typeof existingOptions[0]>()
+        const existingOptionsArray = existingOptions // Keep array for position-based matching
         existingOptions.forEach(opt => {
-          const normalizedText = opt.text.trim()
-          // Use normalized text as key, but store both normalized and original
-          if (!existingOptionsMap.has(normalizedText)) {
-            existingOptionsMap.set(normalizedText, opt)
+          const normalizedText = opt.text.trim().toLowerCase()
+          // Use normalized lowercase text as key
+          if (!existingOptionsMapByText.has(normalizedText)) {
+            existingOptionsMapByText.set(normalizedText, opt)
           }
         })
 
@@ -177,21 +178,47 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         const processedOptionIds: string[] = []
         const optionsToUpdate: { id: string; text: string; position: number }[] = []
         const optionsToCreate: { text: string; position: number }[] = []
+        const usedExistingIndices = new Set<number>() // Track which existing options we've matched
 
         validOptions.forEach((newText, index) => {
           const normalizedText = newText.trim()
-          const existing = existingOptionsMap.get(normalizedText)
+          const normalizedTextLower = normalizedText.toLowerCase()
           
-          if (existing) {
-            // Option exists with same text - keep it (preserves votes)
-            processedOptionIds.push(existing.id)
-            // Update text in case of whitespace differences (but same normalized text)
-            if (existing.text.trim() !== normalizedText) {
-              optionsToUpdate.push({ id: existing.id, text: normalizedText, position: index })
+          // First, try to match by exact text (case-insensitive)
+          const existingByText = existingOptionsMapByText.get(normalizedTextLower)
+          
+          if (existingByText && !processedOptionIds.includes(existingByText.id)) {
+            // Found by text match - preserve it (preserves votes)
+            processedOptionIds.push(existingByText.id)
+            const existingIndex = existingOptionsArray.findIndex(opt => opt.id === existingByText.id)
+            if (existingIndex !== -1) {
+              usedExistingIndices.add(existingIndex)
+            }
+            // Update text if there are any differences (case, whitespace)
+            if (existingByText.text.trim() !== normalizedText) {
+              optionsToUpdate.push({ id: existingByText.id, text: normalizedText, position: index })
             }
           } else {
-            // New option - needs to be created
-            optionsToCreate.push({ text: normalizedText, position: index })
+            // No text match - try to match by position if option count is the same
+            // This handles cases where user edits option text but keeps it in the same position
+            if (existingOptionsArray.length === validOptions.length && 
+                index < existingOptionsArray.length) {
+              const existingByPosition = existingOptionsArray[index]
+              // Only use position match if this option hasn't been matched yet
+              if (!processedOptionIds.includes(existingByPosition.id) && 
+                  !usedExistingIndices.has(index)) {
+                // Match by position - update text but keep ID (preserves votes)
+                processedOptionIds.push(existingByPosition.id)
+                usedExistingIndices.add(index)
+                optionsToUpdate.push({ id: existingByPosition.id, text: normalizedText, position: index })
+              } else {
+                // Position already matched, create new option
+                optionsToCreate.push({ text: normalizedText, position: index })
+              }
+            } else {
+              // Option count changed or no position match - create new option
+              optionsToCreate.push({ text: normalizedText, position: index })
+            }
           }
         })
 
@@ -270,6 +297,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
                   },
                 },
               },
+              orderBy: {
+                createdAt: 'asc',
+              },
             },
             creator: {
               include: {
@@ -295,6 +325,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
                     },
                   },
                 },
+              },
+              orderBy: {
+                createdAt: 'asc',
               },
             },
             creator: {
@@ -369,11 +402,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
                       },
                     },
                   },
+                  orderBy: {
+                    createdAt: 'asc',
+                  },
                 },
-              },
-              creator: {
-                include: {
-                  profile: true,
+                creator: {
+                  include: {
+                    profile: true,
+                  },
                 },
               },
             },

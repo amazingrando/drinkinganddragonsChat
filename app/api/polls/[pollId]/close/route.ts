@@ -76,6 +76,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
               },
             },
           },
+          orderBy: {
+            createdAt: 'asc',
+          },
         },
         creator: {
           include: {
@@ -113,6 +116,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
                         },
                       },
                     },
+                  },
+                  orderBy: {
+                    createdAt: 'asc',
                   },
                 },
                 creator: {

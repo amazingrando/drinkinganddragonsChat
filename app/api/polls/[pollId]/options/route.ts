@@ -83,6 +83,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
               },
             },
           },
+          orderBy: {
+            createdAt: 'asc',
+          },
         },
         creator: {
           include: {
@@ -120,6 +123,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                         },
                       },
                     },
+                  },
+                  orderBy: {
+                    createdAt: 'asc',
                   },
                 },
                 creator: {

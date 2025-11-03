@@ -124,6 +124,9 @@ export async function POST(request: NextRequest) {
               },
             },
           },
+          orderBy: {
+            createdAt: 'asc',
+          },
         },
         creator: {
           include: {
@@ -150,6 +153,9 @@ export async function POST(request: NextRequest) {
                     },
                   },
                 },
+              },
+              orderBy: {
+                createdAt: 'asc',
               },
             },
             creator: {
@@ -218,6 +224,9 @@ export async function GET(request: NextRequest) {
                 },
               },
             },
+          },
+          orderBy: {
+            createdAt: 'asc',
           },
         },
         creator: {

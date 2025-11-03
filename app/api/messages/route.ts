@@ -53,6 +53,9 @@ export async function GET(request: NextRequest) {
                     },
                   },
                 },
+                orderBy: {
+                  createdAt: 'asc',
+                },
               },
               creator: {
                 include: {
@@ -91,6 +94,9 @@ export async function GET(request: NextRequest) {
                       },
                     },
                   },
+                },
+                orderBy: {
+                  createdAt: 'asc',
                 },
               },
               creator: {
