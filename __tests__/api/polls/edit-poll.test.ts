@@ -276,4 +276,76 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     expect(result.status).toBe(404)
     expect(result.data.message).toBe('Poll not found')
   })
+
+  it('preserves option order after editing one or more poll options', async () => {
+    // Arrange
+    const mockProfile = createMockProfile()
+    const mockServer = createMockServerWithMembers()
+    
+    // Original poll with options in order: Option A, Option B, Option C
+    const originalOptions = [
+      { id: 'option-id-1', text: 'Option A', pollId: 'poll-id-1', createdBy: 'member-id-1', createdAt: new Date('2024-01-01T00:00:00Z'), updatedAt: new Date(), votes: [] },
+      { id: 'option-id-2', text: 'Option B', pollId: 'poll-id-1', createdBy: 'member-id-1', createdAt: new Date('2024-01-01T00:01:00Z'), updatedAt: new Date(), votes: [] },
+      { id: 'option-id-3', text: 'Option C', pollId: 'poll-id-1', createdBy: 'member-id-1', createdAt: new Date('2024-01-01T00:02:00Z'), updatedAt: new Date(), votes: [] },
+    ]
+    
+    const mockPoll = {
+      ...createMockPollWithOptions({ creatorId: 'member-id-1' }),
+      options: originalOptions,
+    }
+    
+    // Updated options: Option C (moved to first), Option B Updated (text changed), New Option D (added)
+    // Expected order: Option C, Option B Updated, New Option D
+    const updatedOptions = [
+      { id: 'option-id-3', text: 'Option C', pollId: 'poll-id-1', createdBy: 'member-id-1', createdAt: new Date('2024-01-01T00:02:00Z'), updatedAt: new Date(), votes: [] },
+      { id: 'option-id-2', text: 'Option B Updated', pollId: 'poll-id-1', createdBy: 'member-id-1', createdAt: new Date('2024-01-01T00:01:00Z'), updatedAt: new Date(), votes: [] },
+      { id: 'option-id-4', text: 'New Option D', pollId: 'poll-id-1', createdBy: 'member-id-1', createdAt: new Date('2024-01-01T00:03:00Z'), updatedAt: new Date(), votes: [] },
+    ]
+    
+    const updatedPoll = {
+      ...createMockPollWithOptions({ creatorId: 'member-id-1' }),
+      options: updatedOptions,
+    }
+    
+    const mockMessage = createMockMessageWithPoll()
+
+    mockCurrentProfile.mockResolvedValue(mockProfile)
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll as any)
+    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
+    mockDb.pollOption.findMany.mockResolvedValue(originalOptions as any)
+    mockDb.pollOption.deleteMany.mockResolvedValue({ count: 1 } as any) // Option A deleted
+    mockDb.pollOption.update.mockResolvedValue({ ...originalOptions[1], text: 'Option B Updated' } as any)
+    mockDb.pollOption.create.mockResolvedValue(updatedOptions[2] as any)
+    mockDb.poll.update.mockResolvedValue(updatedPoll as any)
+    // Mock the final fetch that returns the poll with reordered options
+    mockDb.poll.findUnique.mockResolvedValueOnce(updatedPoll as any)
+    mockDb.message.findUnique.mockResolvedValue(mockMessage as any)
+
+    // Request body with options in new order: Option C, Option B Updated, New Option D
+    const requestBody = {
+      options: ['Option C', 'Option B Updated', 'New Option D'],
+    }
+
+    const request = createMockNextRequest(requestBody, {
+      channelId: 'channel-id-1',
+    })
+
+    // Act
+    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const result = await parseNextResponse(response)
+
+    // Assert
+    expect(result.status).toBe(200)
+    expect(result.data.options).toBeDefined()
+    expect(result.data.options.length).toBe(3)
+    
+    // Verify options are in the same order as requested
+    expect(result.data.options[0].text).toBe('Option C')
+    expect(result.data.options[1].text).toBe('Option B Updated')
+    expect(result.data.options[2].text).toBe('New Option D')
+    
+    // Verify the order matches the request body order exactly
+    const responseOptionTexts = result.data.options.map((opt: any) => opt.text)
+    expect(responseOptionTexts).toEqual(['Option C', 'Option B Updated', 'New Option D'])
+  })
 })
