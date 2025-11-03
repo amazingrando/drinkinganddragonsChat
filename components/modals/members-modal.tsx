@@ -84,7 +84,7 @@ const MembersModal = () => {
         <ScrollArea className="mt-8 max-h-[480px] px-3">
           {server?.members.map((member) => (
             <div key={member.id} className="flex items-center gap-x-2">
-              <UserAvatar src={member.profile.imageUrl} />
+              <UserAvatar src={member.profile.email} />
               <p className="text-sm text-muted-foreground flex items-center gap-x-2">
                 {member.profile.name}
                 {roleIconMap[member.role]}

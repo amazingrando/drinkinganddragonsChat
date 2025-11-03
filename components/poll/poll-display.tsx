@@ -164,9 +164,9 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
           <h3 className="font-semibold text-base">{localPoll.title}</h3>
           {isClosed && <Lock className="h-4 w-4 text-muted-foreground" />}
           {!isClosed && localPoll.endsAt && <Clock className="h-4 w-4 text-muted-foreground" />}
+          {!isClosed && localPoll.endsAt && <span className="text-xs text-muted-foreground">{timeRemaining}</span>}
         </div>
         <div className="flex items-center gap-2">
-          {!isClosed && localPoll.endsAt && <span className="text-xs text-muted-foreground">{timeRemaining}</span>}
           {canEdit && (
             <ActionTooltip label="Edit Poll">
               <button
@@ -199,7 +199,7 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
                   "w-full text-left p-3 rounded border transition-colors group/option-item",
                   "hover:border-white/40",
                   isVoted && " border-white/60",
-                  isClosed && "opacity-50 cursor-not-allowed"
+                  isClosed && "cursor-not-allowed pointer-events-none"
                 )}
               >
                 <div className="flex items-center gap-2 mb-2">
@@ -224,9 +224,7 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
                     {voters.length > 0 && (
                       <div className="flex items-center gap-1">
                         {voters.slice(0, 5).map((voter, idx) => (
-                          <div key={idx} className="w-5 h-5 rounded-full overflow-hidden">
-                            <UserAvatar src={voter.profile.email} />
-                          </div>
+                          <UserAvatar key={idx} src={voter.profile.email} size={50} className="size-5" />
                         ))}
                         {voters.length > 5 && (
                           <span className="text-xs text-muted-foreground">
