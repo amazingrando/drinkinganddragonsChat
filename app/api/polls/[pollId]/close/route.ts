@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { currentProfile } from "@/lib/current-profile"
 import { db } from "@/lib/db"
 import { broadcastMessage } from "@/lib/supabase/server-broadcast"
+import { MemberRole } from "@prisma/client"
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ pollId: string }> }) {
   try {
@@ -47,9 +48,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ message: "Member not found" }, { status: 404 })
     }
 
-    // Only creator can close the poll
-    if (poll.creatorId !== member.id) {
-      return NextResponse.json({ message: "Only the poll creator can close the poll" }, { status: 403 })
+    // Only creator or admin can close the poll
+    const isCreator = poll.creatorId === member.id
+    const isAdmin = member.role === MemberRole.ADMIN
+    
+    if (!isCreator && !isAdmin) {
+      return NextResponse.json({ message: "Only poll owners and admins can close the poll" }, { status: 403 })
     }
 
     // Close the poll

@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import { Channel, ChannelType, Server } from "@prisma/client"
+import { Channel, ChannelType, Server, MemberRole } from "@prisma/client"
 import { PollWithOptionsAndVotes } from "@/types"
 
 export type ModalType = "createServer" | "invite" | "editServer" | "members" | "createChannel" | "leaveServer" | "deleteServer" | "deleteChannel" | "editChannel" | "messageFile" | "deleteMessage" | "createPoll" | "editPoll"
@@ -11,6 +11,8 @@ interface ModalData {
   apiUrl?: string
   query?: Record<string, unknown>
   poll?: PollWithOptionsAndVotes
+  currentMemberId?: string
+  currentMemberRole?: MemberRole
 }
 
 interface ModalStore {

@@ -34,6 +34,7 @@ import {
 import { useModal } from "@/hooks/use-modal-store"
 import qs from "query-string"
 import { PollWithOptionsAndVotes } from "@/types"
+import { MemberRole } from "@prisma/client"
 
 const formSchema = z.object({
   title: z.string().min(1, {
@@ -46,6 +47,7 @@ const formSchema = z.object({
   allowAddOptions: z.boolean().default(false),
   durationType: z.enum(["none", "hours", "days", "date"]).default("none"),
   durationValue: z.string().optional(),
+  closePoll: z.boolean().default(false),
 })
 
 const EditPollModal = () => {
@@ -53,8 +55,13 @@ const EditPollModal = () => {
   const router = useRouter()
 
   const isModalOpen = isOpen && type === "editPoll"
-  const { poll, query } = data || {}
+  const { poll, query, currentMemberId, currentMemberRole } = data || {}
   const pollData = poll as PollWithOptionsAndVotes | undefined
+
+  // Check if user can close the poll (owner or admin)
+  const isOwner = pollData?.creatorId === currentMemberId
+  const isAdmin = currentMemberRole === MemberRole.ADMIN
+  const canClosePoll = (isOwner || isAdmin) && pollData?.closedAt === null
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -65,6 +72,7 @@ const EditPollModal = () => {
       allowAddOptions: false,
       durationType: "none" as const,
       durationValue: "",
+      closePoll: false,
     },
   })
 
@@ -74,7 +82,7 @@ const EditPollModal = () => {
   useEffect(() => {
     if (pollData) {
       const options = pollData.options.map(opt => opt.text)
-      
+
       // Determine duration type and value
       let durationType: "none" | "hours" | "days" | "date" = "none"
       let durationValue = ""
@@ -83,12 +91,8 @@ const EditPollModal = () => {
         const now = new Date()
         const endsAt = new Date(pollData.endsAt)
         const diffMs = endsAt.getTime() - now.getTime()
-        
+
         if (diffMs > 0) {
-          // Poll hasn't ended yet, calculate duration
-          const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-          const hours = Math.floor(diffMs / (1000 * 60 * 60))
-          
           // For existing polls with end dates, use "date" type
           durationType = "date"
           // Format datetime-local format: YYYY-MM-DDTHH:mm
@@ -103,6 +107,7 @@ const EditPollModal = () => {
       form.setValue("allowAddOptions", pollData.allowAddOptions)
       form.setValue("durationType", durationType)
       form.setValue("durationValue", durationValue)
+      form.setValue("closePoll", false) // Always start with false
     }
   }, [pollData, form])
 
@@ -161,33 +166,60 @@ const EditPollModal = () => {
         durationDays = undefined
       }
 
-      const url = qs.stringifyUrl({
-        url: `/api/polls/${pollData.id}`,
-        query: query as Record<string, string>,
-      })
+      // Check if there are any changes to poll properties
+      // Note: We check if any field differs, or if close poll is requested (which needs poll to be open)
+      const hasTitleChange = values.title !== pollData.title
+      const hasOptionsChange = JSON.stringify(validOptions) !== JSON.stringify(pollData.options.map(opt => opt.text))
+      const hasSettingsChange = values.allowMultipleChoices !== pollData.allowMultipleChoices ||
+        values.allowAddOptions !== pollData.allowAddOptions
+      const hasDurationChange = durationHours !== undefined ||
+        durationDays !== undefined ||
+        endDate !== undefined ||
+        (values.durationType === "none" && pollData.endsAt !== null)
 
-      await axios.patch(url, {
-        title: values.title,
-        options: validOptions,
-        allowMultipleChoices: values.allowMultipleChoices,
-        allowAddOptions: values.allowAddOptions,
-        durationHours,
-        durationDays,
-        endDate,
-      })
+      const hasChanges = hasTitleChange || hasOptionsChange || hasSettingsChange || hasDurationChange
+
+      if (hasChanges) {
+        const url = qs.stringifyUrl({
+          url: `/api/polls/${pollData.id}`,
+          query: query as Record<string, string>,
+        })
+
+        await axios.patch(url, {
+          title: values.title,
+          options: validOptions,
+          allowMultipleChoices: values.allowMultipleChoices,
+          allowAddOptions: values.allowAddOptions,
+          durationHours,
+          durationDays,
+          endDate,
+        })
+      }
+
+      // Then, close the poll if requested
+      if (values.closePoll && canClosePoll) {
+        const closeUrl = qs.stringifyUrl({
+          url: `/api/polls/${pollData.id}/close`,
+          query: query as Record<string, string>,
+        })
+
+        await axios.patch(closeUrl)
+      }
 
       form.reset()
       setOptionErrors([])
       router.refresh()
       onClose()
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Edit poll error:", error)
-      if (error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         console.error("Error response:", error.response.data)
         setOptionErrors([error.response.data?.message || error.response.data?.error || "Failed to update poll"])
-      } else {
+      } else if (error instanceof Error) {
         console.error("Error details:", error)
         setOptionErrors([error.message || "Failed to update poll"])
+      } else {
+        setOptionErrors(["Failed to update poll"])
       }
     }
   }
@@ -341,6 +373,25 @@ const EditPollModal = () => {
                       )}
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )} />
+              )}
+
+              {canClosePoll && (
+                <FormField control={form.control} name="closePoll" render={({ field }) => (
+                  <FormItem className="flex items-center gap-x-2">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-sm font-semibold">Close poll</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        Close this poll after saving changes
+                      </p>
+                    </div>
                   </FormItem>
                 )} />
               )}

@@ -77,6 +77,25 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
     }
   }, [poll.id, subscribe, unsubscribe])
 
+  // Subscribe to poll close events
+  useEffect(() => {
+    if (!subscribe || !unsubscribe) {
+      return
+    }
+
+    const closeChannelKey = `poll:${poll.id}:close`
+    const closeChannel = subscribe(closeChannelKey, closeChannelKey, (payload: RealtimeBroadcastPayload<unknown>) => {
+      const updatedPoll = payload.payload as PollWithOptionsAndVotes
+      setLocalPoll(updatedPoll)
+    })
+
+    return () => {
+      if (closeChannel) {
+        unsubscribe(closeChannel)
+      }
+    }
+  }, [poll.id, subscribe, unsubscribe])
+
   // Update local poll when prop changes
   useEffect(() => {
     setLocalPoll(poll)
@@ -154,6 +173,8 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
       query: {
         channelId,
       },
+      currentMemberId,
+      currentMemberRole,
     })
   }
 
@@ -162,7 +183,11 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-base">{localPoll.title}</h3>
-          {isClosed && <Lock className="h-4 w-4 text-muted-foreground" />}
+          {isClosed &&
+            <ActionTooltip label="Poll Closed">
+              <Lock className="h-4 w-4 text-muted-foreground" />
+            </ActionTooltip>
+          }
           {!isClosed && localPoll.endsAt && <Clock className="h-4 w-4 text-muted-foreground" />}
           {!isClosed && localPoll.endsAt && <span className="text-xs text-muted-foreground">{timeRemaining}</span>}
         </div>
