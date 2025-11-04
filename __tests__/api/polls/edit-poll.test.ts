@@ -8,6 +8,7 @@ import {
   createMockServerWithMembers,
   createMockPollWithOptions,
   createMockPollWithVotes,
+  createMockPollOption,
   createMockMessageWithPoll,
   createMockNextRequest,
   parseNextResponse,
@@ -62,12 +63,14 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     const mockServer = createMockServerWithMembers()
     const existingOptions = createMockPollWithVotes()
     const updatedPoll = createMockPollWithVotes()
+    const newOption = createMockPollOption({ id: 'option-id-3', text: 'New Option 3' })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
     mockDb.poll.findUnique.mockResolvedValueOnce(existingOptions)
     mockDb.server.findFirst.mockResolvedValue(mockServer)
     mockDb.pollOption.findMany.mockResolvedValue(existingOptions.options)
     mockDb.pollOption.deleteMany.mockResolvedValue({ count: 0 })
+    mockDb.pollOption.create.mockResolvedValue(newOption)
     mockDb.poll.update.mockResolvedValue(updatedPoll)
     mockDb.poll.findUnique.mockResolvedValueOnce(updatedPoll)
     mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll())
@@ -132,7 +135,7 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     )
   })
 
-  it('only allows creator or admin to edit', async () => {
+  it('only allows creator, admin, or moderator to edit', async () => {
     // Arrange
     const mockProfile = createMockProfile({ id: 'other-profile-id' })
     const mockServer = createMockServerWithMembers({
@@ -161,7 +164,7 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
 
     // Assert
     expect(result.status).toBe(403)
-    expect(result.data.message).toContain('Only poll owners and admins can edit polls')
+    expect(result.data.message).toContain('Only poll owners, admins, and moderators can edit polls')
   })
 
   it('allows admin to edit polls', async () => {
@@ -195,6 +198,39 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     // Assert
     expect(result.status).toBe(200)
     expect(result.data.title).toBe('Admin Edit')
+  })
+
+  it('allows moderator to edit polls', async () => {
+    // Arrange
+    const mockProfile = createMockProfile()
+    const mockServer = createMockServerWithMembers()
+    const mockMember = { ...mockServer.members[0], role: 'MODERATOR' as const }
+    const mockServerWithModerator = { ...mockServer, members: [mockMember] }
+    const mockPoll = createMockPollWithOptions({ creatorId: 'other-member-id' })
+    const updatedPoll = createMockPollWithOptions({ title: 'Moderator Edit' })
+
+    mockCurrentProfile.mockResolvedValue(mockProfile)
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServerWithModerator)
+    mockDb.poll.update.mockResolvedValue(updatedPoll)
+    mockDb.poll.findUnique.mockResolvedValueOnce(updatedPoll)
+    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll())
+
+    const requestBody = {
+      title: 'Moderator Edit',
+    }
+
+    const request = createMockNextRequest(requestBody, {
+      channelId: 'channel-id-1',
+    })
+
+    // Act
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
+    const result = await parseNextResponse(response)
+
+    // Assert
+    expect(result.status).toBe(200)
+    expect(result.data.title).toBe('Moderator Edit')
   })
 
   it('prevents editing closed polls', async () => {

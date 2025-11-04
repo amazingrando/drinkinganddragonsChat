@@ -34,10 +34,11 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
   const { subscribe, unsubscribe } = UseRealtime()
   const { onOpen } = useModal()
 
-  // Check if current user can edit (owner or admin)
+  // Check if current user can edit (owner, admin, or moderator)
   const isOwner = localPoll.creatorId === currentMemberId
   const isAdmin = currentMemberRole === MemberRole.ADMIN
-  const canEdit = (isOwner || isAdmin) && !isClosed
+  const isModerator = currentMemberRole === MemberRole.MODERATOR
+  const canEdit = (isOwner || isAdmin || isModerator) && !isClosed
 
   // Subscribe to poll vote updates
   useEffect(() => {

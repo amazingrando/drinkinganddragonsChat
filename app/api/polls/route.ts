@@ -235,13 +235,16 @@ export async function POST(request: NextRequest) {
     })
 
     // Sort options in messageWithPoll by optionOrder if available
-    if (messageWithPoll?.poll?.optionOrder && Array.isArray(messageWithPoll.poll.optionOrder)) {
-      const orderMap = new Map(messageWithPoll.poll.optionOrder.map((id: string, index: number) => [id, index]))
-      messageWithPoll.poll.options.sort((a, b) => {
-        const aIndex = orderMap.get(a.id) ?? 999
-        const bIndex = orderMap.get(b.id) ?? 999
-        return aIndex - bIndex
-      })
+    if (messageWithPoll?.poll) {
+      const pollWithOrder = messageWithPoll.poll as PollWithOptionsAndVotes
+      if (pollWithOrder.optionOrder && Array.isArray(pollWithOrder.optionOrder)) {
+        const orderMap = new Map(pollWithOrder.optionOrder.map((id: string, index: number) => [id, index]))
+        pollWithOrder.options.sort((a, b) => {
+          const aIndex = orderMap.get(a.id) ?? 999
+          const bIndex = orderMap.get(b.id) ?? 999
+          return aIndex - bIndex
+        })
+      }
     }
 
     // Broadcast the new message with poll

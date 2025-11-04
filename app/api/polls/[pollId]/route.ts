@@ -72,12 +72,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ message: "Member not found" }, { status: 404 })
     }
 
-    // Check permissions: creator or admin can edit
+    // Check permissions: creator, admin, or moderator can edit
     const isCreator = poll.creatorId === member.id
     const isAdmin = member.role === MemberRole.ADMIN
+    const isModerator = member.role === MemberRole.MODERATOR
 
-    if (!isCreator && !isAdmin) {
-      return NextResponse.json({ message: "Only poll owners and admins can edit polls" }, { status: 403 })
+    if (!isCreator && !isAdmin && !isModerator) {
+      return NextResponse.json({ message: "Only poll owners, admins, and moderators can edit polls" }, { status: 403 })
     }
 
     // Check if poll is closed

@@ -74,10 +74,11 @@ const EditPollModal = () => {
   const { poll, query, currentMemberId, currentMemberRole } = data || {}
   const pollData = poll as PollWithOptionsAndVotes | undefined
 
-  // Check if user can close the poll (owner or admin)
+  // Check if user can close the poll (owner, admin, or moderator)
   const isOwner = pollData?.creatorId === currentMemberId
   const isAdmin = currentMemberRole === MemberRole.ADMIN
-  const canClosePoll = (isOwner || isAdmin) && pollData?.closedAt === null
+  const isModerator = currentMemberRole === MemberRole.MODERATOR
+  const canClosePoll = (isOwner || isAdmin || isModerator) && pollData?.closedAt === null
 
   const form = useForm({
     resolver: zodResolver(formSchema),

@@ -28,6 +28,7 @@ describe('POST /api/polls - Create Poll', () => {
     const mockServer = createMockServerWithMembers()
     const mockChannel = createMockChannel()
     const mockPoll = createMockPollWithOptions()
+    const mockPollWithOrder = { ...mockPoll, optionOrder: ['option-id-1', 'option-id-2'] }
     const mockMessage = createMockMessageWithPoll({ poll: mockPoll })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
@@ -36,6 +37,7 @@ describe('POST /api/polls - Create Poll', () => {
     mockDb.channel.findFirst.mockResolvedValue(mockChannel)
     mockDb.message.create.mockResolvedValue(mockMessage)
     mockDb.poll.create.mockResolvedValue(mockPoll)
+    mockDb.poll.update.mockResolvedValue(mockPollWithOrder)
     mockDb.message.findUnique.mockResolvedValue(mockMessage)
 
     const requestBody = {
@@ -144,6 +146,7 @@ describe('POST /api/polls - Create Poll', () => {
     const mockServer = createMockServerWithMembers()
     const mockChannel = createMockChannel()
     const mockPoll = createMockPollWithOptions()
+    const mockPollWithOrder = { ...mockPoll, optionOrder: ['option-id-1', 'option-id-2'] }
     const mockMessage = createMockMessageWithPoll({ poll: mockPoll })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
@@ -151,6 +154,7 @@ describe('POST /api/polls - Create Poll', () => {
     mockDb.channel.findFirst.mockResolvedValue(mockChannel)
     mockDb.message.create.mockResolvedValue(mockMessage)
     mockDb.poll.create.mockResolvedValue(mockPoll)
+    mockDb.poll.update.mockResolvedValue(mockPollWithOrder)
     mockDb.message.findUnique.mockResolvedValue(mockMessage)
 
     const requestBody = {
@@ -187,6 +191,7 @@ describe('POST /api/polls - Create Poll', () => {
     const mockServer = createMockServerWithMembers()
     const mockChannel = createMockChannel()
     const mockPoll = createMockPollWithOptions()
+    const mockPollWithOrder = { ...mockPoll, optionOrder: ['option-id-1', 'option-id-2'] }
     const mockMessage = createMockMessageWithPoll({ poll: mockPoll })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
@@ -194,6 +199,7 @@ describe('POST /api/polls - Create Poll', () => {
     mockDb.channel.findFirst.mockResolvedValue(mockChannel)
     mockDb.message.create.mockResolvedValue(mockMessage)
     mockDb.poll.create.mockResolvedValue(mockPoll)
+    mockDb.poll.update.mockResolvedValue(mockPollWithOrder)
     mockDb.message.findUnique.mockResolvedValue(mockMessage)
 
     const requestBody = {
