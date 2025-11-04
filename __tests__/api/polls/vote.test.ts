@@ -11,11 +11,13 @@ import {
   createMockMessageWithPoll,
   createMockNextRequest,
   parseNextResponse,
+  createMockMember,
+  createMockPollVote,
 } from '@/__tests__/utils/test-helpers'
 
-const mockDb = db as any
-const mockCurrentProfile = currentProfile as any
-const mockBroadcastMessage = broadcastMessage as any
+const mockDb = db as jest.Mocked<typeof db>
+const mockCurrentProfile = currentProfile as jest.MockedFunction<typeof currentProfile>
+const mockBroadcastMessage = broadcastMessage as jest.MockedFunction<typeof broadcastMessage>
 
 describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
   beforeEach(() => {
@@ -25,17 +27,26 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
   it('adds vote to option', async () => {
     // Arrange
     const mockProfile = createMockProfile()
-    const mockServer = createMockServerWithMembers()
-    const mockPoll = createMockPollWithOptions()
+    const mockServer = createMockServerWithMembers({ members: [createMockMember({ profileID: mockProfile.id })] })
+    const mockPoll = {
+      ...createMockPollWithOptions(),
+      message: {
+        id: 'message-id-1',
+        channel: {
+          id: 'channel-id-1',
+          server: mockServer,
+        },
+      },
+    } as any
     const mockPollWithVotes = createMockPollWithVotes()
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
     mockDb.pollVote.findFirst.mockResolvedValue(null)
-    mockDb.pollVote.create.mockResolvedValue({} as any)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPollWithVotes as any)
-    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll() as any)
+    mockDb.pollVote.create.mockResolvedValue(createMockPollVote())
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPollWithVotes)
+    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll())
 
     const requestBody = {
       optionId: 'option-id-1',
@@ -47,7 +58,7 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await POST(request as Parameters<typeof POST>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -59,16 +70,25 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
   it('removes vote when removeVote is true', async () => {
     // Arrange
     const mockProfile = createMockProfile()
-    const mockServer = createMockServerWithMembers()
-    const mockPoll = createMockPollWithVotes()
+    const mockServer = createMockServerWithMembers({ members: [createMockMember({ profileID: mockProfile.id })] })
+    const mockPoll = {
+      ...createMockPollWithVotes(),
+      message: {
+        id: 'message-id-1',
+        channel: {
+          id: 'channel-id-1',
+          server: mockServer,
+        },
+      },
+    } as any
     const mockPollAfterRemove = createMockPollWithOptions()
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
-    mockDb.pollVote.deleteMany.mockResolvedValue({ count: 1 } as any)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPollAfterRemove as any)
-    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll() as any)
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
+    mockDb.pollVote.deleteMany.mockResolvedValue({ count: 1 })
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPollAfterRemove)
+    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll())
 
     const requestBody = {
       optionId: 'option-id-1',
@@ -80,7 +100,7 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await POST(request as Parameters<typeof POST>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -92,18 +112,27 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
   it('enforces single choice when allowMultipleChoices is false', async () => {
     // Arrange
     const mockProfile = createMockProfile()
-    const mockServer = createMockServerWithMembers()
-    const mockPoll = createMockPollWithOptions({ allowMultipleChoices: false })
+    const mockServer = createMockServerWithMembers({ members: [createMockMember({ profileID: mockProfile.id })] })
+    const mockPoll = {
+      ...createMockPollWithOptions({ allowMultipleChoices: false }),
+      message: {
+        id: 'message-id-1',
+        channel: {
+          id: 'channel-id-1',
+          server: mockServer,
+        },
+      },
+    } as any
     const mockPollWithVotes = createMockPollWithVotes()
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
-    mockDb.pollVote.deleteMany.mockResolvedValue({ count: 0 } as any)
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
+    mockDb.pollVote.deleteMany.mockResolvedValue({ count: 0 })
     mockDb.pollVote.findFirst.mockResolvedValue(null)
-    mockDb.pollVote.create.mockResolvedValue({} as any)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPollWithVotes as any)
-    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll() as any)
+    mockDb.pollVote.create.mockResolvedValue(createMockPollVote())
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPollWithVotes)
+    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll())
 
     const requestBody = {
       optionId: 'option-id-2',
@@ -115,7 +144,7 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await POST(request as Parameters<typeof POST>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -131,17 +160,26 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
   it('allows multiple votes when allowMultipleChoices is true', async () => {
     // Arrange
     const mockProfile = createMockProfile()
-    const mockServer = createMockServerWithMembers()
-    const mockPoll = createMockPollWithOptions({ allowMultipleChoices: true })
+    const mockServer = createMockServerWithMembers({ members: [createMockMember({ profileID: mockProfile.id })] })
+    const mockPoll = {
+      ...createMockPollWithOptions({ allowMultipleChoices: true }),
+      message: {
+        id: 'message-id-1',
+        channel: {
+          id: 'channel-id-1',
+          server: mockServer,
+        },
+      },
+    } as any
     const mockPollWithVotes = createMockPollWithVotes()
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
     mockDb.pollVote.findFirst.mockResolvedValue(null)
-    mockDb.pollVote.create.mockResolvedValue({} as any)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPollWithVotes as any)
-    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll() as any)
+    mockDb.pollVote.create.mockResolvedValue(createMockPollVote())
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPollWithVotes)
+    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll())
 
     const requestBody = {
       optionId: 'option-id-2',
@@ -153,7 +191,7 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await POST(request as Parameters<typeof POST>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -175,7 +213,7 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
     })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValue(mockPoll as any)
+    mockDb.poll.findUnique.mockResolvedValue(mockPoll)
 
     const requestBody = {
       optionId: 'option-id-1',
@@ -187,7 +225,7 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await POST(request as Parameters<typeof POST>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -207,7 +245,7 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
     })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValue(mockPoll as any)
+    mockDb.poll.findUnique.mockResolvedValue(mockPoll)
 
     const requestBody = {
       optionId: 'option-id-1',
@@ -219,7 +257,7 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await POST(request as Parameters<typeof POST>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -243,7 +281,7 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any, { params: Promise.resolve({ pollId: 'invalid-poll-id' }) } as any)
+    const response = await POST(request as Parameters<typeof POST>[0], { params: Promise.resolve({ pollId: 'invalid-poll-id' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -265,7 +303,7 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await POST(request as Parameters<typeof POST>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert

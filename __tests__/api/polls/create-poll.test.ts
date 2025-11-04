@@ -13,9 +13,9 @@ import {
   parseNextResponse,
 } from '@/__tests__/utils/test-helpers'
 
-const mockDb = db as any
-const mockCurrentProfile = currentProfile as any
-const mockBroadcastMessage = broadcastMessage as any
+const mockDb = db as jest.Mocked<typeof db>
+const mockCurrentProfile = currentProfile as jest.MockedFunction<typeof currentProfile>
+const mockBroadcastMessage = broadcastMessage as jest.MockedFunction<typeof broadcastMessage>
 
 describe('POST /api/polls - Create Poll', () => {
   beforeEach(() => {
@@ -32,11 +32,11 @@ describe('POST /api/polls - Create Poll', () => {
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
     
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
-    mockDb.channel.findFirst.mockResolvedValue(mockChannel as any)
-    mockDb.message.create.mockResolvedValue(mockMessage as any)
-    mockDb.poll.create.mockResolvedValue(mockPoll as any)
-    mockDb.message.findUnique.mockResolvedValue(mockMessage as any)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
+    mockDb.channel.findFirst.mockResolvedValue(mockChannel)
+    mockDb.message.create.mockResolvedValue(mockMessage)
+    mockDb.poll.create.mockResolvedValue(mockPoll)
+    mockDb.message.findUnique.mockResolvedValue(mockMessage)
 
     const requestBody = {
       title: 'Test Poll',
@@ -51,7 +51,7 @@ describe('POST /api/polls - Create Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any)
+    const response = await POST(request as Parameters<typeof POST>[0])
     const result = await parseNextResponse(response)
 
     // Assert
@@ -79,7 +79,7 @@ describe('POST /api/polls - Create Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any)
+    const response = await POST(request as Parameters<typeof POST>[0])
     const result = await parseNextResponse(response)
 
     // Assert
@@ -104,7 +104,7 @@ describe('POST /api/polls - Create Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any)
+    const response = await POST(request as Parameters<typeof POST>[0])
     const result = await parseNextResponse(response)
 
     // Assert
@@ -130,7 +130,7 @@ describe('POST /api/polls - Create Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any)
+    const response = await POST(request as Parameters<typeof POST>[0])
     const result = await parseNextResponse(response)
 
     // Assert
@@ -147,11 +147,11 @@ describe('POST /api/polls - Create Poll', () => {
     const mockMessage = createMockMessageWithPoll({ poll: mockPoll })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
-    mockDb.channel.findFirst.mockResolvedValue(mockChannel as any)
-    mockDb.message.create.mockResolvedValue(mockMessage as any)
-    mockDb.poll.create.mockResolvedValue(mockPoll as any)
-    mockDb.message.findUnique.mockResolvedValue(mockMessage as any)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
+    mockDb.channel.findFirst.mockResolvedValue(mockChannel)
+    mockDb.message.create.mockResolvedValue(mockMessage)
+    mockDb.poll.create.mockResolvedValue(mockPoll)
+    mockDb.message.findUnique.mockResolvedValue(mockMessage)
 
     const requestBody = {
       title: 'Test Poll',
@@ -167,7 +167,7 @@ describe('POST /api/polls - Create Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any)
+    const response = await POST(request as Parameters<typeof POST>[0])
     const result = await parseNextResponse(response)
 
     // Assert
@@ -190,11 +190,11 @@ describe('POST /api/polls - Create Poll', () => {
     const mockMessage = createMockMessageWithPoll({ poll: mockPoll })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
-    mockDb.channel.findFirst.mockResolvedValue(mockChannel as any)
-    mockDb.message.create.mockResolvedValue(mockMessage as any)
-    mockDb.poll.create.mockResolvedValue(mockPoll as any)
-    mockDb.message.findUnique.mockResolvedValue(mockMessage as any)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
+    mockDb.channel.findFirst.mockResolvedValue(mockChannel)
+    mockDb.message.create.mockResolvedValue(mockMessage)
+    mockDb.poll.create.mockResolvedValue(mockPoll)
+    mockDb.message.findUnique.mockResolvedValue(mockMessage)
 
     const requestBody = {
       title: 'Test Poll',
@@ -210,7 +210,7 @@ describe('POST /api/polls - Create Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any)
+    const response = await POST(request as Parameters<typeof POST>[0])
     const result = await parseNextResponse(response)
 
     // Assert
@@ -241,7 +241,7 @@ describe('POST /api/polls - Create Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any)
+    const response = await POST(request as Parameters<typeof POST>[0])
     const result = await parseNextResponse(response)
 
     // Assert
@@ -268,7 +268,7 @@ describe('POST /api/polls - Create Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any)
+    const response = await POST(request as Parameters<typeof POST>[0])
     const result = await parseNextResponse(response)
 
     // Assert
@@ -282,7 +282,7 @@ describe('POST /api/polls - Create Poll', () => {
     const mockServer = createMockServerWithMembers()
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
     mockDb.channel.findFirst.mockResolvedValue(null)
 
     const requestBody = {
@@ -298,7 +298,7 @@ describe('POST /api/polls - Create Poll', () => {
     })
 
     // Act
-    const response = await POST(request as any)
+    const response = await POST(request as Parameters<typeof POST>[0])
     const result = await parseNextResponse(response)
 
     // Assert

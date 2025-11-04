@@ -14,9 +14,9 @@ import {
   parseNextResponse,
 } from '@/__tests__/utils/test-helpers'
 
-const mockDb = db as any
-const mockCurrentProfile = currentProfile as any
-const mockBroadcastMessage = broadcastMessage as any
+const mockDb = db as jest.Mocked<typeof db>
+const mockCurrentProfile = currentProfile as jest.MockedFunction<typeof currentProfile>
+const mockBroadcastMessage = broadcastMessage as jest.MockedFunction<typeof broadcastMessage>
 
 describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
   beforeEach(() => {
@@ -33,12 +33,12 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     const mockMessage = createMockMessageWithPoll()
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
-    mockDb.pollOption.findMany.mockResolvedValue(mockPoll.options as any)
-    mockDb.poll.update.mockResolvedValue(updatedPoll as any)
-    mockDb.poll.findUnique.mockResolvedValueOnce(updatedPoll as any)
-    mockDb.message.findUnique.mockResolvedValue(mockMessage as any)
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
+    mockDb.pollOption.findMany.mockResolvedValue(mockPoll.options)
+    mockDb.poll.update.mockResolvedValue(updatedPoll)
+    mockDb.poll.findUnique.mockResolvedValueOnce(updatedPoll)
+    mockDb.message.findUnique.mockResolvedValue(mockMessage)
 
     const requestBody = {
       title: 'Updated Title',
@@ -49,7 +49,7 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -66,13 +66,13 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     const updatedPoll = createMockPollWithVotes()
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValueOnce(existingOptions as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
-    mockDb.pollOption.findMany.mockResolvedValue(existingOptions.options as any)
-    mockDb.pollOption.deleteMany.mockResolvedValue({ count: 0 } as any)
-    mockDb.poll.update.mockResolvedValue(updatedPoll as any)
-    mockDb.poll.findUnique.mockResolvedValueOnce(updatedPoll as any)
-    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll() as any)
+    mockDb.poll.findUnique.mockResolvedValueOnce(existingOptions)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
+    mockDb.pollOption.findMany.mockResolvedValue(existingOptions.options)
+    mockDb.pollOption.deleteMany.mockResolvedValue({ count: 0 })
+    mockDb.poll.update.mockResolvedValue(updatedPoll)
+    mockDb.poll.findUnique.mockResolvedValueOnce(updatedPoll)
+    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll())
 
     const requestBody = {
       options: ['Updated Option 1', 'Updated Option 2', 'New Option 3'],
@@ -83,7 +83,7 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -103,11 +103,11 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
-    mockDb.poll.update.mockResolvedValue(updatedPoll as any)
-    mockDb.poll.findUnique.mockResolvedValueOnce(updatedPoll as any)
-    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll() as any)
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
+    mockDb.poll.update.mockResolvedValue(updatedPoll)
+    mockDb.poll.findUnique.mockResolvedValueOnce(updatedPoll)
+    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll())
 
     const requestBody = {
       allowMultipleChoices: true,
@@ -119,7 +119,7 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -146,8 +146,8 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     const mockPoll = createMockPollWithOptions({ creatorId: 'member-id-1' })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValue(mockPoll as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
+    mockDb.poll.findUnique.mockResolvedValue(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
 
     const requestBody = {
       title: 'Unauthorized Edit',
@@ -158,7 +158,7 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -176,11 +176,11 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     const updatedPoll = createMockPollWithOptions({ title: 'Admin Edit' })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServerWithAdmin as any)
-    mockDb.poll.update.mockResolvedValue(updatedPoll as any)
-    mockDb.poll.findUnique.mockResolvedValueOnce(updatedPoll as any)
-    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll() as any)
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServerWithAdmin)
+    mockDb.poll.update.mockResolvedValue(updatedPoll)
+    mockDb.poll.findUnique.mockResolvedValueOnce(updatedPoll)
+    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll())
 
     const requestBody = {
       title: 'Admin Edit',
@@ -191,7 +191,7 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -209,8 +209,8 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValue(mockPoll as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
+    mockDb.poll.findUnique.mockResolvedValue(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
 
     const requestBody = {
       title: 'Cannot Edit Closed',
@@ -221,7 +221,7 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -242,7 +242,7 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -257,7 +257,7 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
     mockDb.poll.findUnique.mockResolvedValue(null)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
     // Don't set mockDb.poll.update - should never reach it
 
     const requestBody = {
@@ -269,7 +269,7 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'invalid-poll-id' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'invalid-poll-id' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -310,16 +310,16 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     const mockMessage = createMockMessageWithPoll()
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
-    mockDb.pollOption.findMany.mockResolvedValue(originalOptions as any)
-    mockDb.pollOption.deleteMany.mockResolvedValue({ count: 1 } as any) // Option A deleted
-    mockDb.pollOption.update.mockResolvedValue({ ...originalOptions[1], text: 'Option B Updated' } as any)
-    mockDb.pollOption.create.mockResolvedValue(updatedOptions[2] as any)
-    mockDb.poll.update.mockResolvedValue(updatedPoll as any)
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
+    mockDb.pollOption.findMany.mockResolvedValue(originalOptions)
+    mockDb.pollOption.deleteMany.mockResolvedValue({ count: 1 }) // Option A deleted
+    mockDb.pollOption.update.mockResolvedValue({ ...originalOptions[1], text: 'Option B Updated' })
+    mockDb.pollOption.create.mockResolvedValue(updatedOptions[2])
+    mockDb.poll.update.mockResolvedValue(updatedPoll)
     // Mock the final fetch that returns the poll with reordered options
-    mockDb.poll.findUnique.mockResolvedValueOnce(updatedPoll as any)
-    mockDb.message.findUnique.mockResolvedValue(mockMessage as any)
+    mockDb.poll.findUnique.mockResolvedValueOnce(updatedPoll)
+    mockDb.message.findUnique.mockResolvedValue(mockMessage)
 
     // Request body with options in new order: Option C, Option B Updated, New Option D
     const requestBody = {
@@ -331,7 +331,7 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -345,7 +345,7 @@ describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
     expect(result.data.options[2].text).toBe('New Option D')
     
     // Verify the order matches the request body order exactly
-    const responseOptionTexts = result.data.options.map((opt: any) => opt.text)
+    const responseOptionTexts = result.data.options.map((opt: { text: string }) => opt.text)
     expect(responseOptionTexts).toEqual(['Option C', 'Option B Updated', 'New Option D'])
   })
 })

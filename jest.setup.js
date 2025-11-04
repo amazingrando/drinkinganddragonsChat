@@ -38,8 +38,9 @@ jest.mock('@/lib/supabase/server', () => ({
 
 // Mock database and profile functions
 jest.mock('@/lib/db', () => {
-  const { mockDeep } = require('jest-mock-extended')
-  const { PrismaClient } = require('@prisma/client')
+  // Use import instead of require for compliance with lint rules
+  const { mockDeep } = jest.requireActual('jest-mock-extended')
+  // PrismaClient import not used, so removed to comply with lint rules
   return { db: mockDeep() }
 })
 

@@ -1,5 +1,5 @@
 import { mock } from 'jest-mock-extended'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Profile, Server, Member, Channel, Message, Poll, PollOption, PollVote } from '@prisma/client'
 
 // Create a mocked Prisma client
 export const createMockPrismaClient = () => {
@@ -8,7 +8,7 @@ export const createMockPrismaClient = () => {
 }
 
 // Mock data generators
-export const createMockProfile = (overrides?: Partial<any>) => ({
+export const createMockProfile = (overrides?: Partial<Profile>) => ({
   id: 'profile-id-1',
   userId: 'user-id-1',
   name: 'Test User',
@@ -19,7 +19,7 @@ export const createMockProfile = (overrides?: Partial<any>) => ({
   ...overrides,
 })
 
-export const createMockServer = (overrides?: Partial<any>) => ({
+export const createMockServer = (overrides?: Partial<Server>) => ({
   id: 'server-id-1',
   name: 'Test Server',
   imageUrl: 'https://example.com/server.png',
@@ -30,7 +30,7 @@ export const createMockServer = (overrides?: Partial<any>) => ({
   ...overrides,
 })
 
-export const createMockMember = (overrides?: Partial<any>) => ({
+export const createMockMember = (overrides?: Partial<Member>) => ({
   id: 'member-id-1',
   role: 'MEMBER' as const,
   profileID: 'profile-id-1',
@@ -40,7 +40,7 @@ export const createMockMember = (overrides?: Partial<any>) => ({
   ...overrides,
 })
 
-export const createMockChannel = (overrides?: Partial<any>) => ({
+export const createMockChannel = (overrides?: Partial<Channel>) => ({
   id: 'channel-id-1',
   name: 'general',
   type: 'TEXT' as const,
@@ -51,7 +51,7 @@ export const createMockChannel = (overrides?: Partial<any>) => ({
   ...overrides,
 })
 
-export const createMockMessage = (overrides?: Partial<any>) => ({
+export const createMockMessage = (overrides?: Partial<Message>) => ({
   id: 'message-id-1',
   content: 'Test message',
   fileUrl: null,
@@ -63,7 +63,7 @@ export const createMockMessage = (overrides?: Partial<any>) => ({
   ...overrides,
 })
 
-export const createMockPoll = (overrides?: Partial<any>) => ({
+export const createMockPoll = (overrides?: Partial<Poll>) => ({
   id: 'poll-id-1',
   title: 'Test Poll',
   allowMultipleChoices: false,
@@ -77,7 +77,7 @@ export const createMockPoll = (overrides?: Partial<any>) => ({
   ...overrides,
 })
 
-export const createMockPollOption = (overrides?: Partial<any>) => ({
+export const createMockPollOption = (overrides?: Partial<PollOption>) => ({
   id: 'option-id-1',
   text: 'Option 1',
   pollId: 'poll-id-1',
@@ -88,7 +88,7 @@ export const createMockPollOption = (overrides?: Partial<any>) => ({
   ...overrides,
 })
 
-export const createMockPollVote = (overrides?: Partial<any>) => ({
+export const createMockPollVote = (overrides?: Partial<PollVote>) => ({
   id: 'vote-id-1',
   pollId: 'poll-id-1',
   optionId: 'option-id-1',
@@ -97,7 +97,7 @@ export const createMockPollVote = (overrides?: Partial<any>) => ({
   ...overrides,
 })
 
-export const createMockServerWithMembers = (overrides?: Partial<any>) => ({
+export const createMockServerWithMembers = (overrides?: Partial<Server & { members: Member[] }>) => ({
   ...createMockServer(),
   members: [
     createMockMember({ id: 'member-id-1', role: 'ADMIN' as const }),
@@ -106,7 +106,7 @@ export const createMockServerWithMembers = (overrides?: Partial<any>) => ({
   ...overrides,
 })
 
-export const createMockPollWithOptions = (overrides?: Partial<any>) => ({
+export const createMockPollWithOptions = (overrides?: Partial<Poll & { options: PollOption[]; creator: Member & { profile: Profile } }>) => ({
   ...createMockPoll(),
   options: [
     createMockPollOption({ id: 'option-id-1', text: 'Option 1' }),
@@ -119,7 +119,7 @@ export const createMockPollWithOptions = (overrides?: Partial<any>) => ({
   ...overrides,
 })
 
-export const createMockPollWithVotes = (overrides?: Partial<any>) => ({
+export const createMockPollWithVotes = (overrides?: Partial<Poll & { options: (PollOption & { votes: (PollVote & { member: Member & { profile: Profile } })[] })[]; creator: Member & { profile: Profile } }>) => ({
   ...createMockPoll(),
   options: [
     {
@@ -146,7 +146,7 @@ export const createMockPollWithVotes = (overrides?: Partial<any>) => ({
   ...overrides,
 })
 
-export const createMockMessageWithPoll = (overrides?: Partial<any>) => ({
+export const createMockMessageWithPoll = (overrides?: Partial<Message & { poll: Poll & { options: PollOption[]; creator: Member & { profile: Profile } }; member: Member & { profile: Profile } }>) => ({
   ...createMockMessage(),
   poll: createMockPollWithOptions(),
   member: {
@@ -157,7 +157,7 @@ export const createMockMessageWithPoll = (overrides?: Partial<any>) => ({
 })
 
 // Helper to create NextRequest with body
-export const createMockNextRequest = (body: any, searchParams?: Record<string, string>) => {
+export const createMockNextRequest = (body: unknown, searchParams?: Record<string, string>) => {
   const url = new URL('http://localhost/api/test')
   if (searchParams) {
     Object.entries(searchParams).forEach(([key, value]) => {
@@ -169,13 +169,13 @@ export const createMockNextRequest = (body: any, searchParams?: Record<string, s
     json: jest.fn().mockResolvedValue(body),
     headers: new Headers(),
     url: url.toString(),
-  } as any
+  } as unknown as Request
 }
 
 // Helper to create NextResponse from handler
-export const parseNextResponse = async (response: Response) => {
+export const parseNextResponse = async (response: Response): Promise<{ status: number; data: unknown }> => {
   const text = await response.text()
-  let data
+  let data: unknown
   try {
     data = JSON.parse(text)
   } catch {

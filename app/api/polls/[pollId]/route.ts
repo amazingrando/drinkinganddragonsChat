@@ -83,8 +83,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ message: "Cannot edit a closed poll" }, { status: 400 })
     }
 
-    // Build update data
-    const updateData: any = {}
+    // Build update data with explicit type instead of `any`
+    interface PollUpdateData {
+      title?: string
+      allowMultipleChoices?: boolean
+      allowAddOptions?: boolean
+      endsAt?: Date | null
+      // Add more fields if needed
+    }
+    const updateData: PollUpdateData = {}
 
     if (title !== undefined) {
       if (typeof title !== "string" || title.trim().length === 0) {
@@ -461,17 +468,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     return NextResponse.json(updatedPoll, { status: 200 })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[POLL_EDIT_PATCH] ========== ERROR START ==========")
     console.error("[POLL_EDIT_PATCH] Error:", error)
     console.error("[POLL_EDIT_PATCH] Error type:", typeof error)
-    console.error("[POLL_EDIT_PATCH] Error name:", error?.name)
-    console.error("[POLL_EDIT_PATCH] Error message:", error?.message)
-    if (error?.stack) {
-      console.error("[POLL_EDIT_PATCH] Error stack:", error.stack)
+    if (error instanceof Error) {
+      console.error("[POLL_EDIT_PATCH] Error name:", error.name)
+      console.error("[POLL_EDIT_PATCH] Error message:", error.message)
+      if (error.stack) {
+        console.error("[POLL_EDIT_PATCH] Error stack:", error.stack)
+      }
     }
-    if (error?.code) {
-      console.error("[POLL_EDIT_PATCH] Error code:", error.code)
+    if (error && typeof error === 'object' && 'code' in error) {
+      console.error("[POLL_EDIT_PATCH] Error code:", (error as { code: unknown }).code)
     }
     console.error("[POLL_EDIT_PATCH] ========== ERROR END ==========")
     
@@ -482,10 +491,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         errorMessage = error.message || errorMessage
       } else if (typeof error === "string") {
         errorMessage = error
-      } else if (error?.message) {
-        errorMessage = String(error.message)
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = String((error as { message: unknown }).message)
       }
-    } catch (e) {
+    } catch {
       // If we can't extract the message, use default
     }
     

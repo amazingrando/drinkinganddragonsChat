@@ -14,9 +14,9 @@ import {
   parseNextResponse,
 } from '@/__tests__/utils/test-helpers'
 
-const mockDb = db as any
-const mockCurrentProfile = currentProfile as any
-const mockBroadcastMessage = broadcastMessage as any
+const mockDb = db as jest.Mocked<typeof db>
+const mockCurrentProfile = currentProfile as jest.MockedFunction<typeof currentProfile>
+const mockBroadcastMessage = broadcastMessage as jest.MockedFunction<typeof broadcastMessage>
 
 describe('PATCH /api/polls/[pollId]/close - Close Poll', () => {
   beforeEach(() => {
@@ -33,18 +33,18 @@ describe('PATCH /api/polls/[pollId]/close - Close Poll', () => {
     })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
-    mockDb.poll.update.mockResolvedValue(closedPoll as any)
-    mockDb.poll.findUnique.mockResolvedValueOnce(closedPoll as any)
-    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll() as any)
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
+    mockDb.poll.update.mockResolvedValue(closedPoll)
+    mockDb.poll.findUnique.mockResolvedValueOnce(closedPoll)
+    mockDb.message.findUnique.mockResolvedValue(createMockMessageWithPoll())
 
     const request = createMockNextRequest({}, {
       channelId: 'channel-id-1',
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -68,20 +68,20 @@ describe('PATCH /api/polls/[pollId]/close - Close Poll', () => {
     const mockPoll = createMockPollWithOptions({ creatorId: 'member-id-1' })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
 
     const request = createMockNextRequest({}, {
       channelId: 'channel-id-1',
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
     expect(result.status).toBe(403)
-    expect(result.data.message).toContain('Only the poll creator can close the poll')
+    expect(result.data.message).toContain('Only poll owners and admins can close the poll')
   })
 
   it('prevents closing already closed poll', async () => {
@@ -94,15 +94,15 @@ describe('PATCH /api/polls/[pollId]/close - Close Poll', () => {
     })
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValue(mockPoll as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
+    mockDb.poll.findUnique.mockResolvedValue(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
 
     const request = createMockNextRequest({}, {
       channelId: 'channel-id-1',
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -119,7 +119,7 @@ describe('PATCH /api/polls/[pollId]/close - Close Poll', () => {
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -134,14 +134,14 @@ describe('PATCH /api/polls/[pollId]/close - Close Poll', () => {
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
     mockDb.poll.findUnique.mockResolvedValue(null)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
 
     const request = createMockNextRequest({}, {
       channelId: 'channel-id-1',
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'invalid-poll-id' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'invalid-poll-id' }) })
     const result = await parseNextResponse(response)
 
     // Assert
@@ -160,18 +160,18 @@ describe('PATCH /api/polls/[pollId]/close - Close Poll', () => {
     const mockMessage = createMockMessageWithPoll()
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
-    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll as any)
-    mockDb.server.findFirst.mockResolvedValue(mockServer as any)
-    mockDb.poll.update.mockResolvedValue(closedPoll as any)
-    mockDb.poll.findUnique.mockResolvedValueOnce(closedPoll as any)
-    mockDb.message.findUnique.mockResolvedValue(mockMessage as any)
+    mockDb.poll.findUnique.mockResolvedValueOnce(mockPoll)
+    mockDb.server.findFirst.mockResolvedValue(mockServer)
+    mockDb.poll.update.mockResolvedValue(closedPoll)
+    mockDb.poll.findUnique.mockResolvedValueOnce(closedPoll)
+    mockDb.message.findUnique.mockResolvedValue(mockMessage)
 
     const request = createMockNextRequest({}, {
       channelId: 'channel-id-1',
     })
 
     // Act
-    const response = await PATCH(request as any, { params: Promise.resolve({ pollId: 'poll-id-1' }) } as any)
+    const response = await PATCH(request as Parameters<typeof PATCH>[0], { params: Promise.resolve({ pollId: 'poll-id-1' }) })
     const result = await parseNextResponse(response)
 
     // Assert
