@@ -36,7 +36,7 @@ const formSchema = z.object({
 })
 
 const CreateServerModal = () => {
-  const { isOpen, type, onOpen, onClose } = useModal()
+  const { isOpen, type, onClose } = useModal()
   const router = useRouter()
 
   const isModalOpen = isOpen && type === "createServer"
@@ -119,7 +119,7 @@ const CreateServerModal = () => {
                 </FormItem>
               )} />
 
-              <FormField control={form.control} name="imageUrl" render={({ field }) => (
+              <FormField control={form.control} name="imageUrl" render={({ }) => (
                 <FormItem>
                   <FormLabel className="uppercase text-xs font-bold ">Server image</FormLabel>
                   <FormControl>

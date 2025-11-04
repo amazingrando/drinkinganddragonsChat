@@ -101,8 +101,9 @@ export const RealtimeProvider = ({ children }: { children: React.ReactNode }) =>
 
   // Cleanup all channels on unmount
   useEffect(() => {
+    const channelsMap = channelsRef.current
     return () => {
-      channelsRef.current.forEach(channel => {
+      channelsMap.forEach(channel => {
         supabase.removeChannel(channel)
       })
     }

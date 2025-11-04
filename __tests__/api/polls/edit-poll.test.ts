@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, jest } from '@jest/globals'
 import { PATCH } from '@/app/api/polls/[pollId]/route'
 import { db } from '@/lib/db'
 import { currentProfile } from '@/lib/current-profile'
-import { broadcastMessage } from '@/lib/supabase/server-broadcast'
 import {
   createMockProfile,
   createMockMember,
@@ -16,7 +15,6 @@ import {
 
 const mockDb = db as jest.Mocked<typeof db>
 const mockCurrentProfile = currentProfile as jest.MockedFunction<typeof currentProfile>
-const mockBroadcastMessage = broadcastMessage as jest.MockedFunction<typeof broadcastMessage>
 
 describe('PATCH /api/polls/[pollId] - Edit Poll', () => {
   beforeEach(() => {

@@ -119,7 +119,7 @@ const InitialModal = () => {
                 </FormItem>
               )} />
 
-              <FormField control={form.control} name="imageUrl" render={({ field }) => (
+              <FormField control={form.control} name="imageUrl" render={({ }) => (
                 <FormItem>
                   <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Server image</FormLabel>
                   <FormControl>

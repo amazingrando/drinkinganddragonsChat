@@ -257,7 +257,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         // Create new options in the correct order
         // We'll create them one by one to ensure they're created in the right position
         // (since createMany doesn't guarantee order, we'll use individual creates)
-        for (const { text, position } of optionsToCreate.sort((a, b) => a.position - b.position)) {
+        for (const { text } of optionsToCreate.sort((a, b) => a.position - b.position)) {
           await db.pollOption.create({
             data: {
               text,

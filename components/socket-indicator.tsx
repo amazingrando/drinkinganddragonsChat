@@ -1,7 +1,6 @@
 "use client"
 
 import { UseRealtime } from "@/components/providers/realtime-provider"
-import { Badge } from "@/components/ui/badge"
 
 export const SocketIndicator = () => {
   const { isConnected } = UseRealtime()

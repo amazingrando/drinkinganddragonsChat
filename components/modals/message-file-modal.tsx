@@ -58,7 +58,7 @@ const MessageFileModal = () => {
     console.log(values)
     try {
       const url = qs.stringifyUrl({
-        url: data.apiUrl || "",
+        url: apiUrl || "",
         // Ensures "query" is properly typed for qs (StringifiableRecord)
         query: query as Record<string, string | number | boolean | null | undefined> | undefined,
       })
@@ -112,7 +112,7 @@ const MessageFileModal = () => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="space-y-8 px-6">
-              <FormField control={form.control} name="fileUrl" render={({ field }) => (
+              <FormField control={form.control} name="fileUrl" render={({ }) => (
                 <FormItem>
                   <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Attachment</FormLabel>
                   <FormControl>

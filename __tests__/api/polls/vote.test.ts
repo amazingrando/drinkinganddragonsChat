@@ -37,7 +37,8 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
           server: mockServer,
         },
       },
-    } as any
+    } as typeof mockPoll
+
     const mockPollWithVotes = createMockPollWithVotes()
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
@@ -80,7 +81,7 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
           server: mockServer,
         },
       },
-    } as any
+    } as typeof mockPoll
     const mockPollAfterRemove = createMockPollWithOptions()
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
@@ -122,7 +123,7 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
           server: mockServer,
         },
       },
-    } as any
+    } as unknown as typeof mockPoll
     const mockPollWithVotes = createMockPollWithVotes()
 
     mockCurrentProfile.mockResolvedValue(mockProfile)
@@ -170,7 +171,7 @@ describe('POST /api/polls/[pollId]/vote - Vote on Poll', () => {
           server: mockServer,
         },
       },
-    } as any
+    } as typeof mockPoll
     const mockPollWithVotes = createMockPollWithVotes()
 
     mockCurrentProfile.mockResolvedValue(mockProfile)

@@ -8,7 +8,6 @@ import {
   createMockMember,
   createMockServerWithMembers,
   createMockPollWithOptions,
-  createMockPollWithVotes,
   createMockMessageWithPoll,
   createMockNextRequest,
   parseNextResponse,

@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User as UserIcon } from "lucide-react"
+import { LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 export function UserButton() {
