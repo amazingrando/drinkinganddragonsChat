@@ -206,6 +206,7 @@ model Poll {
   allowAddOptions      Boolean   @default(false)
   endsAt               DateTime?
   closedAt             DateTime?
+  optionOrder          Json? // Array of option IDs in display order
 
   creatorId String
   creator   Member @relation(fields: [creatorId], references: [id], onDelete: Cascade)

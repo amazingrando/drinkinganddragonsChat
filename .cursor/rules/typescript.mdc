@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+Don't write code that will fail the @typescript-eslint/no-explicit-any linting test.

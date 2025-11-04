@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { currentProfile } from "@/lib/current-profile"
 import { db } from "@/lib/db"
 import { broadcastMessage } from "@/lib/supabase/server-broadcast"
-import { MemberRole } from "@prisma/client"
+import { MemberRole, Prisma } from "@prisma/client"
+import { PollWithOptionsAndVotes } from "@/types"
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ pollId: string }> }) {
   try {
@@ -16,6 +17,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const {
       title,
       options,
+      optionOrder,
       allowMultipleChoices,
       allowAddOptions,
       durationHours,
@@ -24,6 +26,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }: {
       title?: string
       options?: string[]
+      optionOrder?: string[]
       allowMultipleChoices?: boolean
       allowAddOptions?: boolean
       durationHours?: number
@@ -89,6 +92,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       allowMultipleChoices?: boolean
       allowAddOptions?: boolean
       endsAt?: Date | null
+      optionOrder?: Prisma.InputJsonValue
       // Add more fields if needed
     }
     const updateData: PollUpdateData = {}
@@ -142,6 +146,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       if (endsAt !== undefined) {
         updateData.endsAt = endsAt
       }
+    }
+
+    // Handle optionOrder update
+    if (optionOrder !== undefined) {
+      if (!Array.isArray(optionOrder)) {
+        return NextResponse.json({ message: "optionOrder must be an array" }, { status: 400 })
+      }
+      updateData.optionOrder = optionOrder
     }
 
     // Handle options update
@@ -257,23 +269,36 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         // Create new options in the correct order
         // We'll create them one by one to ensure they're created in the right position
         // (since createMany doesn't guarantee order, we'll use individual creates)
+        const newOptionIds: string[] = []
         for (const { text } of optionsToCreate.sort((a, b) => a.position - b.position)) {
-          await db.pollOption.create({
+          const newOption = await db.pollOption.create({
             data: {
               text,
               pollId: pollId,
               createdBy: member.id,
             },
           })
+          newOptionIds.push(newOption.id)
         }
         if (optionsToCreate.length > 0) {
           console.log("[POLL_EDIT_PATCH] Created", optionsToCreate.length, "new options")
         }
 
-        // To maintain order, we need to ensure existing options are in the right order
-        // Since we can't easily reorder without recreating (which would lose votes),
-        // we'll fetch the final result ordered by createdAt which should match the order
-        // they were processed (existing ones first, then new ones in order)
+        // If optionOrder was provided, use it. Otherwise, build order from processedOptionIds + newOptionIds
+        if (optionOrder !== undefined && Array.isArray(optionOrder)) {
+          // Validate and use provided optionOrder
+          const allOptionIds = new Set([...processedOptionIds, ...newOptionIds])
+          const validOrder = optionOrder.filter(id => allOptionIds.has(id))
+          if (validOrder.length === allOptionIds.size) {
+            updateData.optionOrder = validOrder
+          } else {
+            // Build order: existing options in processedOrder, then new options
+            updateData.optionOrder = [...processedOptionIds, ...newOptionIds]
+          }
+        } else if (options !== undefined) {
+          // Build order from the current state: processed options followed by new ones
+          updateData.optionOrder = [...processedOptionIds, ...newOptionIds]
+        }
 
         console.log("[POLL_EDIT_PATCH] Options updated successfully - votes preserved, order maintained")
       } catch (error) {
@@ -347,22 +372,34 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       }
       console.log("[POLL_EDIT_PATCH] Poll updated/fetched successfully")
       
-      // Reorder options to match the order specified in validOptions (if options were updated)
-      if (options !== undefined && updatedPoll && updatedPoll.options) {
-        const optionsOrderMap = new Map<string, number>()
-        validOptions.forEach((text, index) => {
-          optionsOrderMap.set(text.trim().toLowerCase(), index)
-        })
-        
-        // Sort options by their position in validOptions
-        updatedPoll.options.sort((a, b) => {
-          const aIndex = optionsOrderMap.get(a.text.trim().toLowerCase()) ?? 999
-          const bIndex = optionsOrderMap.get(b.text.trim().toLowerCase()) ?? 999
-          return aIndex - bIndex
-        })
-        
-        console.log("[POLL_EDIT_PATCH] Options reordered to match edit form")
-      }
+              // Reorder options using optionOrder if provided, otherwise by validOptions order
+        const pollWithOrder = updatedPoll as PollWithOptionsAndVotes
+        if (pollWithOrder && pollWithOrder.options) {
+          if (pollWithOrder.optionOrder && Array.isArray(pollWithOrder.optionOrder)) {
+            // Sort by optionOrder from database
+            const orderMap = new Map(pollWithOrder.optionOrder.map((id: string, index: number) => [id, index]))
+            pollWithOrder.options.sort((a, b) => {
+              const aIndex = orderMap.get(a.id) ?? 999
+              const bIndex = orderMap.get(b.id) ?? 999
+              return aIndex - bIndex
+            })
+            console.log("[POLL_EDIT_PATCH] Options reordered using optionOrder")
+          } else if (options !== undefined) {
+            // Fallback to text-based matching if optionOrder not available
+            const optionsOrderMap = new Map<string, number>()
+            validOptions.forEach((text, index) => {
+              optionsOrderMap.set(text.trim().toLowerCase(), index)
+            })
+            
+            pollWithOrder.options.sort((a, b) => {
+              const aIndex = optionsOrderMap.get(a.text.trim().toLowerCase()) ?? 999
+              const bIndex = optionsOrderMap.get(b.text.trim().toLowerCase()) ?? 999
+              return aIndex - bIndex
+            })
+            
+            console.log("[POLL_EDIT_PATCH] Options reordered to match edit form")
+          }
+        }
     } catch (error) {
       console.error("[POLL_EDIT_PATCH] Error updating/fetching poll:", error)
       throw error
@@ -428,18 +465,29 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           },
         })
         
-        // Reorder options in messageWithPoll to match the desired order (if options were updated)
-        if (options !== undefined && messageWithPoll?.poll?.options) {
-          const optionsOrderMap = new Map<string, number>()
-          validOptions.forEach((text, index) => {
-            optionsOrderMap.set(text.trim().toLowerCase(), index)
-          })
-          
-          messageWithPoll.poll.options.sort((a, b) => {
-            const aIndex = optionsOrderMap.get(a.text.trim().toLowerCase()) ?? 999
-            const bIndex = optionsOrderMap.get(b.text.trim().toLowerCase()) ?? 999
-            return aIndex - bIndex
-          })
+        // Reorder options in messageWithPoll using optionOrder if available
+        const messagePoll = messageWithPoll?.poll as PollWithOptionsAndVotes | null
+        if (messagePoll && messagePoll.options) {
+          if (messagePoll.optionOrder && Array.isArray(messagePoll.optionOrder)) {
+            const orderMap = new Map(messagePoll.optionOrder.map((id: string, index: number) => [id, index]))
+            messagePoll.options.sort((a, b) => {
+              const aIndex = orderMap.get(a.id) ?? 999
+              const bIndex = orderMap.get(b.id) ?? 999
+              return aIndex - bIndex
+            })
+          } else if (options !== undefined) {
+            // Fallback to text-based matching
+            const optionsOrderMap = new Map<string, number>()
+            validOptions.forEach((text, index) => {
+              optionsOrderMap.set(text.trim().toLowerCase(), index)
+            })
+            
+            messagePoll.options.sort((a, b) => {
+              const aIndex = optionsOrderMap.get(a.text.trim().toLowerCase()) ?? 999
+              const bIndex = optionsOrderMap.get(b.text.trim().toLowerCase()) ?? 999
+              return aIndex - bIndex
+            })
+          }
         }
       } catch (error) {
         console.error("[POLL_EDIT_PATCH] Error fetching message with poll:", error)

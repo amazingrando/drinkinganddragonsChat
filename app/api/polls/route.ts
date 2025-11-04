@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { currentProfile } from "@/lib/current-profile"
 import { db } from "@/lib/db"
 import { broadcastMessage } from "@/lib/supabase/server-broadcast"
+import { Prisma } from "@prisma/client"
+import { PollWithOptionsAndVotes } from "@/types"
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +15,7 @@ export async function POST(request: NextRequest) {
     const {
       title,
       options,
+      optionOrder,
       allowMultipleChoices,
       allowAddOptions,
       durationHours,
@@ -21,6 +24,7 @@ export async function POST(request: NextRequest) {
     }: {
       title: string
       options: string[]
+      optionOrder?: string[]
       allowMultipleChoices: boolean
       allowAddOptions: boolean
       durationHours?: number
@@ -136,6 +140,63 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Update poll with optionOrder if provided, otherwise use created order
+    let finalOptionOrder: string[]
+    if (optionOrder && optionOrder.length === poll.options.length) {
+      // Validate that all option IDs in optionOrder exist in poll.options
+      const optionIds = new Set(poll.options.map(opt => opt.id))
+      const validOrder = optionOrder.filter(id => optionIds.has(id))
+      if (validOrder.length === poll.options.length) {
+        finalOptionOrder = validOrder
+      } else {
+        finalOptionOrder = poll.options.map(opt => opt.id)
+      }
+    } else {
+      finalOptionOrder = poll.options.map(opt => opt.id)
+    }
+
+    // Update poll with optionOrder
+    const updatedPoll = await db.poll.update({
+      where: { id: poll.id },
+      data: {
+        optionOrder: finalOptionOrder as Prisma.InputJsonValue,
+      },
+      include: {
+        options: {
+          include: {
+            votes: {
+              include: {
+                member: {
+                  include: {
+                    profile: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+        creator: {
+          include: {
+            profile: true,
+          },
+        },
+      },
+    })
+
+    // Sort options by optionOrder for the response
+    const pollWithOrder = updatedPoll as PollWithOptionsAndVotes
+    if (pollWithOrder.optionOrder && Array.isArray(pollWithOrder.optionOrder)) {
+      const orderMap = new Map(pollWithOrder.optionOrder.map((id: string, index: number) => [id, index]))
+      pollWithOrder.options.sort((a, b) => {
+        const aIndex = orderMap.get(a.id) ?? 999
+        const bIndex = orderMap.get(b.id) ?? 999
+        return aIndex - bIndex
+      })
+    }
+
     // Fetch complete message with poll
     const messageWithPoll = await db.message.findUnique({
       where: { id: message.id },
@@ -173,6 +234,16 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Sort options in messageWithPoll by optionOrder if available
+    if (messageWithPoll?.poll?.optionOrder && Array.isArray(messageWithPoll.poll.optionOrder)) {
+      const orderMap = new Map(messageWithPoll.poll.optionOrder.map((id: string, index: number) => [id, index]))
+      messageWithPoll.poll.options.sort((a, b) => {
+        const aIndex = orderMap.get(a.id) ?? 999
+        const bIndex = orderMap.get(b.id) ?? 999
+        return aIndex - bIndex
+      })
+    }
+
     // Broadcast the new message with poll
     const channelKey = `chat:${channelId}:messages`
     try {
@@ -183,7 +254,7 @@ export async function POST(request: NextRequest) {
       console.log("[SUPABASE_BROADCAST_ERROR]", error)
     }
 
-    return NextResponse.json(poll, { status: 200 })
+    return NextResponse.json(updatedPoll, { status: 200 })
   } catch (error) {
     console.error("[POLLS_POST]", error)
     return NextResponse.json(

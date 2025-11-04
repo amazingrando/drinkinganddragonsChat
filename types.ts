@@ -5,6 +5,7 @@ export type ServerWithMembersWithProfiles = Server & {
 }
 
 export type PollWithOptionsAndVotes = Poll & {
+  optionOrder?: string[] | null
   options: (PollOption & {
     votes: (PollVote & {
       member: Member & {

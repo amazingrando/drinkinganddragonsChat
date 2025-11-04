@@ -5,8 +5,24 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import axios from "axios"
 import { useRouter } from "next/navigation"
 import { ModalHeader } from "./_modal-header"
-import { useState } from "react"
-import { X, Plus } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Plus } from "lucide-react"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { SortablePollOption } from "./sortable-poll-option"
 
 import {
   Dialog,
@@ -73,15 +89,44 @@ const CreatePollModal = () => {
   const watchOptions = form.watch("options")
   const watchDurationType = form.watch("durationType")
 
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  // Generate unique IDs for each option
+  const [optionIds, setOptionIds] = useState<string[]>(() => {
+    return watchOptions.map((_, index) => `option-${Date.now()}-${index}`)
+  })
+
+  // Sync optionIds with options length
+  useEffect(() => {
+    if (optionIds.length !== watchOptions.length) {
+      const newIds = watchOptions.map((_, index) => {
+        if (index < optionIds.length) {
+          return optionIds[index]
+        }
+        return `option-${Date.now()}-${index}`
+      })
+      setOptionIds(newIds)
+    }
+  }, [optionIds, watchOptions, watchOptions.length])
+
   const addOption = () => {
     const options = form.getValues("options")
+    const newId = `option-${Date.now()}-${options.length}`
     form.setValue("options", [...options, ""])
+    setOptionIds([...optionIds, newId])
   }
 
   const removeOption = (index: number) => {
     const options = form.getValues("options")
     if (options.length > 2) {
       form.setValue("options", options.filter((_, i) => i !== index))
+      setOptionIds(optionIds.filter((_, i) => i !== index))
     }
   }
 
@@ -90,6 +135,21 @@ const CreatePollModal = () => {
     const newOptions = [...options]
     newOptions[index] = value
     form.setValue("options", newOptions)
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      const oldIndex = optionIds.indexOf(active.id as string)
+      const newIndex = optionIds.indexOf(over.id as string)
+
+      const newOptionIds = arrayMove(optionIds, oldIndex, newIndex)
+      const newOptions = arrayMove(watchOptions, oldIndex, newIndex)
+
+      setOptionIds(newOptionIds)
+      form.setValue("options", newOptions)
+    }
   }
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -119,9 +179,16 @@ const CreatePollModal = () => {
         query: query as Record<string, string>,
       })
 
+      // Get option IDs in current order (optionIds already matches watchOptions order)
+      const orderedOptionIds = validOptions.map((opt) => {
+        const index = watchOptions.indexOf(opt)
+        return index >= 0 && index < optionIds.length ? optionIds[index] : `option-${Date.now()}`
+      })
+
       await axios.post(url, {
         title: values.title,
         options: validOptions,
+        optionOrder: orderedOptionIds,
         allowMultipleChoices: values.allowMultipleChoices,
         allowAddOptions: values.allowAddOptions,
         durationHours,
@@ -168,32 +235,32 @@ const CreatePollModal = () => {
 
               <div>
                 <FormLabel className="uppercase text-xs font-bold">Poll options</FormLabel>
-                <div className="space-y-2 mt-2">
-                  {watchOptions.map((option, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <FormControl>
-                        <Input
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={optionIds}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2 mt-2">
+                      {watchOptions.map((option, index) => (
+                        <SortablePollOption
+                          key={optionIds[index]}
+                          id={optionIds[index]}
+                          index={index}
+                          value={option}
                           disabled={isLoading}
                           placeholder={`Option ${index + 1}`}
-                          value={option}
-                          onChange={(e) => updateOption(index, e.target.value)}
+                          onChange={(value) => updateOption(index, value)}
+                          onRemove={watchOptions.length > 2 ? () => removeOption(index) : undefined}
+                          showRemove={watchOptions.length > 2}
                         />
-                      </FormControl>
-                      {watchOptions.length > 2 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          disabled={isLoading}
-                          onClick={() => removeOption(index)}
-                          className="flex-shrink-0"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </SortableContext>
+                </DndContext>
                 <Button
                   type="button"
                   variant="ghost"

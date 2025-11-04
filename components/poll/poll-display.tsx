@@ -134,17 +134,31 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
     return () => clearInterval(interval)
   }, [localPoll])
 
+  // Sort options by optionOrder if available, otherwise keep original order
+  const sortedOptions = useMemo(() => {
+    const poll = localPoll as PollWithOptionsAndVotes
+    if (poll.optionOrder && Array.isArray(poll.optionOrder)) {
+      const orderMap = new Map(poll.optionOrder.map((id: string, index: number) => [id, index]))
+      return [...localPoll.options].sort((a, b) => {
+        const aIndex = orderMap.get(a.id) ?? 999
+        const bIndex = orderMap.get(b.id) ?? 999
+        return aIndex - bIndex
+      })
+    }
+    return localPoll.options
+  }, [localPoll])
+
   // Calculate total votes
-  const totalVotes = localPoll.options.reduce((sum, option) => sum + option.votes.length, 0)
+  const totalVotes = sortedOptions.reduce((sum, option) => sum + option.votes.length, 0)
 
   // Get votes for current member - recalculate when localPoll or currentMemberId changes
   const memberVotes = useMemo(() => {
-    return localPoll.options
+    return sortedOptions
       .filter(option => option.votes.some(vote =>
         vote.memberId === currentMemberId || vote.member?.id === currentMemberId
       ))
       .map(option => option.id)
-  }, [localPoll, currentMemberId])
+  }, [sortedOptions, currentMemberId])
 
   const handleVote = async (optionId: string) => {
     if (isClosed) return
@@ -206,7 +220,7 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
       </div>
 
       <div className="space-y-2">
-        {localPoll.options.map((option) => {
+        {sortedOptions.map((option) => {
           const voteCount = option.votes.length
           const percentage = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0
           // Check if current member has voted for this option - check both memberId and nested member.id
