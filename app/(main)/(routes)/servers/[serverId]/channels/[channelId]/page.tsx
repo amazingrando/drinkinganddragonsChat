@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { currentProfile } from "@/lib/current-profile"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
@@ -9,6 +10,18 @@ import { MediaRoom } from "@/components/media-room"
 
 interface ChannelIdPageProps {
   params: Promise<{ serverId: string, channelId: string }>
+}
+
+export async function generateMetadata({ params }: ChannelIdPageProps): Promise<Metadata> {
+  const { serverId, channelId } = await params
+  const channel = await db.channel.findUnique({ where: { id: channelId } })
+  const server = await db.server.findUnique({ where: { id: serverId } })
+  const serverName = server?.name ?? 'Server'
+  const channelName = channel?.name ?? 'Channel'
+  return {
+    title: `Guildhall → #${channelName} @ ${serverName}`,
+    description: "Connect and collaborate with your TTRPG gaming community",
+  }
 }
 
 const ChannelIdPage = async ({ params }: ChannelIdPageProps) => {

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { currentProfile } from '@/lib/current-profile'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
@@ -10,7 +11,6 @@ const ServerIDLayout = async ({ children, params }: { children: React.ReactNode,
     return redirect('/sign-in')
   }
 
-  // Await params before accessing its properties
   const { serverId } = await params
 
   const server = await db.server.findUnique({
