@@ -13,8 +13,10 @@ import MessageFileModal from '@/components/modals/message-file-modal'
 import DeleteMessageModal from '@/components/modals/delete-message-modal'
 import CreatePollModal from '@/components/modals/create-poll-modal'
 import EditPollModal from '@/components/modals/edit-poll-modal'
+import JoinServerModal from '@/components/modals/join-server-modal'
 
 import { useEffect, useState } from 'react'
+import InitialModal from '../modals/initial-modal'
 
 export const ModalProvider = () => {
   const [isMounted, setIsMounted] = useState(false)
@@ -30,6 +32,7 @@ export const ModalProvider = () => {
   return (
     <>
       <CreateServerModal />
+      <InitialModal />
       <InviteModal />
       <EditServerModal />
       <MembersModal />
@@ -42,6 +45,7 @@ export const ModalProvider = () => {
       <DeleteMessageModal />
       <CreatePollModal />
       <EditPollModal />
+      <JoinServerModal />
     </>
   )
 }
