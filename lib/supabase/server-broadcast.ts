@@ -12,11 +12,11 @@ export async function broadcastMessage(
   )
   
   const channel = supabase.channel(channelName)
-  await channel.subscribe()
-  await channel.send({
-    type: 'broadcast',
-    event,
-    payload
-  })
-  await supabase.removeChannel(channel)
+  try {
+    await channel.httpSend(event, payload ?? {})
+  } catch (error) {
+    throw error instanceof Error
+      ? error
+      : new Error(`Failed to deliver broadcast for channel ${channelName}`)
+  }
 }

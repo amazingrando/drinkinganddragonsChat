@@ -36,6 +36,7 @@ export const RealtimeProvider = ({ children }: { children: React.ReactNode }) =>
   const [isConnected, setIsConnected] = useState(false)
   const [supabase] = useState(() => createClient())
   const channelsRef = useRef<Map<string, RealtimeChannel>>(new Map())
+  const subscriptionPromisesRef = useRef<WeakMap<RealtimeChannel, Promise<void>>>(new WeakMap())
 
   useEffect(() => {
     // Track connection status
@@ -53,27 +54,69 @@ export const RealtimeProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, [supabase])
 
-  const subscribe = (channelName: string, event: string, callback: (payload: RealtimeBroadcastPayload<unknown>) => void) => {
-    // Clean up existing channel if it exists
-    const existingChannel = channelsRef.current.get(channelName)
-    if (existingChannel) {
-      supabase.removeChannel(existingChannel)
+  const ensureChannel = (channelName: string) => {
+    let channel = channelsRef.current.get(channelName)
+    if (!channel) {
+      channel = supabase.channel(channelName)
+      channelsRef.current.set(channelName, channel)
+    }
+    return channel
+  }
+
+  const ensureSubscribed = (channel: RealtimeChannel) => {
+    if (channel.state === "SUBSCRIBED") {
+      return Promise.resolve()
     }
 
-    const channel = supabase.channel(channelName)
+    const promises = subscriptionPromisesRef.current
+    const existingPromise = promises.get(channel)
+    if (existingPromise) {
+      return existingPromise
+    }
 
-    channel.on('broadcast', { event }, callback)
+    const promise = new Promise<void>((resolve, reject) => {
+      channel.subscribe((status) => {
+        console.log(`Realtime channel ${channel.topic} status:`, status)
+        if (status === "SUBSCRIBED") {
+          subscriptionPromisesRef.current.delete(channel)
+          setIsConnected(true)
+          resolve()
+          return
+        }
 
-    channel.subscribe((status) => {
-      console.log(`Realtime channel ${channelName} status:`, status)
-      if (status === 'SUBSCRIBED') {
-        setIsConnected(true)
-      }
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          subscriptionPromisesRef.current.delete(channel)
+          setIsConnected(false)
+          reject(new Error(`Failed to subscribe to channel ${channel.topic}: ${status}`))
+          return
+        }
+
+        if (status === "CLOSED") {
+          subscriptionPromisesRef.current.delete(channel)
+          const stillTracked = channelsRef.current.get(channel.topic) === channel
+          setIsConnected(false)
+          if (stillTracked) {
+            reject(new Error(`Channel ${channel.topic} closed unexpectedly`))
+          } else {
+            resolve()
+          }
+        }
+      })
+    }).catch((error) => {
+      subscriptionPromisesRef.current.delete(channel)
+      throw error
     })
 
-    // Store channel for cleanup
-    channelsRef.current.set(channelName, channel)
+    promises.set(channel, promise)
+    return promise
+  }
 
+  const subscribe = (channelName: string, event: string, callback: (payload: RealtimeBroadcastPayload<unknown>) => void) => {
+    const channel = ensureChannel(channelName)
+    channel.on("broadcast", { event }, callback)
+    ensureSubscribed(channel).catch((error) => {
+      console.error(error)
+    })
     return channel
   }
 
@@ -83,29 +126,35 @@ export const RealtimeProvider = ({ children }: { children: React.ReactNode }) =>
     for (const [key, value] of channelsRef.current.entries()) {
       if (value === channel) {
         channelsRef.current.delete(key)
+        subscriptionPromisesRef.current.delete(value)
         break
       }
     }
   }
 
   const broadcast = async (channelName: string, event: string, payload: Record<string, unknown>) => {
-    const channel = supabase.channel(channelName)
-    await channel.subscribe()
-    await channel.send({
-      type: 'broadcast',
+    const channel = ensureChannel(channelName)
+    await ensureSubscribed(channel)
+    const { status, error } = await channel.send({
+      type: "broadcast",
       event,
-      payload
+      payload,
     })
-    await supabase.removeChannel(channel)
+
+    if (status !== "ok" || error) {
+      throw error ?? new Error(`Realtime send failed for channel ${channelName}`)
+    }
   }
 
   // Cleanup all channels on unmount
   useEffect(() => {
     const channelsMap = channelsRef.current
     return () => {
-      channelsMap.forEach(channel => {
+      channelsMap.forEach((channel) => {
         supabase.removeChannel(channel)
+        subscriptionPromisesRef.current.delete(channel)
       })
+      channelsMap.clear()
     }
   }, [supabase])
 
