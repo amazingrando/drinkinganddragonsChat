@@ -68,7 +68,7 @@ export const RealtimeProvider = ({ children }: { children: React.ReactNode }) =>
   }, [supabase])
 
   const ensureSubscribed = useCallback((channel: RealtimeChannel) => {
-    if (channel.state === "SUBSCRIBED") {
+    if (channel.state === "joined") {
       return Promise.resolve()
     }
 
@@ -146,14 +146,14 @@ export const RealtimeProvider = ({ children }: { children: React.ReactNode }) =>
   const broadcast = useCallback(async (channelName: string, event: string, payload: Record<string, unknown>) => {
     const channel = ensureChannel(channelName)
     await ensureSubscribed(channel)
-    const { status, error } = await channel.send({
+    const sendResult = await channel.send({
       type: "broadcast",
       event,
       payload,
     })
 
-    if (status !== "ok" || error) {
-      throw error ?? new Error(`Realtime send failed for channel ${channelName}`)
+    if (sendResult !== "ok") {
+      throw new Error(`Realtime send failed for channel ${channelName}: ${sendResult}`)
     }
   }, [ensureChannel, ensureSubscribed])
 

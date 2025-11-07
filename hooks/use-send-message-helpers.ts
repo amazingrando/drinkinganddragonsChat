@@ -25,7 +25,7 @@ export const createOptimisticMessage = (
 ): ChatMessage => {
   const { currentMember, query, type } = params
   const { tempId, content } = variables
-  const timestamp = new Date().toISOString()
+  const timestamp = new Date()
 
   if (type === "channel") {
     return {
@@ -41,8 +41,8 @@ export const createOptimisticMessage = (
       pollId: null,
       poll: null,
       member: currentMember,
-      status: "pending",
-    }
+      status: "pending" as ChatMessage["status"],
+    } as ChatMessage
   }
 
   return {
@@ -56,8 +56,8 @@ export const createOptimisticMessage = (
     conversationId: query.conversationId ?? "",
     memberId: currentMember.id,
     member: currentMember,
-    status: "pending",
-  }
+    status: "pending" as ChatMessage["status"],
+  } as ChatMessage
 }
 
 const normalizeData = (data: InfiniteChatData | undefined): InfiniteChatData => {
@@ -86,7 +86,7 @@ export const upsertPendingMessage = (
         if (item.id === tempId || item.optimisticId === tempId) {
           return {
             ...item,
-            status: "pending",
+            status: "pending" as ChatMessage["status"],
           }
         }
         return item
