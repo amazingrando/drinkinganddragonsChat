@@ -6,7 +6,8 @@ import ChatWelcome from "@/components/chat/chat-welcome"
 import { useChatQuery } from "@/hooks/use-chat-query"
 import { Loader2, ServerCrash } from "lucide-react"
 import ChatItem from "@/components/chat/chat-item"
-import { format } from "date-fns"
+import ChatDaySeparator from "@/components/chat/chat-day-separator"
+import { format, isSameDay } from "date-fns"
 import { useChatRealtime } from "@/hooks/use-chat-realtime"
 import { Button } from "../ui/button"
 import { useChatScroll } from "@/hooks/use-chat-scroll"
@@ -14,6 +15,7 @@ import { ChatMessage } from "@/types"
 import { useSendMessage } from "@/hooks/use-send-message"
 
 const DATE_FORMAT = "d MMM yyyy, HH:mm"
+const DAY_SEPARATOR_FORMAT = "EEEE, MMMM d, yyyy"
 
 interface ChatMessagesProps {
   name: string
@@ -128,25 +130,45 @@ const ChatMessages = ({ name, member, chatId, apiUrl, socketUrl, socketQuery, pa
             });
           });
 
-          return allMessages.map((message) => (
-            <ChatItem
-              key={message.id}
-              id={message.id}
-              currentMember={member}
-              member={message.member}
-              content={message.content}
-              fileUrl={message.fileUrl}
-              deleted={message.deleted}
-              timestamp={format(new Date(message.createdAt || Date.now()), DATE_FORMAT)}
-              isUpdated={message.updatedAt !== message.createdAt}
-              socketUrl={socketUrl}
-              socketQuery={socketQuery}
-              poll={"poll" in message ? message.poll : undefined}
-              status={message.status}
-              isRetrying={isRetrying && pendingTempId === message.id}
-              onRetry={message.status === "failed" ? () => handleRetry(message) : undefined}
-            />
-          ));
+          const messageNodes: React.ReactNode[] = []
+
+          allMessages.forEach((message, index) => {
+            const createdAt = new Date(message.createdAt || Date.now())
+            const nextMessage = allMessages[index + 1]
+            const nextCreatedAt = nextMessage ? new Date(nextMessage.createdAt || Date.now()) : null
+            const showDaySeparator = !nextMessage || !nextCreatedAt || !isSameDay(createdAt, nextCreatedAt)
+
+            messageNodes.push(
+              <ChatItem
+                key={message.id}
+                id={message.id}
+                currentMember={member}
+                member={message.member}
+                content={message.content}
+                fileUrl={message.fileUrl}
+                deleted={message.deleted}
+                timestamp={format(createdAt, DATE_FORMAT)}
+                isUpdated={message.updatedAt !== message.createdAt}
+                socketUrl={socketUrl}
+                socketQuery={socketQuery}
+                poll={"poll" in message ? message.poll : undefined}
+                status={message.status}
+                isRetrying={isRetrying && pendingTempId === message.id}
+                onRetry={message.status === "failed" ? () => handleRetry(message) : undefined}
+              />
+            )
+
+            if (showDaySeparator) {
+              messageNodes.push(
+                <ChatDaySeparator
+                  key={`separator-${message.id}`}
+                  label={format(createdAt, DAY_SEPARATOR_FORMAT)}
+                />
+              )
+            }
+          })
+
+          return messageNodes
         })()}
       </div>
       <div ref={bottomRef} />
