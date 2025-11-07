@@ -7,11 +7,6 @@ import { ModalProvider } from "@/components/providers/modal-provider"
 import { RealtimeProvider } from "@/components/providers/realtime-provider"
 import { QueryProvider } from "@/components/providers/query-provider"
 
-const openSans = Open_Sans({
-  variable: "--font-open-sans",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
   title: "Guildhall Community",
   description: "Connect and collaborate with your TTRPG gaming community",
@@ -23,8 +18,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="h-screen">
-      <body className={cn(`${openSans.variable} antialiased font-sans`, "h-screen")}>
+    <html lang="en" suppressHydrationWarning className="h-svh">
+      <body className="antialiased font-sans h-svh">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
