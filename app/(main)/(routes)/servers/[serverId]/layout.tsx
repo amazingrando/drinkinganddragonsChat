@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { currentProfile } from '@/lib/current-profile'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
