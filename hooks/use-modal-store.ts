@@ -2,7 +2,7 @@ import { create } from "zustand"
 import { Channel, ChannelType, Server, MemberRole } from "@prisma/client"
 import { PollWithOptionsAndVotes } from "@/types"
 
-export type ModalType = "createServer" | "invite" | "editServer" | "members" | "createChannel" | "leaveServer" | "deleteServer" | "deleteChannel" | "editChannel" | "messageFile" | "deleteMessage" | "createPoll" | "editPoll"
+export type ModalType = "createServer" | "joinServer" | "invite" | "editServer" | "members" | "createChannel" | "leaveServer" | "deleteServer" | "deleteChannel" | "editChannel" | "messageFile" | "deleteMessage" | "createPoll" | "editPoll" | "initialModal"
 
 interface ModalData {
   server?: Server
