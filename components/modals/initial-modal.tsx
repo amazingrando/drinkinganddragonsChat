@@ -7,14 +7,40 @@ import { ModalHeader } from "./_modal-header"
 
 const InitialModal = () => {
   const [isMounted, setIsMounted] = useState(false)
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
+  const [hasChecked, setHasChecked] = useState(false)
   const { onOpen } = useModal()
 
   useEffect(() => {
     setIsMounted(true)
   }, [])
 
-  if (!isMounted) {
+  useEffect(() => {
+    const checkServerMembership = async () => {
+      if (!isMounted) return
+
+      try {
+        const response = await fetch("/api/servers")
+        if (response.ok) {
+          const data = await response.json()
+          // Only show modal if user has no servers
+          if (!data.hasServers) {
+            setIsOpen(true)
+          }
+        }
+      } catch (error) {
+        console.error("[INITIAL_MODAL]", error)
+      } finally {
+        setHasChecked(true)
+      }
+    }
+
+    if (isMounted) {
+      checkServerMembership()
+    }
+  }, [isMounted])
+
+  if (!isMounted || !hasChecked) {
     return null
   }
 

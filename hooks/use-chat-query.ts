@@ -22,7 +22,9 @@ export const useChatQuery = ({ queryKey, apiUrl, paramKey, paramValue }: ChatQue
       },
     }, { skipNull: true })
     
-    const res = await fetch(url)
+    const res = await fetch(url, {
+      credentials: 'include',
+    })
     return res.json()
   }
 
