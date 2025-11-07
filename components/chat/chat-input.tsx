@@ -3,8 +3,6 @@
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-import axios from "axios"
-import qs from "query-string"
 import { cn } from "@/lib/utils"
 
 import {
@@ -23,25 +21,35 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, BarChart3, LogOut } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { Plus, BarChart3 } from "lucide-react"
 import { useModal } from "@/hooks/use-modal-store"
 import { EmojiPicker } from "@/components/emoji-picker"
+import { Member, Profile } from "@prisma/client"
+import { useSendMessage } from "@/hooks/use-send-message"
 
 interface ChatInputProps {
   apiUrl: string
   query: { channelId?: string, serverId?: string, conversationId?: string }
   name: string
   type: "channel" | "conversation"
+  chatId: string
+  currentMember: Member & { profile: Profile }
 }
 
 const formSchema = z.object({
   content: z.string().min(1),
 })
 
-export const ChatInput = ({ apiUrl, query, name, type }: ChatInputProps) => {
+export const ChatInput = ({ apiUrl, query, name, type, chatId, currentMember }: ChatInputProps) => {
   const { onOpen } = useModal()
-  const router = useRouter();
+  const queryKey = `chat:${chatId}`
+  const { sendMessage, isSending } = useSendMessage({
+    apiUrl,
+    query,
+    queryKey,
+    currentMember,
+    type,
+  })
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,17 +58,17 @@ export const ChatInput = ({ apiUrl, query, name, type }: ChatInputProps) => {
     },
   })
 
-  const isLoading = form.formState.isSubmitting
+  const isLoading = form.formState.isSubmitting || isSending
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const url = qs.stringifyUrl({
-        url: apiUrl,
-        query: query,
-      })
-      await axios.post(url, values)
-      form.reset();
-      router.refresh();
+      const content = values.content.trim()
+      if (!content) {
+        return
+      }
+
+      await sendMessage(content)
+      form.reset()
     } catch (error) {
       console.error(error)
     }

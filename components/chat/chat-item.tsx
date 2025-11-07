@@ -3,7 +3,7 @@
 import { Member, MemberRole, Profile } from "@prisma/client"
 import UserAvatar from "@/components/user-avatar"
 import { ActionTooltip } from "@/components//action-tooltip"
-import { ShieldCheck, ShieldAlert, Users, Pencil, Trash } from "lucide-react"
+import { ShieldCheck, ShieldAlert, Users, Pencil, Trash, Loader2 } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
@@ -32,6 +32,9 @@ interface ChatItemProps {
   socketUrl: string,
   socketQuery: Record<string, string>,
   poll?: PollWithOptionsAndVotes | null,
+  status?: "pending" | "failed" | "sent",
+  onRetry?: () => void,
+  isRetrying?: boolean,
 }
 
 const roleIconMap = {
@@ -44,7 +47,7 @@ const formSchema = z.object({
   content: z.string().min(1),
 })
 
-export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, currentMember, isUpdated, socketUrl, socketQuery, poll }: ChatItemProps) => {
+export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, currentMember, isUpdated, socketUrl, socketQuery, poll, status, onRetry, isRetrying }: ChatItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const { onOpen } = useModal();
   const router = useRouter();
@@ -107,8 +110,15 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
   const canEditMessage = !deleted && isOwner && !fileUrl;
   const isImage = fileUrl;
 
+  const isPending = status === "pending"
+  const isFailed = status === "failed"
+
   return (
-    <div className="relative group flex items-center dark:hover:bg-background/70 hover:bg-lavender-200 p-4 transition w-full">
+    <div className={cn(
+      "relative group flex items-center dark:hover:bg-background/70 hover:bg-lavender-200 p-4 transition w-full",
+      isPending && "pointer-events-none",
+      isFailed && "bg-destructive/10",
+    )}>
       <div className="group flex gap-x-2 items-start w-full">
         <div className="cursor-pointer hover:drop-shadow-md transition" onClick={onMemberClick}>
           <UserAvatar src={member.profile.email} />
@@ -158,7 +168,6 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
               )}
             </p>
           )}
-
           {!fileUrl && isEditing && (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-center gap-x-2 pt-2 w-full">
@@ -178,6 +187,38 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
                 Press escape to cancel, enter to save.
               </span>
             </Form>
+          )}
+
+          {isPending && (
+            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Sending...</span>
+            </div>
+          )}
+
+          {isFailed && (
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-destructive">
+              <span>Message failed to send.</span>
+              {onRetry && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-auto px-2 py-1 text-xs"
+                  onClick={onRetry}
+                  disabled={isRetrying}
+                >
+                  {isRetrying ? (
+                    <span className="flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Retrying...
+                    </span>
+                  ) : (
+                    "Retry"
+                  )}
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </div>

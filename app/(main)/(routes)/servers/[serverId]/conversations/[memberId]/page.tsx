@@ -75,6 +75,8 @@ const MemberIdPage = async ({ params, searchParams }: MemberIdPageProps) => {
             query={{
               conversationId: conversation.id,
             }}
+            chatId={conversation.id}
+            currentMember={currentMember}
           />
         </>
       )}

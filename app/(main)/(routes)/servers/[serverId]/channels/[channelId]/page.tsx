@@ -43,6 +43,9 @@ const ChannelIdPage = async ({ params }: ChannelIdPageProps) => {
       serverID: (await params).serverId,
       profileID: profile.id,
     },
+    include: {
+      profile: true,
+    },
   })
 
   if (!channel || !member) {
@@ -55,7 +58,7 @@ const ChannelIdPage = async ({ params }: ChannelIdPageProps) => {
       {channel.type === ChannelType.TEXT && (
         <>
           <ChatMessages name={channel.name} member={member} chatId={channel.id} apiUrl="/api/messages" socketUrl="/api/socket/messages" socketQuery={{ channelId: channel.id, serverId: channel.serverID }} paramKey="channelId" paramValue={channel.id} type="channel" />
-          <ChatInput apiUrl="/api/socket/messages" query={{ channelId: channel.id, serverId: channel.serverID }} name={channel.name} type="channel" />
+          <ChatInput apiUrl="/api/socket/messages" query={{ channelId: channel.id, serverId: channel.serverID }} name={channel.name} type="channel" chatId={channel.id} currentMember={member} />
         </>
       )}
       {channel.type === ChannelType.AUDIO && (

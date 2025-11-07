@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useRef } from "react"
-import { Member, Message, Profile } from "@prisma/client"
+import React, { useCallback, useRef } from "react"
+import { Member, Profile } from "@prisma/client"
 import ChatWelcome from "@/components/chat/chat-welcome"
 import { useChatQuery } from "@/hooks/use-chat-query"
 import { Loader2, ServerCrash } from "lucide-react"
@@ -10,13 +10,14 @@ import { format } from "date-fns"
 import { useChatRealtime } from "@/hooks/use-chat-realtime"
 import { Button } from "../ui/button"
 import { useChatScroll } from "@/hooks/use-chat-scroll"
-import { MessageWithPoll } from "@/types"
+import { ChatMessage } from "@/types"
+import { useSendMessage } from "@/hooks/use-send-message"
 
 const DATE_FORMAT = "d MMM yyyy, HH:mm"
 
 interface ChatMessagesProps {
   name: string
-  member: Member
+  member: Member & { profile: Profile }
   chatId: string
   apiUrl: string
   socketUrl: string
@@ -25,8 +26,6 @@ interface ChatMessagesProps {
   paramValue: string
   type: "channel" | "conversation"
 }
-
-type MessageWithMemberWithProfile = Message & { member: Member & { profile: Profile } }
 
 const ChatMessages = ({ name, member, chatId, apiUrl, socketUrl, socketQuery, paramKey, paramValue, type }: ChatMessagesProps) => {
   const queryKey = `chat:${chatId}`
@@ -42,6 +41,21 @@ const ChatMessages = ({ name, member, chatId, apiUrl, socketUrl, socketQuery, pa
     paramKey: paramKey,
     paramValue: paramValue,
   })
+
+  const { sendMessage: retrySendMessage, isSending: isRetrying, pendingTempId } = useSendMessage({
+    apiUrl: socketUrl,
+    query: socketQuery,
+    queryKey,
+    currentMember: member,
+    type,
+  })
+
+  const handleRetry = useCallback(
+    (message: ChatMessage) => {
+      void retrySendMessage(message.content, { tempId: message.id, isRetry: true })
+    },
+    [retrySendMessage],
+  )
 
   // Use Supabase Realtime for all chat types
   useChatRealtime({
@@ -100,13 +114,13 @@ const ChatMessages = ({ name, member, chatId, apiUrl, socketUrl, socketQuery, pa
         {(() => {
           // Flatten and deduplicate messages from all pages, preserving order
           const seenIds = new Set<string>();
-          const allMessages: (MessageWithPoll | MessageWithMemberWithProfile)[] = [];
+          const allMessages: ChatMessage[] = [];
 
           // Iterate through pages in reverse to maintain correct order when flattened
           // (since flex-col-reverse will reverse the visual order)
           data?.pages?.forEach((group) => {
             // Iterate items in the order they appear in the page
-            group.items.forEach((message: MessageWithPoll | MessageWithMemberWithProfile) => {
+            group.items.forEach((message: ChatMessage) => {
               if (!seenIds.has(message.id)) {
                 seenIds.add(message.id);
                 allMessages.push(message);
@@ -114,7 +128,7 @@ const ChatMessages = ({ name, member, chatId, apiUrl, socketUrl, socketQuery, pa
             });
           });
 
-          return allMessages.map((message: MessageWithPoll | MessageWithMemberWithProfile) => (
+          return allMessages.map((message) => (
             <ChatItem
               key={message.id}
               id={message.id}
@@ -128,6 +142,9 @@ const ChatMessages = ({ name, member, chatId, apiUrl, socketUrl, socketQuery, pa
               socketUrl={socketUrl}
               socketQuery={socketQuery}
               poll={"poll" in message ? message.poll : undefined}
+              status={message.status}
+              isRetrying={isRetrying && pendingTempId === message.id}
+              onRetry={message.status === "failed" ? () => handleRetry(message) : undefined}
             />
           ));
         })()}

@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const serverId = searchParams.get("serverId")
     const channelId = searchParams.get("channelId")
-    const { content, fileUrl }: { content?: string; fileUrl?: string } = await request.json()
+    const { content, fileUrl, optimisticId }: { content?: string; fileUrl?: string; optimisticId?: string } = await request.json()
 
     if (!profile) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
@@ -60,13 +60,17 @@ export async function POST(request: NextRequest) {
     })
 
     const channelKey = `chat:${channelId}:messages`
+    const payload = {
+      ...message,
+      optimisticId,
+    }
     try {
-      await broadcastMessage(channelKey, channelKey, message)
+      await broadcastMessage(channelKey, channelKey, payload)
     } catch (error) {
       console.log("[SUPABASE_BROADCAST_ERROR]", error)
     }
 
-    return NextResponse.json(message, { status: 200 })
+    return NextResponse.json(payload, { status: 200 })
   } catch (error) {
     console.log("[MESSAGES_POST]", error)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })

@@ -3,7 +3,8 @@
 import { UseRealtime } from "@/components/providers/realtime-provider";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Member, Message, Profile } from "@prisma/client";
+
+import { ChatMessage } from "@/types";
 
 type ChatSocketProps = {
   addKey: string
@@ -11,10 +12,9 @@ type ChatSocketProps = {
   queryKey: string
 }
 
-type MessageWithMemberWithProfile = Message & {
-  member: Member & {
-    profile: Profile
-  }
+type ChatPagesData = {
+  pages?: Array<{ items: ChatMessage[]; nextCursor?: string | null }>
+  pageParams?: unknown[]
 }
 
 type RealtimeBroadcastPayload<T> = {
@@ -42,70 +42,109 @@ export const useChatRealtime = ({
 
     // Subscribe to add messages
     const addChannel = subscribe(addKey, addKey, (payload: RealtimeBroadcastPayload<unknown>) => {
-      const message = payload.payload as MessageWithMemberWithProfile;
-      queryClient.setQueryData([queryKey], (oldData: { pages?: Array<{ items: MessageWithMemberWithProfile[] }> } | undefined) => {
-        if (!oldData || !Array.isArray(oldData.pages) || oldData.pages.length === 0) {
+      const message = payload.payload as ChatMessage;
+      const normalizedMessage: ChatMessage = {
+        ...message,
+        status: undefined,
+      };
+
+      queryClient.setQueryData<ChatPagesData | undefined>([queryKey], (oldData) => {
+        const basePages = Array.isArray(oldData?.pages) ? oldData!.pages : [];
+
+        let replaced = false;
+        const nextPages = basePages.map((page) => {
+          const items = page.items.map((item) => {
+            if (message.optimisticId && item.optimisticId === message.optimisticId) {
+              replaced = true;
+              return {
+                ...normalizedMessage,
+              };
+            }
+            return item;
+          });
+
           return {
-            pages: [{
-              items: [message],
-            }]
-          }
+            ...page,
+            items,
+          };
+        });
+
+        if (replaced) {
+          return {
+            ...oldData,
+            pages: nextPages,
+          };
         }
 
-        // Check if message already exists in any page to prevent duplicates
-        const messageExists = oldData.pages.some(page => 
-          page.items.some(item => item.id === message.id)
+        const messageExists = nextPages.some((page) =>
+          page.items.some((item) => item.id === normalizedMessage.id),
         );
 
         if (messageExists) {
-          return oldData;
+          return {
+            ...oldData,
+            pages: nextPages,
+          };
         }
 
-        const newData = [...oldData.pages];
+        if (!nextPages.length) {
+          return {
+            pages: [
+              {
+                items: [normalizedMessage],
+                nextCursor: null,
+              },
+            ],
+          };
+        }
 
-        newData[0] = {
-          ...newData[0],
-          items: [
-            message,
-            ...newData[0].items,
-          ]
-        };
+        const [firstPage, ...rest] = nextPages;
 
         return {
           ...oldData,
-          pages: newData,
+          pages: [
+            {
+              ...firstPage,
+              items: [normalizedMessage, ...firstPage.items],
+            },
+            ...rest,
+          ],
         };
       });
     });
 
     // Subscribe to update messages
     const updateChannel = subscribe(updateKey, updateKey, (payload: RealtimeBroadcastPayload<unknown>) => {
-      const message = payload.payload as MessageWithMemberWithProfile;
-      queryClient.setQueryData([queryKey], (oldData: { pages?: Array<{ items: MessageWithMemberWithProfile[] }> } | undefined) => {
-        if (
-          !oldData ||
-          !Array.isArray(oldData.pages) ||
-          oldData.pages.length === 0
-        ) {
+      const message = payload.payload as ChatMessage;
+      const normalizedMessage: ChatMessage = {
+        ...message,
+        status: undefined,
+      };
+
+      queryClient.setQueryData<ChatPagesData | undefined>([queryKey], (oldData) => {
+        if (!oldData || !Array.isArray(oldData.pages) || !oldData.pages.length) {
           return oldData;
         }
 
-        const newData = oldData.pages.map((page) => {
-          return {
-            ...page,
-            items: page.items.map((item: MessageWithMemberWithProfile) => {
-              if (item.id === message.id) {
-                return message;
-              }
-              return item;
-            })
-          }
-        });
+        const nextPages = oldData.pages.map((page) => ({
+          ...page,
+          items: page.items.map((item) => {
+            if (item.id === normalizedMessage.id) {
+              return normalizedMessage;
+            }
+
+            if (message.optimisticId && item.optimisticId === message.optimisticId) {
+              return normalizedMessage;
+            }
+
+            return item;
+          }),
+        }));
 
         return {
           ...oldData,
-          pages: newData,
-        }
+          pages: nextPages,
+        };
       })
     });
 

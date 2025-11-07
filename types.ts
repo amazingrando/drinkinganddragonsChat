@@ -1,4 +1,4 @@
-import { Member, Profile, Server, Poll, PollOption, PollVote, Message } from "@prisma/client"
+import { Member, Profile, Server, Poll, PollOption, PollVote, Message, DirectMessage } from "@prisma/client"
 
 export type ServerWithMembersWithProfiles = Server & {
   members: (Member & { profile: Profile })[]
@@ -23,4 +23,15 @@ export type MessageWithPoll = Message & {
   member: Member & {
     profile: Profile
   }
+}
+
+export type DirectMessageWithMemberProfile = DirectMessage & {
+  member: Member & {
+    profile: Profile
+  }
+}
+
+export type ChatMessage = (MessageWithPoll | DirectMessageWithMemberProfile) & {
+  optimisticId?: string
+  status?: "pending" | "failed" | "sent"
 }
