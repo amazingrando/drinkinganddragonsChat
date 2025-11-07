@@ -13,8 +13,17 @@ import {
   FormField,
   FormItem,
 } from "@/components/ui/form"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, BarChart3 } from "lucide-react"
+import { Plus, BarChart3, LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useModal } from "@/hooks/use-modal-store"
 import { EmojiPicker } from "@/components/emoji-picker"
@@ -64,26 +73,31 @@ export const ChatInput = ({ apiUrl, query, name, type }: ChatInputProps) => {
           <FormItem>
             <FormControl>
               <div className="relative p-4 pb-6">
-                <button
-                  type="button"
-                  onClick={() => { onOpen("messageFile", { apiUrl, query }); }}
-                  className="absolute top-7 left-8 h-[24px] w-[24px] bg-icon-background hover:bg-mana-600 transition rounded-full p-1 flex items-center justify-center" >
-                  <Plus className="w-4 h-4 text-white " />
-                </button>
 
-                {type === "channel" && (
-                  <button
-                    type="button"
-                    onClick={() => { onOpen("createPoll", { apiUrl, query }); }}
-                    className="absolute top-7 left-[3.5rem] h-[24px] w-[24px] bg-icon-background hover:bg-mana-600 transition rounded-full p-1 flex items-center justify-center" >
-                    <BarChart3 className="w-4 h-4 text-white " />
-                  </button>
-                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <div className="absolute top-5.75 left-6">
+                      <Button variant="primary" size="icon" className="rounded-full bg-mana-600 hover:bg-mana-700" >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent forceMount>
+                    <DropdownMenuItem onClick={() => { onOpen("messageFile", { apiUrl, query }); }}>
+                      <Plus className="w-4 h-4" />
+                      <span>Add a File</span>
+                    </DropdownMenuItem>
+                    {type === "channel" && (<DropdownMenuItem onClick={() => { onOpen("createPoll", { apiUrl, query }); }}>
+                      <BarChart3 className="w-4 h-4 " />
+                      <span>Creat a Poll</span>
+                    </DropdownMenuItem>)}
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 <Input disabled={isLoading} className={cn(
                   "px-14 py-6 bg-muted/50 font-medium",
                   "text-foreground placeholder:text-muted-foreground/70",
-                  type === "channel" && "pl-20"
+                  type === "channel" && "pl-14"
                 )}
                   placeholder={`Message ${type === "conversation" ? name : "#" + name}`} {...field} />
 
