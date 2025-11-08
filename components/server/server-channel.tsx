@@ -11,6 +11,7 @@ interface ServerChannelProps {
   channel: Channel
   server: Server
   role?: MemberRole
+  hasUnread?: boolean
 }
 
 const iconMap = {
@@ -19,7 +20,7 @@ const iconMap = {
   [ChannelType.VIDEO]: <Video className="w-4 h-4 mr-2 text-icon-foreground" />,
 }
 
-export const ServerChannel = ({ channel, server, role }: ServerChannelProps) => {
+export const ServerChannel = ({ channel, server, role, hasUnread = false }: ServerChannelProps) => {
   const { onOpen } = useModal()
   const params = useParams()
   const router = useRouter()
@@ -32,6 +33,11 @@ export const ServerChannel = ({ channel, server, role }: ServerChannelProps) => 
     e.stopPropagation()
     onOpen(action, { channel, server })
   }
+
+  const canManageChannel = channel.name !== "general" && role !== MemberRole.MEMBER
+  const showLock = channel.name === "general"
+  const showUnreadIndicator = hasUnread
+  const showTrailing = showUnreadIndicator || canManageChannel || showLock
 
   return (
     <button
@@ -47,20 +53,31 @@ export const ServerChannel = ({ channel, server, role }: ServerChannelProps) => 
       )}>
         {channel.name}
       </p>
-
-      {channel.name !== "general" && role !== MemberRole.MEMBER && (
+      {showTrailing && (
         <div className="ml-auto flex items-center gap-x-2">
-          <ActionTooltip label="Edit">
-            <Edit onClick={(e) => onAction(e, "editChannel")} className="hidden group-hover:block w-4 h-4 text-icon-muted-foreground hover:text-foreground dark:hover:text-white transition" />
-          </ActionTooltip>
-          <ActionTooltip label="Delete">
-            <Trash onClick={(e) => onAction(e, "deleteChannel")} className="hidden group-hover:block w-4 h-4 text-icon-muted-foreground hover:text-foreground dark:hover:text-white transition" />
-          </ActionTooltip>
+          {showUnreadIndicator && (
+            <span className="inline-flex h-2 w-2 rounded-full bg-white shadow-[0_0_0_2px_rgba(99,102,241,0.45)] dark:shadow-[0_0_0_2px_rgba(99,102,241,0.35)]" />
+          )}
+          {canManageChannel && (
+            <div className="flex items-center gap-x-2">
+              <ActionTooltip label="Edit">
+                <Edit
+                  onClick={(e) => onAction(e, "editChannel")}
+                  className="hidden group-hover:block w-4 h-4 text-icon-muted-foreground hover:text-foreground dark:hover:text-white transition"
+                />
+              </ActionTooltip>
+              <ActionTooltip label="Delete">
+                <Trash
+                  onClick={(e) => onAction(e, "deleteChannel")}
+                  className="hidden group-hover:block w-4 h-4 text-icon-muted-foreground hover:text-foreground dark:hover:text-white transition"
+                />
+              </ActionTooltip>
+            </div>
+          )}
+          {showLock && (
+            <Lock className="w-4 h-4 text-muted-foreground/60" />
+          )}
         </div>
-      )}
-
-      {channel.name === "general" && (
-        <Lock className="ml-auto w-4 h-4 text-muted-foreground/60" />
       )}
     </button>
   )

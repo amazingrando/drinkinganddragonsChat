@@ -52,12 +52,51 @@ const ChannelIdPage = async ({ params }: ChannelIdPageProps) => {
     return redirect('/')
   }
 
+  const [readState, latestMessage] = await Promise.all([
+    db.channelReadState.findUnique({
+      where: {
+        memberId_channelId: {
+          memberId: member.id,
+          channelId: channel.id,
+        },
+      },
+    }),
+    db.message.findFirst({
+      where: { channelId: channel.id },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        createdAt: true,
+      },
+    }),
+  ])
+
+  const hasUnread = latestMessage
+    ? !readState || latestMessage.createdAt > readState.lastReadAt
+    : false
+
   return (
     <div className="bg-lavender-100 dark:bg-lavender-900 text-foreground flex flex-col h-full">
       <ChatHeader serverId={channel.serverID} name={channel.name} type="channel" />
       {channel.type === ChannelType.TEXT && (
         <>
-          <ChatMessages name={channel.name} member={member} chatId={channel.id} apiUrl="/api/messages" socketUrl="/api/socket/messages" socketQuery={{ channelId: channel.id, serverId: channel.serverID }} paramKey="channelId" paramValue={channel.id} type="channel" />
+          <ChatMessages
+            name={channel.name}
+            member={member}
+            chatId={channel.id}
+            apiUrl="/api/messages"
+            socketUrl="/api/socket/messages"
+            socketQuery={{ channelId: channel.id, serverId: channel.serverID }}
+            paramKey="channelId"
+            paramValue={channel.id}
+            type="channel"
+            serverId={channel.serverID}
+            initialReadState={{
+              lastReadAt: readState?.lastReadAt?.toISOString() ?? null,
+              lastMessageId: readState?.lastMessageId ?? null,
+              hasUnread,
+            }}
+          />
           <ChatInput apiUrl="/api/socket/messages" query={{ channelId: channel.id, serverId: channel.serverID }} name={channel.name} type="channel" chatId={channel.id} currentMember={member} />
         </>
       )}
