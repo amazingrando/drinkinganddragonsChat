@@ -23,6 +23,7 @@ export const useChatScroll = ({
 }: ChatScrollProps) => {
   const [hasInitialized, setHasInitialized] = useState(false)
   const atBottomRef = useRef<boolean>(false)
+  const autoScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const evaluateAtBottom = useCallback(() => {
     const topDiv = chatRef?.current
@@ -41,6 +42,11 @@ export const useChatScroll = ({
   useEffect(() => {
     const topDiv = chatRef?.current
     const handleScroll = () => {
+      if (autoScrollTimeoutRef.current) {
+        clearTimeout(autoScrollTimeoutRef.current)
+        autoScrollTimeoutRef.current = null
+      }
+
       const scrollTop = topDiv?.scrollTop
 
       if (scrollTop === 0 && shouldLoadMore) {
@@ -64,26 +70,52 @@ export const useChatScroll = ({
   useEffect(() => {
     const bottomDiv = bottomRef?.current
     const topDiv = chatRef?.current
+    if (!bottomDiv) {
+      return
+    }
+
+    if (autoScrollTimeoutRef.current) {
+      clearTimeout(autoScrollTimeoutRef.current)
+      autoScrollTimeoutRef.current = null
+    }
+
     const shouldAutoScroll = () => {
-      if (!hasInitialized && bottomDiv) {
-        setHasInitialized(true)
-        return !disableInitialScroll
-      }
       if (!topDiv) {
         return false
       }
-      const distanceFromBottom = topDiv?.scrollHeight - topDiv?.scrollTop - topDiv?.clientHeight
-  
+
+      if (!hasInitialized) {
+        setHasInitialized(true)
+        return !disableInitialScroll
+      }
+
+      if (!autoScrollEnabled) {
+        return false
+      }
+
+      const isAtBottom = evaluateAtBottom()
+      if (!isAtBottom) {
+        return false
+      }
+
+      const distanceFromBottom = topDiv.scrollHeight - topDiv.scrollTop - topDiv.clientHeight
       return distanceFromBottom <= 100
     }
 
-    if (shouldAutoScroll() && autoScrollEnabled) {
-      setTimeout(() => {
-        bottomRef?.current?.scrollIntoView({ behavior: "smooth" })
+    if (shouldAutoScroll()) {
+      autoScrollTimeoutRef.current = setTimeout(() => {
+        bottomDiv.scrollIntoView({ behavior: hasInitialized ? "smooth" : "auto" })
         evaluateAtBottom()
+        autoScrollTimeoutRef.current = null
       }, 100)
     }
-    
+
+    return () => {
+      if (autoScrollTimeoutRef.current) {
+        clearTimeout(autoScrollTimeoutRef.current)
+        autoScrollTimeoutRef.current = null
+      }
+    }
   }, [
     loadMore,
     bottomRef,

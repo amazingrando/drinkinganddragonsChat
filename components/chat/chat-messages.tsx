@@ -62,6 +62,7 @@ const ChatMessages = ({
   const notifiedRef = useRef<boolean>(false)
   const markTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const hasScrolledToUnreadRef = useRef(false)
+  const hasScrolledToLastReadRef = useRef(false)
   const latestUnreadObservedIdRef = useRef<string | null>(null)
   const shouldDeferReadRef = useRef(false)
 
@@ -95,6 +96,8 @@ const ChatMessages = ({
   })
 
   const enableUnreadTracking = type === "channel"
+  const hasInitialUnread = initialReadState?.hasUnread ?? false
+  const initialLastMessageId = initialReadState?.lastMessageId ?? null
 
   const [lastReadAt, setLastReadAt] = useState<Date | null>(() => {
     const value = initialReadState?.lastReadAt
@@ -126,6 +129,11 @@ const ChatMessages = ({
   }, [allMessages, enableUnreadTracking, lastReadAt])
 
   const showUnreadSeparator = enableUnreadTracking && unreadBoundaryIndex >= 0
+  const shouldDisableInitialScroll = enableUnreadTracking && (
+    showUnreadSeparator ||
+    hasInitialUnread ||
+    (initialLastMessageId !== null && !hasInitialUnread)
+  )
   const firstUnreadMessageId = showUnreadSeparator ? allMessages[unreadBoundaryIndex]?.id : undefined
 
   const latestUnreadMessageId = useMemo(() => {
@@ -263,6 +271,37 @@ const ChatMessages = ({
   }, [allMessages, enableUnreadTracking, firstUnreadMessageId, showUnreadSeparator])
 
   useEffect(() => {
+    if (
+      !enableUnreadTracking ||
+      showUnreadSeparator ||
+      hasInitialUnread ||
+      hasScrolledToLastReadRef.current ||
+      !initialLastMessageId
+    ) {
+      return
+    }
+
+    const container = chatRef.current
+    if (!container) {
+      return
+    }
+
+    const target = container.querySelector<HTMLElement>(`[data-chat-item-id="${initialLastMessageId}"]`)
+    if (!target) {
+      return
+    }
+
+    hasScrolledToLastReadRef.current = true
+    target.scrollIntoView({ behavior: "auto", block: "center", inline: "nearest" })
+  }, [
+    allMessages,
+    enableUnreadTracking,
+    hasInitialUnread,
+    initialLastMessageId,
+    showUnreadSeparator,
+  ])
+
+  useEffect(() => {
     if (!enableUnreadTracking || !latestUnreadMessageId) {
       if (!latestUnreadMessageId) {
         latestUnreadObservedIdRef.current = null
@@ -389,15 +428,8 @@ const ChatMessages = ({
     }
   }, [markMessagesAsRead])
 
-  useChatScroll({
-    chatRef: chatRef as React.RefObject<HTMLDivElement>,
-    bottomRef: bottomRef as React.RefObject<HTMLDivElement>,
-    loadMore: fetchNextPage,
-    shouldLoadMore: !isFetchingNextPage && !!hasNextPage,
-    count: data?.pages?.[0]?.items.length || 0,
-    disableInitialScroll: enableUnreadTracking && ((initialReadState?.hasUnread ?? false) || showUnreadSeparator),
-    autoScrollEnabled: !showUnreadSeparator,
-    onAtBottomChange: (atBottom) => {
+  const handleAtBottomChange = useCallback(
+    (atBottom: boolean) => {
       setIsAtBottom(atBottom)
       if (atBottom) {
         void markMessagesAsRead(undefined, { immediate: false })
@@ -405,6 +437,18 @@ const ChatMessages = ({
         clearPendingMark()
       }
     },
+    [clearPendingMark, markMessagesAsRead],
+  )
+
+  useChatScroll({
+    chatRef: chatRef as React.RefObject<HTMLDivElement>,
+    bottomRef: bottomRef as React.RefObject<HTMLDivElement>,
+    loadMore: fetchNextPage,
+    shouldLoadMore: !isFetchingNextPage && !!hasNextPage,
+    count: data?.pages?.[0]?.items.length || 0,
+    disableInitialScroll: shouldDisableInitialScroll,
+    autoScrollEnabled: !showUnreadSeparator,
+    onAtBottomChange: handleAtBottomChange,
   })
 
   useEffect(() => {
@@ -419,6 +463,28 @@ const ChatMessages = ({
 
     void markMessagesAsRead(latestMessage, { immediate: false })
   }, [enableUnreadTracking, isAtBottom, latestMessage, lastReadAt, markMessagesAsRead])
+
+  useEffect(() => {
+    if (!enableUnreadTracking || !latestMessage || !serverId) {
+      return
+    }
+
+    const authorId = latestMessage.member?.id ?? latestMessage.memberId
+    if (authorId !== member.id) {
+      return
+    }
+
+    const createdAt = new Date(latestMessage.createdAt || Date.now())
+    if (Number.isNaN(createdAt.getTime())) {
+      return
+    }
+
+    if (lastReadAt && createdAt <= lastReadAt) {
+      return
+    }
+
+    void markMessagesAsRead(latestMessage, { immediate: true, force: true })
+  }, [enableUnreadTracking, lastReadAt, latestMessage, markMessagesAsRead, member.id, serverId])
 
   if (status === "pending") {
     return (
