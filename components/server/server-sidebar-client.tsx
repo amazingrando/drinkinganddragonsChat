@@ -178,9 +178,23 @@ export const ServerSidebarClient = ({
 
   useEffect(() => {
     console.log("useEffect - buildInitialMap")
-    setUnreadMap(buildInitialMap(textChannels, audioChannels, videoChannels))
-    processedMessageIdsRef.current = {}
-    lastMessageIdsRef.current = {}
+    const initialUnreadMap = buildInitialMap(textChannels, audioChannels, videoChannels)
+    const activeChannelIds = new Set(Object.keys(initialUnreadMap))
+
+    setUnreadMap((prev) => {
+      const next: UnreadMap = {}
+      for (const [channelId, baselineCount] of Object.entries(initialUnreadMap)) {
+        next[channelId] = prev[channelId] ?? baselineCount
+      }
+      return next
+    })
+
+    processedMessageIdsRef.current = Object.fromEntries(
+      Object.entries(processedMessageIdsRef.current).filter(([channelId]) => activeChannelIds.has(channelId)),
+    )
+    lastMessageIdsRef.current = Object.fromEntries(
+      Object.entries(lastMessageIdsRef.current).filter(([channelId]) => activeChannelIds.has(channelId)),
+    )
   }, [textChannels, audioChannels, videoChannels])
 
   useEffect(() => {

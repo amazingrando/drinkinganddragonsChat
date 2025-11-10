@@ -398,9 +398,29 @@ const ChatMessages = ({
     }
   }, [enableUnreadTracking, initialReadState, paramValue, serverId])
 
+  const enableUnreadTrackingRef = useRef(enableUnreadTracking)
+  useEffect(() => {
+    enableUnreadTrackingRef.current = enableUnreadTracking
+  }, [enableUnreadTracking])
+
+  const markMessagesAsReadRef = useRef(markMessagesAsRead)
+  useEffect(() => {
+    markMessagesAsReadRef.current = markMessagesAsRead
+  }, [markMessagesAsRead])
+
   useEffect(() => {
     return () => {
       clearPendingMark()
+      if (!enableUnreadTrackingRef.current) {
+        return
+      }
+
+      const mark = markMessagesAsReadRef.current
+      if (!mark) {
+        return
+      }
+
+      void mark(undefined, { immediate: true, force: true })
     }
   }, [clearPendingMark])
 
