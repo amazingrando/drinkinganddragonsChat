@@ -35,6 +35,7 @@ interface ChatItemProps {
   status?: "pending" | "failed" | "sent",
   onRetry?: () => void,
   isRetrying?: boolean,
+  isUnread?: boolean,
 }
 
 const roleIconMap = {
@@ -47,7 +48,23 @@ const formSchema = z.object({
   content: z.string().min(1),
 })
 
-export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, currentMember, isUpdated, socketUrl, socketQuery, poll, status, onRetry, isRetrying }: ChatItemProps) => {
+export const ChatItem = ({
+  id,
+  content,
+  member,
+  timestamp,
+  fileUrl,
+  deleted,
+  currentMember,
+  isUpdated,
+  socketUrl,
+  socketQuery,
+  poll,
+  status,
+  onRetry,
+  isRetrying,
+  isUnread = false,
+}: ChatItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const { onOpen } = useModal();
   const router = useRouter();
@@ -114,11 +131,14 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
   const isFailed = status === "failed"
 
   return (
-    <div className={cn(
-      "relative group flex items-center dark:hover:bg-background/70 hover:bg-lavender-200 p-4 transition w-full",
-      isPending && "pointer-events-none",
-      isFailed && "bg-destructive/10",
-    )}>
+    <div
+      data-chat-item-id={id}
+      className={cn(
+        "relative group flex items-center dark:hover:bg-background/70 hover:bg-lavender-200 p-4 transition w-full",
+        isPending && "pointer-events-none",
+        isFailed && "bg-destructive/10",
+      )}
+    >
       <div className="group flex gap-x-2 items-start w-full">
         <div className="cursor-pointer hover:drop-shadow-md transition" onClick={onMemberClick}>
           <UserAvatar src={member.profile.email} />
@@ -136,6 +156,11 @@ export const ChatItem = ({ id, content, member, timestamp, fileUrl, deleted, cur
             <span className="text-xs font-medium text-muted-foreground">
               {timestamp}
             </span>
+            {isUnread && (
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-atomicorange-600">
+                Unread
+              </span>
+            )}
           </div>
 
           {isImage && (

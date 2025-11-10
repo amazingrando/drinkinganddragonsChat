@@ -56,10 +56,13 @@ const ChatMessages = ({
 
   const chatRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const newMessagesRef = useRef<HTMLDivElement>(null)
   const persistRef = useRef(false)
   const [isAtBottom, setIsAtBottom] = useState(false)
   const notifiedRef = useRef<boolean>(false)
+  const markTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const hasScrolledToUnreadRef = useRef(false)
+  const latestUnreadObservedIdRef = useRef<string | null>(null)
+  const shouldDeferReadRef = useRef(false)
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } = useChatQuery({
     queryKey,
@@ -121,11 +124,36 @@ const ChatMessages = ({
     return getUnreadBoundaryIndex(allMessages, lastReadAt)
   }, [allMessages, enableUnreadTracking, lastReadAt])
 
-  const showUnreadSeparator = enableUnreadTracking && !isAtBottom && unreadBoundaryIndex >= 0
+  const showUnreadSeparator = enableUnreadTracking && unreadBoundaryIndex >= 0
+  const firstUnreadMessageId = showUnreadSeparator ? allMessages[unreadBoundaryIndex]?.id : undefined
+
+  const latestUnreadMessageId = useMemo(() => {
+    if (!enableUnreadTracking || !allMessages.length) {
+      return undefined
+    }
+
+    if (!lastReadAt) {
+      return allMessages[0]?.id
+    }
+
+    const latestUnread = allMessages.find((message) => {
+      const createdAt = new Date(message.createdAt || Date.now())
+      return createdAt > lastReadAt
+    })
+
+    return latestUnread?.id
+  }, [allMessages, enableUnreadTracking, lastReadAt])
 
   const latestMessage = allMessages[0]
 
-  const markMessagesAsRead = useCallback(
+  const clearPendingMark = useCallback(() => {
+    if (markTimeoutRef.current) {
+      clearTimeout(markTimeoutRef.current)
+      markTimeoutRef.current = null
+    }
+  }, [])
+
+  const runImmediateMark = useCallback(
     async (message?: ChatMessage) => {
       if (!enableUnreadTracking || !serverId || persistRef.current) {
         return
@@ -164,14 +192,125 @@ const ChatMessages = ({
     [enableUnreadTracking, lastReadAt, latestMessage, paramValue, serverId],
   )
 
+  const scheduleDelayedMark = useCallback(
+    (message?: ChatMessage) => {
+      if (markTimeoutRef.current) {
+        return
+      }
+      markTimeoutRef.current = setTimeout(() => {
+        markTimeoutRef.current = null
+        void runImmediateMark(message)
+      }, 60_000)
+    },
+    [runImmediateMark],
+  )
+
+  const markMessagesAsRead = useCallback(
+    async (message?: ChatMessage, options?: { immediate?: boolean; force?: boolean }) => {
+      const immediate = options?.immediate ?? true
+      const force = options?.force ?? false
+
+      if (force) {
+        shouldDeferReadRef.current = false
+      }
+
+      if (!force && shouldDeferReadRef.current) {
+        return
+      }
+
+      if (!immediate) {
+        scheduleDelayedMark(message)
+        return
+      }
+
+      clearPendingMark()
+      await runImmediateMark(message)
+    },
+    [clearPendingMark, runImmediateMark, scheduleDelayedMark],
+  )
+
   useEffect(() => {
-    if (!showUnreadSeparator || !newMessagesRef.current) {
+    if (
+      !enableUnreadTracking ||
+      !showUnreadSeparator ||
+      !firstUnreadMessageId ||
+      hasScrolledToUnreadRef.current
+    ) {
       return
     }
 
-    const node = newMessagesRef.current
-    node.scrollIntoView({ behavior: "smooth", block: "center" })
-  }, [showUnreadSeparator])
+    const container = chatRef.current
+    const target = container?.querySelector<HTMLElement>(`[data-chat-item-id="${firstUnreadMessageId}"]`)
+    const latestElement = container?.querySelector<HTMLElement>(`[data-chat-item-id="${allMessages[0]?.id}"]`)
+
+    if (!target) {
+      return
+    }
+
+    hasScrolledToUnreadRef.current = true
+    target.scrollIntoView({ behavior: "auto", block: "center", inline: "nearest" })
+
+    if (container && latestElement) {
+      const containerRect = container.getBoundingClientRect()
+      const latestRect = latestElement.getBoundingClientRect()
+      const latestVisible = latestRect.bottom > containerRect.top && latestRect.top < containerRect.bottom
+
+      if (latestVisible) {
+        shouldDeferReadRef.current = true
+      }
+    }
+  }, [allMessages, enableUnreadTracking, firstUnreadMessageId, showUnreadSeparator])
+
+  useEffect(() => {
+    if (!enableUnreadTracking || !latestUnreadMessageId) {
+      if (!latestUnreadMessageId) {
+        latestUnreadObservedIdRef.current = null
+        shouldDeferReadRef.current = false
+      }
+      return
+    }
+
+    if (latestUnreadObservedIdRef.current === latestUnreadMessageId) {
+      return
+    }
+
+    const container = chatRef.current
+    if (!container) {
+      return
+    }
+
+    const target = container.querySelector<HTMLElement>(`[data-chat-item-id="${latestUnreadMessageId}"]`)
+    if (!target) {
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const intersecting = entries.find((entry) => entry.isIntersecting)
+        if (!intersecting) {
+          return
+        }
+
+        if (shouldDeferReadRef.current) {
+          return
+        }
+
+        latestUnreadObservedIdRef.current = latestUnreadMessageId
+        observer.disconnect()
+        void markMessagesAsRead(undefined, { immediate: true })
+      },
+      {
+        root: container,
+        threshold: 0.75,
+      },
+    )
+
+    observer.observe(target)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [enableUnreadTracking, latestUnreadMessageId, markMessagesAsRead])
 
   useEffect(() => {
     if (!showUnreadSeparator) {
@@ -180,7 +319,7 @@ const ChatMessages = ({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        void markMessagesAsRead()
+        void markMessagesAsRead(undefined, { immediate: true, force: true })
       }
     }
 
@@ -217,6 +356,36 @@ const ChatMessages = ({
     }
   }, [enableUnreadTracking, initialReadState, paramValue, serverId])
 
+  useEffect(() => {
+    return () => {
+      clearPendingMark()
+    }
+  }, [clearPendingMark])
+
+  useEffect(() => {
+    const container = chatRef.current
+    if (!container) {
+      return
+    }
+
+    const handleScroll = () => {
+      if (!shouldDeferReadRef.current) {
+        return
+      }
+
+      const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+      if (distanceFromBottom >= 400) {
+        shouldDeferReadRef.current = false
+        void markMessagesAsRead(undefined, { immediate: true, force: true })
+      }
+    }
+
+    container.addEventListener("scroll", handleScroll)
+    return () => {
+      container.removeEventListener("scroll", handleScroll)
+    }
+  }, [markMessagesAsRead])
+
   useChatScroll({
     chatRef: chatRef as React.RefObject<HTMLDivElement>,
     bottomRef: bottomRef as React.RefObject<HTMLDivElement>,
@@ -228,7 +397,9 @@ const ChatMessages = ({
     onAtBottomChange: (atBottom) => {
       setIsAtBottom(atBottom)
       if (atBottom) {
-        void markMessagesAsRead()
+        void markMessagesAsRead(undefined, { immediate: false })
+      } else {
+        clearPendingMark()
       }
     },
   })
@@ -243,7 +414,7 @@ const ChatMessages = ({
       return
     }
 
-    void markMessagesAsRead(latestMessage)
+    void markMessagesAsRead(latestMessage, { immediate: false })
   }, [enableUnreadTracking, isAtBottom, latestMessage, lastReadAt, markMessagesAsRead])
 
   if (status === "pending") {
@@ -294,6 +465,7 @@ const ChatMessages = ({
             const nextCreatedAt = nextMessage ? new Date(nextMessage.createdAt || Date.now()) : null
             const showDaySeparator = !nextMessage || !nextCreatedAt || !isSameDay(createdAt, nextCreatedAt)
             const isUnreadBoundary = showUnreadSeparator && index === unreadBoundaryIndex
+          const isUnread = enableUnreadTracking && (!lastReadAt || createdAt > lastReadAt)
 
             messageNodes.push(
               <ChatItem
@@ -312,6 +484,7 @@ const ChatMessages = ({
                 status={message.status}
                 isRetrying={isRetrying && pendingTempId === message.id}
                 onRetry={message.status === "failed" ? () => handleRetry(message) : undefined}
+              isUnread={isUnread}
               />
             )
 
@@ -319,7 +492,9 @@ const ChatMessages = ({
               messageNodes.push(
                 <ChatNewMessagesSeparator
                   key={`new-messages-${message.id}`}
-                  ref={newMessagesRef}
+                  onMarkAsRead={() => {
+                    void markMessagesAsRead(undefined, { immediate: true, force: true })
+                  }}
                 />
               )
             }
