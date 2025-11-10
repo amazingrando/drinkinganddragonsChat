@@ -34,6 +34,7 @@ interface ChatMessagesProps {
     lastReadAt: string | Date | null
     lastMessageId: string | null
     hasUnread?: boolean
+    unreadCount?: number
   }
 }
 
@@ -335,6 +336,7 @@ const ChatMessages = ({
     }
 
     notifiedRef.current = true
+    const initialUnreadCount = Math.max(0, initialReadState?.unreadCount ?? 0)
 
     if (typeof window !== "undefined") {
       window.dispatchEvent(
@@ -342,7 +344,8 @@ const ChatMessages = ({
           detail: {
             channelId: paramValue,
             serverId,
-            hasUnread: true,
+            hasUnread: initialUnreadCount > 0,
+            unreadCount: initialUnreadCount,
           },
         }),
       )
@@ -465,7 +468,7 @@ const ChatMessages = ({
             const nextCreatedAt = nextMessage ? new Date(nextMessage.createdAt || Date.now()) : null
             const showDaySeparator = !nextMessage || !nextCreatedAt || !isSameDay(createdAt, nextCreatedAt)
             const isUnreadBoundary = showUnreadSeparator && index === unreadBoundaryIndex
-          const isUnread = enableUnreadTracking && (!lastReadAt || createdAt > lastReadAt)
+            const isUnread = enableUnreadTracking && (!lastReadAt || createdAt > lastReadAt)
 
             messageNodes.push(
               <ChatItem
@@ -484,7 +487,7 @@ const ChatMessages = ({
                 status={message.status}
                 isRetrying={isRetrying && pendingTempId === message.id}
                 onRetry={message.status === "failed" ? () => handleRetry(message) : undefined}
-              isUnread={isUnread}
+                isUnread={isUnread}
               />
             )
 

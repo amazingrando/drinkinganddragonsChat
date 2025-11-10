@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import { Channel, ChannelType, Member, MemberRole, Profile, Server } from "@prisma/client"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Channel, ChannelType, Member, MemberRole, Profile } from "@prisma/client"
 import { UseRealtime } from "@/components/providers/realtime-provider"
 import { Separator } from "@/components/ui/separator"
 import { ServerHeader } from "@/components/server/server-header"
@@ -11,16 +11,16 @@ import { ServerSection } from "@/components/server/server-section"
 import { ServerChannel } from "@/components/server/server-channel"
 import { ServerMember } from "@/components/server/server-member"
 import { Hash, Mic, ShieldAlert, ShieldCheck, Users, Video } from "lucide-react"
-import { ChatMessage } from "@/types"
+import { ChatMessage, MessageWithPoll, ServerWithMembersWithProfiles } from "@/types"
 import { useParams } from "next/navigation"
 
 type ChannelWithUnread = {
   channel: Channel
-  hasUnread: boolean
+  unreadCount: number
 }
 
 type ServerSidebarClientProps = {
-  server: Server
+  server: ServerWithMembersWithProfiles
   role?: MemberRole
   textChannels: ChannelWithUnread[]
   audioChannels: ChannelWithUnread[]
@@ -41,7 +41,16 @@ const roleIconMap = {
   [MemberRole.MEMBER]: <Users className="w-4 h-4 mr-2" />,
 }
 
-type UnreadMap = Record<string, boolean>
+type UnreadMap = Record<string, number>
+
+type UnreadCountResponse = {
+  unreadCount: number
+  lastMessageId?: string | null
+}
+
+const isChannelMessage = (message: ChatMessage | undefined): message is MessageWithPoll => {
+  return Boolean(message && "channelId" in message)
+}
 
 const buildInitialMap = (
   textChannels: ChannelWithUnread[],
@@ -50,7 +59,7 @@ const buildInitialMap = (
 ): UnreadMap => {
   const map: UnreadMap = {}
   for (const entry of [...textChannels, ...audioChannels, ...videoChannels]) {
-    map[entry.channel.id] = entry.hasUnread
+    map[entry.channel.id] = entry.unreadCount
   }
   return map
 }
@@ -69,6 +78,98 @@ export const ServerSidebarClient = ({
   const activeChannelId = typeof params?.channelId === "string" ? params.channelId : null
   const [unreadMap, setUnreadMap] = useState<UnreadMap>(() => buildInitialMap(textChannels, audioChannels, videoChannels))
   const activeChannelIdRef = useRef<string | null>(activeChannelId)
+  const lastMessageIdsRef = useRef<Record<string, string | undefined>>({})
+  const processedMessageIdsRef = useRef<Record<string, { ids: Set<string>; order: string[] }>>({})
+  const serverId = server.id
+
+  const fetchUnreadCount = useCallback(async (channelId: string) => {
+    if (!serverId) {
+      return null
+    }
+    try {
+      const query = new URLSearchParams({ serverId })
+      const response = await fetch(`/api/channels/${channelId}/unread?${query.toString()}`, {
+        method: "GET",
+        cache: "no-store",
+      })
+      if (!response.ok) {
+        console.error(`[CHANNEL_UNREAD_FETCH_ERROR] Failed to fetch unread count for channel ${channelId}`, response.status)
+        return null
+      }
+      const data = (await response.json()) as UnreadCountResponse
+      return data
+    } catch (error) {
+      console.error("[CHANNEL_UNREAD_FETCH_ERROR]", error)
+      return null
+    }
+  }, [serverId])
+
+  const updateUnreadFromServer = useCallback(
+    async (channelId: string, messageId?: string) => {
+      const result = await fetchUnreadCount(channelId)
+      if (!result) {
+        return
+      }
+      const { unreadCount, lastMessageId } = result
+      setUnreadMap((prev) => {
+        if ((prev[channelId] ?? 0) === unreadCount) {
+          return prev
+        }
+        const messageIdentifier = messageId ?? (typeof lastMessageId === "string" ? lastMessageId : undefined)
+        if (messageIdentifier) {
+          lastMessageIdsRef.current[channelId] = messageIdentifier
+        }
+        const next = {
+          ...prev,
+          [channelId]: unreadCount,
+        }
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("guildhall:channel-unread-change", {
+              detail: {
+                channelId,
+                unreadCount,
+                hasUnread: unreadCount > 0,
+                messageId: messageIdentifier,
+              },
+            }),
+          )
+        }
+        return next
+      })
+    },
+    [fetchUnreadCount],
+  )
+
+  const trackMessage = (channelId: string, identifiers: (string | undefined)[]) => {
+    const validIdentifiers = identifiers.filter((identifier): identifier is string => Boolean(identifier))
+    if (!validIdentifiers.length) {
+      return true
+    }
+    let tracker = processedMessageIdsRef.current[channelId]
+    if (!tracker) {
+      tracker = {
+        ids: new Set<string>(),
+        order: [],
+      }
+      processedMessageIdsRef.current[channelId] = tracker
+    }
+    const processed = validIdentifiers.some((identifier) => tracker.ids.has(identifier))
+    if (processed) {
+      return false
+    }
+    for (const identifier of validIdentifiers) {
+      tracker.ids.add(identifier)
+      tracker.order.push(identifier)
+    }
+    while (tracker.order.length > 100) {
+      const oldest = tracker.order.shift()
+      if (oldest) {
+        tracker.ids.delete(oldest)
+      }
+    }
+    return true
+  }
 
   const allChannels = useMemo(
     () => [...textChannels, ...audioChannels, ...videoChannels].map((entry) => entry.channel),
@@ -76,58 +177,117 @@ export const ServerSidebarClient = ({
   )
 
   useEffect(() => {
+    console.log("useEffect - buildInitialMap")
     setUnreadMap(buildInitialMap(textChannels, audioChannels, videoChannels))
+    processedMessageIdsRef.current = {}
+    lastMessageIdsRef.current = {}
   }, [textChannels, audioChannels, videoChannels])
 
   useEffect(() => {
+    console.log("useEffect - setUnreadMap")
     activeChannelIdRef.current = activeChannelId
     if (!activeChannelId) {
       return
     }
     setUnreadMap((prev) => {
-      if (!prev[activeChannelId]) {
+      const currentCount = prev[activeChannelId] ?? 0
+      if (currentCount === 0) {
         return prev
       }
-      return {
-        ...prev,
-        [activeChannelId]: false,
+      lastMessageIdsRef.current[activeChannelId] = undefined
+      processedMessageIdsRef.current[activeChannelId] = {
+        ids: new Set<string>(),
+        order: [],
       }
+      const next = {
+        ...prev,
+        [activeChannelId]: 0,
+      }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("guildhall:channel-unread-change", {
+            detail: {
+              channelId: activeChannelId,
+              unreadCount: 0,
+              hasUnread: false,
+              messageId: undefined,
+            },
+          }),
+        )
+      }
+      return next
     })
   }, [activeChannelId])
 
   useEffect(() => {
+    console.log("useEffect - subscribe")
     const subscriptions = allChannels.map((channel) => {
       const eventKey = `chat:${channel.id}:messages`
       return subscribe(eventKey, eventKey, (payload) => {
         const message = payload.payload as ChatMessage
-        if (message?.channelId !== channel.id) {
+        if (!isChannelMessage(message) || message.channelId !== channel.id) {
           return
         }
         if (message.memberId === currentMemberId) {
           return
         }
-        setUnreadMap((prev) => {
-          const alreadyUnread = prev[channel.id] ?? false
-          const nextUnread = activeChannelIdRef.current === channel.id ? false : true
-          if (alreadyUnread === nextUnread) {
-            return prev
+        const messageId = typeof message.id === "string" ? message.id : undefined
+        const broadcastId = typeof payload.meta?.id === "string" ? payload.meta.id : undefined
+        const optimisticId = typeof message.optimisticId === "string" ? message.optimisticId : undefined
+        let createdAtIdentifier: string | undefined
+        const createdAtValue = message.createdAt
+        if (createdAtValue instanceof Date) {
+          createdAtIdentifier = `${channel.id}:${message.memberId}:${createdAtValue.toISOString()}`
+        } else if (typeof createdAtValue === "string") {
+          const parsed = new Date(createdAtValue)
+          if (!Number.isNaN(parsed.getTime())) {
+            createdAtIdentifier = `${channel.id}:${message.memberId}:${parsed.toISOString()}`
           }
-          const next = {
-            ...prev,
-            [channel.id]: nextUnread,
+        }
+        if (
+          !trackMessage(channel.id, [
+            messageId,
+            broadcastId,
+            optimisticId,
+            createdAtIdentifier,
+          ])
+        ) {
+          return
+        }
+        if (messageId && lastMessageIdsRef.current[channel.id] === messageId) {
+          return
+        }
+        const isActiveChannel = activeChannelIdRef.current === channel.id
+        if (isActiveChannel) {
+          if (messageId) {
+            lastMessageIdsRef.current[channel.id] = messageId
           }
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(
-              new CustomEvent("guildhall:channel-unread-change", {
-                detail: {
-                  channelId: channel.id,
-                  hasUnread: nextUnread,
-                },
-              }),
-            )
-          }
-          return next
-        })
+          setUnreadMap((prev) => {
+            if ((prev[channel.id] ?? 0) === 0) {
+              return prev
+            }
+            const next = {
+              ...prev,
+              [channel.id]: 0,
+            }
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(
+                new CustomEvent("guildhall:channel-unread-change", {
+                  detail: {
+                    channelId: channel.id,
+                    unreadCount: 0,
+                    hasUnread: false,
+                    messageId,
+                  },
+                }),
+              )
+            }
+            return next
+          })
+          return
+        }
+
+        void updateUnreadFromServer(channel.id, messageId)
       })
     })
 
@@ -138,23 +298,34 @@ export const ServerSidebarClient = ({
         }
       })
     }
-  }, [allChannels, subscribe, unsubscribe, currentMemberId])
+  }, [allChannels, subscribe, unsubscribe, currentMemberId, updateUnreadFromServer])
 
   useEffect(() => {
+    console.log("useEffect - handleChannelEvent")
     const handleChannelEvent = (event: Event) => {
-      const customEvent = event as CustomEvent<{ channelId: string; hasUnread?: boolean }>
+      const customEvent = event as CustomEvent<{
+        channelId: string
+        unreadCount?: number
+        hasUnread?: boolean
+        messageId?: string
+      }>
       const channelId = customEvent.detail?.channelId
       if (!channelId) {
         return
       }
-      const nextUnread = customEvent.detail?.hasUnread ?? false
+      const nextCount = customEvent.detail?.unreadCount ?? 0
+      const messageId = customEvent.detail?.messageId
+      trackMessage(channelId, [messageId])
       setUnreadMap((prev) => {
-        if ((prev[channelId] ?? false) === nextUnread) {
+        if ((prev[channelId] ?? 0) === nextCount) {
           return prev
+        }
+        if (typeof messageId === "string") {
+          lastMessageIdsRef.current[channelId] = messageId
         }
         return {
           ...prev,
-          [channelId]: nextUnread,
+          [channelId]: nextCount,
         }
       })
     }
@@ -168,10 +339,11 @@ export const ServerSidebarClient = ({
   }, [])
 
   const getUnread = (channelId: string) => {
+    console.log("getUnread(channelId):", channelId, unreadMap[channelId])
     if (activeChannelId === channelId) {
-      return false
+      return 0
     }
-    return unreadMap[channelId] ?? false
+    return unreadMap[channelId] ?? 0
   }
 
   return (
@@ -184,7 +356,7 @@ export const ServerSidebarClient = ({
               {
                 label: "Text Channels",
                 type: "channel",
-                data: textChannels?.map(({ channel }) => ({
+                data: textChannels.map(({ channel }) => ({
                   icon: iconMap[channel.type],
                   name: channel.name,
                   id: channel.id,
@@ -193,7 +365,7 @@ export const ServerSidebarClient = ({
               {
                 label: "Voice Channels",
                 type: "channel",
-                data: audioChannels?.map(({ channel }) => ({
+                data: audioChannels.map(({ channel }) => ({
                   icon: iconMap[channel.type],
                   name: channel.name,
                   id: channel.id,
@@ -202,7 +374,7 @@ export const ServerSidebarClient = ({
               {
                 label: "Video Channels",
                 type: "channel",
-                data: videoChannels?.map(({ channel }) => ({
+                data: videoChannels.map(({ channel }) => ({
                   icon: iconMap[channel.type],
                   name: channel.name,
                   id: channel.id,
@@ -211,7 +383,7 @@ export const ServerSidebarClient = ({
               {
                 label: "Members",
                 type: "member",
-                data: members?.map((member) => ({
+                data: members.map((member) => ({
                   icon: roleIconMap[member.role],
                   name: member.profile.name,
                   id: member.id,
@@ -232,7 +404,7 @@ export const ServerSidebarClient = ({
                 channel={channel}
                 server={server}
                 role={role}
-                hasUnread={getUnread(channel.id)}
+                unreadCount={getUnread(channel.id)}
               />
             ))}
           </div>
@@ -247,7 +419,7 @@ export const ServerSidebarClient = ({
                 channel={channel}
                 server={server}
                 role={role}
-                hasUnread={getUnread(channel.id)}
+                unreadCount={getUnread(channel.id)}
               />
             ))}
           </div>
@@ -262,7 +434,7 @@ export const ServerSidebarClient = ({
                 channel={channel}
                 server={server}
                 role={role}
-                hasUnread={getUnread(channel.id)}
+                unreadCount={getUnread(channel.id)}
               />
             ))}
           </div>

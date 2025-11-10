@@ -75,6 +75,21 @@ const ChannelIdPage = async ({ params }: ChannelIdPageProps) => {
     ? !readState || latestMessage.createdAt > readState.lastReadAt
     : false
 
+  const unreadCount = hasUnread
+    ? await db.message.count({
+      where: {
+        channelId: channel.id,
+        ...(readState?.lastReadAt
+          ? {
+            createdAt: {
+              gt: readState.lastReadAt,
+            },
+          }
+          : {}),
+      },
+    })
+    : 0
+
   return (
     <div className="bg-lavender-100 dark:bg-lavender-900 text-foreground flex flex-col h-full">
       <ChatHeader serverId={channel.serverID} name={channel.name} type="channel" />
@@ -95,6 +110,7 @@ const ChannelIdPage = async ({ params }: ChannelIdPageProps) => {
               lastReadAt: readState?.lastReadAt?.toISOString() ?? null,
               lastMessageId: readState?.lastMessageId ?? null,
               hasUnread,
+              unreadCount,
             }}
           />
           <ChatInput apiUrl="/api/socket/messages" query={{ channelId: channel.id, serverId: channel.serverID }} name={channel.name} type="channel" chatId={channel.id} currentMember={member} />

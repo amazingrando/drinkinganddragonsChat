@@ -11,7 +11,7 @@ interface ServerChannelProps {
   channel: Channel
   server: Server
   role?: MemberRole
-  hasUnread?: boolean
+  unreadCount?: number
 }
 
 const iconMap = {
@@ -20,7 +20,7 @@ const iconMap = {
   [ChannelType.VIDEO]: <Video className="w-4 h-4 mr-2 text-icon-foreground" />,
 }
 
-export const ServerChannel = ({ channel, server, role, hasUnread = false }: ServerChannelProps) => {
+export const ServerChannel = ({ channel, server, role, unreadCount = 0 }: ServerChannelProps) => {
   const { onOpen } = useModal()
   const params = useParams()
   const router = useRouter()
@@ -36,8 +36,10 @@ export const ServerChannel = ({ channel, server, role, hasUnread = false }: Serv
 
   const canManageChannel = channel.name !== "general" && role !== MemberRole.MEMBER
   const showLock = channel.name === "general"
-  const showUnreadIndicator = hasUnread
+  const totalUnread = Math.max(0, unreadCount)
+  const showUnreadIndicator = totalUnread > 0
   const showTrailing = showUnreadIndicator || canManageChannel || showLock
+  const unreadLabel = totalUnread > 99 ? "99+" : totalUnread.toString()
 
   return (
     <button
@@ -56,7 +58,9 @@ export const ServerChannel = ({ channel, server, role, hasUnread = false }: Serv
       {showTrailing && (
         <div className="ml-auto flex items-center gap-x-2">
           {showUnreadIndicator && (
-            <span className="inline-flex h-2 w-2 rounded-full bg-white shadow-[0_0_0_2px_rgba(99,102,241,0.45)] dark:shadow-[0_0_0_2px_rgba(99,102,241,0.35)]" />
+            <span className="inline-flex items-center justify-center min-w-[1.5rem] px-2 py-0.5 rounded-full bg-indigo-500 text-white text-xs font-semibold leading-none shadow-sm">
+              {unreadLabel}
+            </span>
           )}
           {canManageChannel && (
             <div className="flex items-center gap-x-2">
