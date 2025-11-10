@@ -3,7 +3,7 @@
 import { ServerWithMembersWithProfiles } from "@/types"
 import { MemberRole } from "@prisma/client"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
-import { ChevronDownIcon, LogOut, Plus, Settings, Trash, UserPlus, Users } from "lucide-react"
+import { ChevronDownIcon, LogOut, Plus, Settings, ShieldAlert, ShieldCheck, Trash, UserPlus, Users } from "lucide-react"
 import { useModal } from "@/hooks/use-modal-store"
 
 interface ServerHeaderProps {
@@ -20,6 +20,8 @@ export const ServerHeader = ({ server, role }: ServerHeaderProps) => {
     <DropdownMenu>
       <DropdownMenuTrigger className="focus:outline-none pr-12 md:pr-2" asChild>
         <button className="w-full text-md font-semibold px-3 h-12 border-border border-b-1 flex items-center hover:bg-muted/60 transition">
+          {isAdmin && <ShieldAlert className="w-4 h-4 mr-2 text-red-500" />}
+          {role === MemberRole.MODERATOR && <ShieldCheck className="w-4 h-4 mr-2 text-mana-500" />}
           <span className="truncate">{server.name}</span>
           <ChevronDownIcon className="w-5 h-5 ml-auto text-mana-500" />
         </button>

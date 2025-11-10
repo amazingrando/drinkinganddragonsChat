@@ -119,11 +119,10 @@ export const ChatItem = ({
     });
   }, [content, form]);
 
-
-  const isAdmin = member.role === MemberRole.ADMIN;
-  const isModerator = member.role === MemberRole.MODERATOR;
+  const viewerIsAdmin = currentMember.role === MemberRole.ADMIN;
+  const viewerIsModerator = currentMember.role === MemberRole.MODERATOR;
   const isOwner = currentMember.id === member.id;
-  const canDeleteMessage = !deleted && (isAdmin || isModerator || isOwner);
+  const canDeleteMessage = !deleted && (viewerIsAdmin || viewerIsModerator || isOwner);
   const canEditMessage = !deleted && isOwner && !fileUrl;
   const isImage = fileUrl;
 
