@@ -20,11 +20,13 @@ const iconMap = {
   [ChannelType.VIDEO]: <Video className="w-4 h-4 mr-2 text-icon-foreground" />,
 }
 
-export const ServerChannel = ({ channel, server, role, unreadCount: _unreadCount }: ServerChannelProps) => {
+export const ServerChannel = ({ channel, server, role, unreadCount = 0 }: ServerChannelProps) => {
   const { onOpen } = useModal()
   const params = useParams()
   const router = useRouter()
-  void _unreadCount
+
+  const hasUnread = unreadCount > 0
+  const formattedUnreadCount = unreadCount > 99 ? "99+" : unreadCount.toString()
 
   const onClick = () => {
     router.push(`/servers/${params?.serverId}/channels/${channel.id}`)
@@ -39,20 +41,36 @@ export const ServerChannel = ({ channel, server, role, unreadCount: _unreadCount
   const showLock = channel.name === "general"
   const showTrailing = canManageChannel || showLock
 
+  const accessibilityLabel = hasUnread
+    ? `${channel.name} (${unreadCount} unread message${unreadCount === 1 ? "" : "s"})`
+    : channel.name
+
   return (
     <button
       onClick={onClick}
+      aria-label={accessibilityLabel}
       className={cn(
         "group px-2 py-2 rounded-md flex items-center gap-x-1 w-full hover:bg-muted/60 transition mb-1",
         params?.channelId === channel.id && "bg-muted hover:bg-muted",
       )}
     >
       {iconMap[channel.type]}
-      <p className={cn("font-semibold text-sm text-muted-foreground group-hover:text-foreground transition whitespace-nowrap text-ellipsis max-w-full overflow-hidden",
-        params?.channelId === channel.id && "text-foreground",
-      )}>
-        {channel.name}
-      </p>
+      <div className="flex items-center gap-x-1 min-w-0">
+        <p
+          className={cn(
+            "font-semibold text-sm text-muted-foreground group-hover:text-foreground transition whitespace-nowrap text-ellipsis max-w-full overflow-hidden",
+            params?.channelId === channel.id && "text-foreground",
+          )}
+        >
+          {channel.name}
+        </p>
+        {hasUnread && (
+          <span className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-semibold text-primary-foreground">
+            <span className="sr-only">{`${unreadCount} unread message${unreadCount === 1 ? "" : "s"}`}</span>
+            <span aria-hidden="true">{formattedUnreadCount}</span>
+          </span>
+        )}
+      </div>
       {showTrailing && (
         <div className="ml-auto flex items-center gap-x-2">
           {canManageChannel && (
