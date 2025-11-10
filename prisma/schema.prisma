@@ -64,7 +64,8 @@ model Member {
   serverID String
   server   Server @relation(fields: [serverID], references: [id], onDelete: Cascade)
 
-  messages Message[]
+  messages          Message[]
+  channelReadStates ChannelReadState[]
 
   conversationsInitiated Conversation[] @relation("MemberOne")
   conversationsReceived  Conversation[] @relation("MemberTwo")
@@ -99,7 +100,8 @@ model Channel {
   serverID String
   server   Server @relation(fields: [serverID], references: [id], onDelete: Cascade)
 
-  messages Message[]
+  messages   Message[]
+  readStates ChannelReadState[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -260,5 +262,20 @@ model PollVote {
   @@unique([pollId, optionId, memberId])
   @@index([pollId])
   @@index([optionId])
+  @@index([memberId])
+}
+
+model ChannelReadState {
+  id            String   @id @default(uuid())
+  memberId      String
+  channelId     String
+  lastMessageId String?
+  lastReadAt    DateTime @default(now())
+
+  member  Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, channelId])
+  @@index([channelId])
   @@index([memberId])
 }
