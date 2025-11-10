@@ -177,7 +177,6 @@ export const ServerSidebarClient = ({
   )
 
   useEffect(() => {
-    console.log("useEffect - buildInitialMap")
     const initialUnreadMap = buildInitialMap(textChannels, audioChannels, videoChannels)
     const activeChannelIds = new Set(Object.keys(initialUnreadMap))
 
@@ -198,7 +197,6 @@ export const ServerSidebarClient = ({
   }, [textChannels, audioChannels, videoChannels])
 
   useEffect(() => {
-    console.log("useEffect - setUnreadMap")
     activeChannelIdRef.current = activeChannelId
     if (!activeChannelId) {
       return
@@ -234,7 +232,6 @@ export const ServerSidebarClient = ({
   }, [activeChannelId])
 
   useEffect(() => {
-    console.log("useEffect - subscribe")
     const subscriptions = allChannels.map((channel) => {
       const eventKey = `chat:${channel.id}:messages`
       return subscribe(eventKey, eventKey, (payload) => {
@@ -315,7 +312,6 @@ export const ServerSidebarClient = ({
   }, [allChannels, subscribe, unsubscribe, currentMemberId, updateUnreadFromServer])
 
   useEffect(() => {
-    console.log("useEffect - handleChannelEvent")
     const handleChannelEvent = (event: Event) => {
       const customEvent = event as CustomEvent<{
         channelId: string
@@ -353,7 +349,6 @@ export const ServerSidebarClient = ({
   }, [])
 
   const getUnread = (channelId: string) => {
-    console.log("getUnread(channelId):", channelId, unreadMap[channelId])
     if (activeChannelId === channelId) {
       return 0
     }
