@@ -19,6 +19,7 @@ import { useModal } from "@/hooks/use-modal-store"
 import { useRouter, useParams } from "next/navigation"
 import { PollDisplay } from "@/components/poll/poll-display"
 import { PollWithOptionsAndVotes } from "@/types"
+import { RoleIcon } from "@/components/role-icon"
 
 interface ChatItemProps {
   id: string,
@@ -36,12 +37,6 @@ interface ChatItemProps {
   onRetry?: () => void,
   isRetrying?: boolean,
   isUnread?: boolean,
-}
-
-const roleIconMap = {
-  [MemberRole.ADMIN]: <ShieldAlert className="h-4 w-4 mr-2 text-jelly-600" />,
-  [MemberRole.MODERATOR]: <ShieldCheck className="h-4 w-4 mr-2 text-atomicorange-600" />,
-  [MemberRole.MEMBER]: <Users className="h-4 w-4 mr-2 text-gray-500" />,
 }
 
 const formSchema = z.object({
@@ -149,7 +144,7 @@ export const ChatItem = ({
                 {member.profile.name}
               </p>
               <ActionTooltip label={member.role}>
-                {roleIconMap[member.role]}
+                <RoleIcon role={member.role} />
               </ActionTooltip>
             </div>
             <span className="text-xs font-medium text-muted-foreground">

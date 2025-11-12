@@ -8,7 +8,7 @@ import { useModal } from "@/hooks/use-modal-store"
 import { ServerWithMembersWithProfiles } from "@/types"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import UserAvatar from "@/components/user-avatar"
-import { Check, Loader2, MoreVertical, Shield, ShieldQuestion, ShieldCheck, Users, Trash, ShieldAlert } from "lucide-react"
+import { Check, Loader2, MoreVertical, Shield, ShieldQuestion, ShieldCheck, Trash } from "lucide-react"
 import { MemberRole } from "@prisma/client"
 import { useState } from "react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from "@/components/ui/dropdown-menu"
@@ -16,12 +16,7 @@ import qs from "query-string"
 import axios from "axios"
 import { useRouter } from "next/navigation"
 import { ModalHeader } from "./_modal-header"
-
-const roleIconMap = {
-  [MemberRole.ADMIN]: <ShieldAlert className="h-4 w-4 mr-2 text-indigo-500" />,
-  [MemberRole.MODERATOR]: <ShieldCheck className="h-4 w-4 mr-2 text-purple-500" />,
-  [MemberRole.MEMBER]: <Users className="h-4 w-4 mr-2 text-gray-500" />,
-}
+import { RoleIcon } from "@/components/role-icon"
 
 const MembersModal = () => {
   const router = useRouter()
@@ -87,7 +82,7 @@ const MembersModal = () => {
               <UserAvatar src={member.profile.email} />
               <p className="text-sm text-muted-foreground flex items-center gap-x-2">
                 {member.profile.name}
-                {roleIconMap[member.role]}
+                <RoleIcon role={member.role} />
               </p>
               <p className="text-xs text-muted-foreground">
                 {member.profile.email}
@@ -107,11 +102,11 @@ const MembersModal = () => {
                       <DropdownMenuPortal>
                         <DropdownMenuSubContent>
                           <DropdownMenuItem onClick={() => handleRoleChange(member.id, "MEMBER")}>
-                            <Shield className="h-4 w-4 mr-2" /> Guest
+                            <RoleIcon role="MEMBER" /> Guest
                             {member.role === "MEMBER" && <Check className="h-4 w-4 ml-auto" />}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleRoleChange(member.id, "MODERATOR")}>
-                            <ShieldCheck className="h-4 w-4 mr-2" /> Moderator
+                            <RoleIcon role="MODERATOR" /> Moderator
                             {member.role === "MODERATOR" && <Check className="h-4 w-4 ml-auto" />}
                           </DropdownMenuItem>
                         </DropdownMenuSubContent>
