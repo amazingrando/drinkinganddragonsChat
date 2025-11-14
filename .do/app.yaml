@@ -97,7 +97,7 @@ services:
         scope: RUN_AND_BUILD_TIME
         type: SECRET
 
-      - key: INVITE_CODES
+      - key: SIGNUP_CODES
         scope: RUN_AND_BUILD_TIME
         type: SECRET
 

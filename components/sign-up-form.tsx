@@ -21,7 +21,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
-  const [inviteCode, setInviteCode] = useState('')
+  const [signUpCode, setSignUpCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -38,21 +38,21 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
       return
     }
 
-    if (!inviteCode.trim()) {
+    if (!signUpCode.trim()) {
       setError('Invite code is required')
       setIsLoading(false)
       return
     }
 
     try {
-      const res = await fetch('/api/invite/validate', {
+      const res = await fetch('/api/sign-up/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: inviteCode.trim() }),
+        body: JSON.stringify({ code: signUpCode.trim() }),
       })
 
       if (!res.ok) {
-        setError('Invalid invite code')
+        setError('Invalid sign-up code')
         setIsLoading(false)
         return
       }
@@ -121,14 +121,14 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
-                  <Label htmlFor="invite-code">Invite Code</Label>
+                  <Label htmlFor="signup-code">Sign-up Code</Label>
                 </div>
                 <Input
-                  id="invite-code"
+                  id="signup-code"
                   type="text"
                   required
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
+                  value={signUpCode}
+                  onChange={(e) => setSignUpCode(e.target.value)}
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}

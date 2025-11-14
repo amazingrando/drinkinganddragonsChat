@@ -49,7 +49,7 @@ Set the following environment variables:
 To require an invite code during sign-up, define a comma-separated list:
 
 ```
-INVITE_CODES=alpha2025,beta2025
+SIGNUP_CODES=alpha2025,beta2025
 ```
 
 The sign-up form validates codes via `@/app/api/invite/validate/route.ts` before creating the account. Do not expose codes with `NEXT_PUBLIC_`.
