@@ -19,6 +19,7 @@ import { GuildhallLogo } from './guildhall-logo'
 
 export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
   const [signUpCode, setSignUpCode] = useState('')
@@ -44,6 +45,32 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
       return
     }
 
+    if (!username.trim()) {
+      setError('Username is required')
+      setIsLoading(false)
+      return
+    }
+
+    // Basic username validation
+    const trimmedUsername = username.trim()
+    if (trimmedUsername.length < 3) {
+      setError('Username must be at least 3 characters long')
+      setIsLoading(false)
+      return
+    }
+
+    if (trimmedUsername.length > 20) {
+      setError('Username must be no more than 20 characters long')
+      setIsLoading(false)
+      return
+    }
+
+    if (!/^[a-zA-Z0-9_-]+$/.test(trimmedUsername)) {
+      setError('Username can only contain letters, numbers, underscores, and hyphens')
+      setIsLoading(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/sign-up/validate', {
         method: 'POST',
@@ -62,6 +89,9 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/protected`,
+          data: {
+            username: trimmedUsername,
+          },
         },
       })
       if (error) throw error
@@ -94,6 +124,23 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="username"
+                  required
+                  minLength={3}
+                  maxLength={20}
+                  pattern="[a-zA-Z0-9_-]+"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  3-20 characters, letters, numbers, underscores, and hyphens only
+                </p>
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">

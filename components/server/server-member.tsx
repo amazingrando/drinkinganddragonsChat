@@ -27,7 +27,7 @@ export const ServerMember = ({ member }: ServerMemberProps) => {
       <p className={cn("font-semibold text-sm whitespace-nowrap text-ellipsis max-w-full overflow-hidden transition text-muted-foreground group-hover:text-foreground",
         params?.memberId === member.id && "text-muted-foreground ",
       )}>
-        {member.profile.name}
+        {member.profile.name || member.profile.email}
       </p>
       <RoleIcon role={member.role} />
     </button>

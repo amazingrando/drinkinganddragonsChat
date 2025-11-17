@@ -81,11 +81,8 @@ const MembersModal = () => {
             <div key={member.id} className="flex items-center gap-x-2">
               <UserAvatar src={member.profile.email} />
               <p className="text-sm text-muted-foreground flex items-center gap-x-2">
-                {member.profile.name}
+                {member.profile.name || member.profile.email}
                 <RoleIcon role={member.role} />
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {member.profile.email}
               </p>
               {server?.profileID !== member.profileID && loadingId !== member.id && (
                 <DropdownMenu>

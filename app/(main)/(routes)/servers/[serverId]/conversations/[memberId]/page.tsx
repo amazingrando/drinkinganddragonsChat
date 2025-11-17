@@ -47,9 +47,11 @@ const MemberIdPage = async ({ params, searchParams }: MemberIdPageProps) => {
   const otherMember = memberOne.id === currentMember.id ? memberTwo : memberOne
 
 
+  const otherMemberName = otherMember.profile.name || otherMember.profile.email
+
   return (
     <div className="bg-lavender-100 dark:bg-lavender-900 text-foreground flex flex-col h-full">
-      <ChatHeader imageUrl={otherMember.profile.imageUrl} name={otherMember.profile.name} type="conversation" serverId={(await params).serverId} />
+      <ChatHeader imageUrl={otherMember.profile.imageUrl} name={otherMemberName} type="conversation" serverId={(await params).serverId} />
       {(await searchParams).video && (
         <MediaRoom chatId={conversation.id} video={true} audio={true} />
       )}
@@ -57,7 +59,7 @@ const MemberIdPage = async ({ params, searchParams }: MemberIdPageProps) => {
         <>
           <ChatMessages
             member={currentMember}
-            name={otherMember.profile.name}
+            name={otherMemberName}
             chatId={conversation.id}
             type="conversation"
             apiUrl="/api/direct-messages"
@@ -69,7 +71,7 @@ const MemberIdPage = async ({ params, searchParams }: MemberIdPageProps) => {
             }}
           />
           <ChatInput
-            name={otherMember.profile.name}
+            name={otherMemberName}
             type="conversation"
             apiUrl="/api/socket/direct-messages"
             query={{

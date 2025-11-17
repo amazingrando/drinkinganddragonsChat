@@ -3,6 +3,7 @@
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { XIcon } from "lucide-react"
+import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
@@ -30,17 +31,31 @@ function DialogClose({
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />
 }
 
+const dialogOverlayVariants = cva(
+  "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-rain-900/70 mix-blend-multiply backdrop-blur-xs",
+        account: "bg-lavender-300",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+)
+
 function DialogOverlay({
   className,
+  variant,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+}: React.ComponentProps<typeof DialogPrimitive.Overlay> &
+  VariantProps<typeof dialogOverlayVariants>) {
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
-      className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-rain-900/70 mix-blend-multiply backdrop-blur-xs",
-        className
-      )}
+      className={cn(dialogOverlayVariants({ variant }), className)}
       {...props}
     />
   )
@@ -50,13 +65,15 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  overlayVariant,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  overlayVariant?: VariantProps<typeof dialogOverlayVariants>["variant"]
 }) {
   return (
     <DialogPortal data-slot="dialog-portal">
-      <DialogOverlay />
+      <DialogOverlay variant={overlayVariant} />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
@@ -140,4 +157,5 @@ export {
   DialogPortal,
   DialogTitle,
   DialogTrigger,
+  dialogOverlayVariants,
 }

@@ -394,7 +394,7 @@ export const ServerSidebarClient = ({
                 type: "member",
                 data: members.map((member) => ({
                   icon: roleIconMap[member.role],
-                  name: member.profile.name,
+                  name: member.profile.name || member.profile.email,
                   id: member.id,
                 })),
               },

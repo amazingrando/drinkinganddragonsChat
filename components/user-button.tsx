@@ -114,8 +114,8 @@ export function UserButton() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">
-              {user.user_metadata?.full_name || user.email}
+            <p className="text-base font-medium leading-none">
+              {profile?.name || user.email}
             </p>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
