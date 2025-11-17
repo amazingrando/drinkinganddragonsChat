@@ -4,7 +4,7 @@ import * as z from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import axios from "axios"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useFileUpload } from '@/hooks/use-file-upload'
 import { Trash2 } from "lucide-react"
@@ -49,6 +49,8 @@ const EditAccountModal = () => {
   const { isOpen, type, onClose, data } = useModal()
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null)
+  const prevModalOpenRef = useRef(false)
 
   const isModalOpen = isOpen && type === "account"
   const { profile } = data || {}
@@ -69,12 +71,44 @@ const EditAccountModal = () => {
     profileId: profile?.id,
   })
 
+  // Reset form and state when modal opens or closes
   useEffect(() => {
-    if (profile) {
+    const wasOpen = prevModalOpenRef.current
+    prevModalOpenRef.current = isModalOpen
+
+    if (!isModalOpen) {
+      // When modal closes, reset everything
+      if (wasOpen) {
+        form.reset({
+          name: "",
+          imageUrl: "",
+        })
+        setCurrentImageUrl(null)
+        dropzoneProps.setFiles([])
+        dropzoneProps.setErrors([])
+      }
+      return
+    }
+
+    // When modal opens (transition from closed to open)
+    if (!wasOpen && profile) {
+      // Reset form with current profile data when modal opens
+      form.reset({
+        name: profile.name || "",
+        imageUrl: profile.imageUrl || "",
+      })
+      setCurrentImageUrl(profile.imageUrl || null)
+      // Reset dropzone state to clear any previous upload state
+      dropzoneProps.setFiles([])
+      dropzoneProps.setErrors([])
+    } else if (isModalOpen && profile) {
+      // Also update if profile data changes while modal is open
       form.setValue("name", profile.name || "")
       form.setValue("imageUrl", profile.imageUrl || "")
+      setCurrentImageUrl(profile.imageUrl || null)
     }
-  }, [profile, form])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isModalOpen, profile?.id, profile?.name, profile?.imageUrl]) // Use specific profile fields to avoid unnecessary re-runs
 
   // Auto-upload when a file is added
   useEffect(() => {
@@ -93,6 +127,7 @@ const EditAccountModal = () => {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
         const imageUrl = `${supabaseUrl}/storage/v1/object/public/avatars/${uploadedFile.uniqueFileName}`
         form.setValue('imageUrl', imageUrl)
+        setCurrentImageUrl(imageUrl)
       }
     }
   }, [dropzoneProps.isSuccess, dropzoneProps.files, form])
@@ -136,8 +171,16 @@ const EditAccountModal = () => {
     try {
       setError(null)
       const response = await axios.patch("/api/profile", { imageUrl: null })
+      
+      // Update form value and local state immediately so the avatar updates in the UI
       form.setValue("imageUrl", "")
+      setCurrentImageUrl(null)
       dropzoneProps.setFiles([])
+      
+      // Update the profile in modal data immediately so the avatar updates in the UI
+      if (data?.profile) {
+        data.profile.imageUrl = ""
+      }
       
       // Dispatch custom event to notify all components of profile update
       if (typeof window !== 'undefined') {
@@ -161,10 +204,9 @@ const EditAccountModal = () => {
   }
 
   const handleClose = () => {
-    form.reset()
-    dropzoneProps.setFiles([])
     setError(null)
     onClose()
+    // Note: Form and dropzone reset is handled by useEffect when isModalOpen changes
   }
 
   if (!profile) {
@@ -179,8 +221,12 @@ const EditAccountModal = () => {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="space-y-8 px-6">
               <div className="flex flex-col items-center gap-4">
-                <UserAvatar src={profile.email} imageUrl={form.watch("imageUrl") || profile.imageUrl} size={80} />
-                {(form.watch("imageUrl") || profile.imageUrl) && (
+                <UserAvatar 
+                  src={profile.email} 
+                  imageUrl={currentImageUrl || null} 
+                  size={80} 
+                />
+                {currentImageUrl && (
                   <Button
                     type="button"
                     variant="destructive"

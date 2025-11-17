@@ -83,14 +83,19 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
   const [successes, setSuccesses] = useState<string[]>([])
 
   const isSuccess = useMemo(() => {
+    if (files.length === 0) {
+      return false
+    }
     if (errors.length === 0 && successes.length === 0) {
       return false
     }
-    if (errors.length === 0 && successes.length === files.length) {
+    // Check that all current files are in the successes array (by name)
+    const allFilesSuccessful = files.every(file => successes.includes(file.name))
+    if (errors.length === 0 && allFilesSuccessful && successes.length === files.length) {
       return true
     }
     return false
-  }, [errors.length, successes.length, files.length])
+  }, [errors.length, files, successes])
 
   const onDrop = useCallback(
     (acceptedFiles: File[], fileRejections: FileRejection[]) => {
@@ -175,6 +180,7 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
   useEffect(() => {
     if (files.length === 0) {
       setErrors([])
+      setSuccesses([])
     }
 
     // If the number of files doesn't exceed the maxFiles parameter, remove the error 'Too many files' from each file
