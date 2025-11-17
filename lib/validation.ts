@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { NextResponse } from 'next/server'
 
 /**
  * Common validation schemas for API endpoints
@@ -106,7 +107,8 @@ export function validateRequestBody<T>(
     return { success: true, data: parsed }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const firstError = error.errors[0]
+      // ZodError uses 'issues' property, not 'errors'
+      const firstError = error.issues[0]
       const errorMessage = firstError?.message || 'Validation failed'
       return { success: false, error: errorMessage, details: error }
     }
@@ -123,7 +125,7 @@ export function validationErrorResponse(
   return NextResponse.json(
     {
       error: validation.error,
-      details: process.env.NODE_ENV === 'development' ? validation.details?.errors : undefined,
+      details: process.env.NODE_ENV === 'development' ? validation.details?.issues : undefined,
     },
     { status: 400 }
   )
