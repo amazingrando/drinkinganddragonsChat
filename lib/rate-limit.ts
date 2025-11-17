@@ -7,7 +7,7 @@ const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
 interface RateLimitOptions {
   limit: number // Maximum number of requests
   windowMs: number // Time window in milliseconds
-  identifier?: (req: NextRequest) => string | null // Custom identifier function
+  identifier?: (req: NextRequest) => string | null | Promise<string | null> // Custom identifier function (can be async)
 }
 
 /**
@@ -23,7 +23,9 @@ export function rateLimit(options: RateLimitOptions) {
     let id: string | null = null
 
     if (identifier) {
-      id = identifier(req)
+      const result = identifier(req)
+      // Handle both sync and async identifiers
+      id = result instanceof Promise ? await result : result
     } else {
       // Default: use IP address
       const forwarded = req.headers.get('x-forwarded-for')
