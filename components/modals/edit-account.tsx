@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import axios from "axios"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useFileUpload } from '@/hooks/use-file-upload'
+import { Trash2 } from "lucide-react"
 
 import {
   Dialog,
@@ -22,6 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone'
 import { useModal } from "@/hooks/use-modal-store"
 import { ModalHeader } from "./_modal-header"
 import UserAvatar from "../user-avatar"
@@ -39,6 +42,7 @@ const formSchema = z.object({
       message:
         "Username can only contain letters, numbers, underscores, and hyphens",
     }),
+  imageUrl: z.string().optional(),
 })
 
 const EditAccountModal = () => {
@@ -53,23 +57,66 @@ const EditAccountModal = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      imageUrl: "",
     },
+  })
+
+  const dropzoneProps = useFileUpload({
+    bucketName: 'avatars',
+    maxFiles: 1,
+    maxFileSize: 5 * 1024 * 1024, // 5MB
+    allowedMimeTypes: ['image/*'],
+    profileId: profile?.id,
   })
 
   useEffect(() => {
     if (profile) {
       form.setValue("name", profile.name || "")
+      form.setValue("imageUrl", profile.imageUrl || "")
     }
   }, [profile, form])
+
+  // Auto-upload when a file is added
+  useEffect(() => {
+    const filesWithoutErrors = dropzoneProps.files.filter(file => file.errors.length === 0)
+    if (filesWithoutErrors.length > 0 && !dropzoneProps.loading && !dropzoneProps.isSuccess) {
+      dropzoneProps.onUpload()
+    }
+  }, [dropzoneProps, dropzoneProps.files.length])
+
+  // Watch for successful uploads and update the form field
+  useEffect(() => {
+    if (dropzoneProps.isSuccess && dropzoneProps.files.length > 0) {
+      const uploadedFile = dropzoneProps.files[0]
+      if (uploadedFile.uniqueFileName) {
+        // Construct the public URL for the uploaded file
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const imageUrl = `${supabaseUrl}/storage/v1/object/public/avatars/${uploadedFile.uniqueFileName}`
+        form.setValue('imageUrl', imageUrl)
+      }
+    }
+  }, [dropzoneProps.isSuccess, dropzoneProps.files, form])
 
   const isLoading = form.formState.isSubmitting
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setError(null)
-      await axios.patch("/api/profile", { name: values.name })
+      const response = await axios.patch("/api/profile", { 
+        name: values.name,
+        imageUrl: values.imageUrl || null,
+      })
 
       form.reset()
+      dropzoneProps.setFiles([])
+      
+      // Dispatch custom event to notify all components of profile update
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('profile-updated', { 
+          detail: response.data 
+        }))
+      }
+      
       router.refresh()
       onClose()
     } catch (err: unknown) {
@@ -77,7 +124,35 @@ const EditAccountModal = () => {
         const errorData = err.response.data as
           | { message?: string; error?: string }
           | undefined
-        setError(errorData?.message || "Failed to update username")
+        setError(errorData?.message || "Failed to update profile")
+      } else {
+        setError("An unexpected error occurred")
+      }
+      console.error(err)
+    }
+  }
+
+  const handleRemoveAvatar = async () => {
+    try {
+      setError(null)
+      const response = await axios.patch("/api/profile", { imageUrl: null })
+      form.setValue("imageUrl", "")
+      dropzoneProps.setFiles([])
+      
+      // Dispatch custom event to notify all components of profile update
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('profile-updated', { 
+          detail: response.data 
+        }))
+      }
+      
+      router.refresh()
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
+        const errorData = err.response.data as
+          | { message?: string; error?: string }
+          | undefined
+        setError(errorData?.message || "Failed to remove avatar")
       } else {
         setError("An unexpected error occurred")
       }
@@ -87,6 +162,7 @@ const EditAccountModal = () => {
 
   const handleClose = () => {
     form.reset()
+    dropzoneProps.setFiles([])
     setError(null)
     onClose()
   }
@@ -102,9 +178,39 @@ const EditAccountModal = () => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="space-y-8 px-6">
-              <div className="flex justify-center">
-                <UserAvatar src={profile.email} />
+              <div className="flex flex-col items-center gap-4">
+                <UserAvatar src={profile.email} imageUrl={form.watch("imageUrl") || profile.imageUrl} size={80} />
+                {(form.watch("imageUrl") || profile.imageUrl) && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleRemoveAvatar}
+                    disabled={isLoading}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Remove Avatar
+                  </Button>
+                )}
               </div>
+              <FormField
+                control={form.control}
+                name="imageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="uppercase text-xs font-bold">
+                      Avatar (Optional)
+                    </FormLabel>
+                    <FormControl>
+                      <Dropzone {...dropzoneProps}>
+                        <DropzoneEmptyState />
+                        <DropzoneContent />
+                      </Dropzone>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="name"

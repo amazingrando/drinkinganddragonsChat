@@ -5,12 +5,16 @@ import { type FileError, type FileRejection, useDropzone } from 'react-dropzone'
 const supabase = createClient()
 
 // Add helper function to generate unique filenames
+// Sanitizes filename to remove spaces and special characters for URL safety
 const generateUniqueFileName = (originalName: string): string => {
   const timestamp = Date.now()
   const randomString = Math.random().toString(36).substring(2, 8)
-  const extension = originalName.split('.').pop()
-  const nameWithoutExt = originalName.replace(/\.[^/.]+$/, '')
-  return `${nameWithoutExt}_${timestamp}_${randomString}.${extension}`
+  const extension = originalName.split('.').pop()?.toLowerCase() || 'jpg'
+  // Remove extension, sanitize name (remove spaces, special chars), keep only alphanumeric, hyphens, underscores
+  const nameWithoutExt = originalName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_')
+  // Limit length to avoid very long filenames
+  const sanitizedName = nameWithoutExt.substring(0, 50)
+  return `${sanitizedName}_${timestamp}_${randomString}.${extension}`
 }
 
 interface FileWithPreview extends File {

@@ -37,6 +37,7 @@ export const NavigationItem = ({
             src={imageUrl}
             alt='Channel'
             fill
+            sizes="48px"
             className='object-cover'
           />
         </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { User } from "@supabase/supabase-js"
 import { Button } from "@/components/ui/button"
@@ -26,21 +26,25 @@ export function UserButton() {
   const supabase = createClient()
   const router = useRouter()
 
+  const fetchProfile = useCallback(async () => {
+    try {
+      const response = await fetch('/api/profile')
+      if (response.ok) {
+        const profileData = await response.json()
+        setProfile(profileData)
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile:', error)
+    }
+  }, [])
+
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
 
       if (user) {
-        try {
-          const response = await fetch('/api/profile')
-          if (response.ok) {
-            const profileData = await response.json()
-            setProfile(profileData)
-          }
-        } catch (error) {
-          console.error('Failed to fetch profile:', error)
-        }
+        await fetchProfile()
       }
 
       setLoading(false)
@@ -53,15 +57,7 @@ export function UserButton() {
         setUser(session?.user ?? null)
 
         if (session?.user) {
-          try {
-            const response = await fetch('/api/profile')
-            if (response.ok) {
-              const profileData = await response.json()
-              setProfile(profileData)
-            }
-          } catch (error) {
-            console.error('Failed to fetch profile:', error)
-          }
+          await fetchProfile()
         } else {
           setProfile(null)
         }
@@ -70,8 +66,18 @@ export function UserButton() {
       }
     )
 
-    return () => subscription.unsubscribe()
-  }, [supabase.auth])
+    // Listen for profile update events
+    const handleProfileUpdate = () => {
+      fetchProfile()
+    }
+
+    window.addEventListener('profile-updated', handleProfileUpdate)
+
+    return () => {
+      subscription.unsubscribe()
+      window.removeEventListener('profile-updated', handleProfileUpdate)
+    }
+  }, [supabase.auth, fetchProfile])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -108,7 +114,7 @@ export function UserButton() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative rounded-full size-11">
-          <UserAvatar src={user.email} size={100} className="size-8" />
+          <UserAvatar src={user.email} imageUrl={profile?.imageUrl} size={100} className="size-8" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>

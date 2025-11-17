@@ -264,7 +264,7 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
                     {voters.length > 0 && (
                       <div className="flex items-center gap-1">
                         {voters.slice(0, 5).map((voter, idx) => (
-                          <UserAvatar key={idx} src={voter.profile.email} size={50} className="size-5" />
+                          <UserAvatar key={idx} src={voter.profile.email} imageUrl={voter.profile.imageUrl} size={50} className="size-5" />
                         ))}
                         {voters.length > 5 && (
                           <span className="text-xs text-muted-foreground">
