@@ -3,8 +3,19 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { validateUsername } from "@/lib/username-validation"
 import { createClient } from "@/lib/supabase/server"
+import { rateLimitPresets } from "@/lib/rate-limit"
+import { NextRequest } from "next/server"
+import { csrfProtection } from "@/lib/csrf"
+import { profileUpdateSchema, validateRequestBody, validationErrorResponse } from "@/lib/validation"
+import { secureErrorResponse, handlePrismaError } from "@/lib/error-handling"
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResponse = await rateLimitPresets.lenient(req)
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
+
   try {
     const profile = await currentProfile()
 
@@ -14,8 +25,7 @@ export async function GET() {
 
     return NextResponse.json(profile)
   } catch (error) {
-    console.error("[PROFILE_GET]", error)
-    return new NextResponse("Internal Server Error", { status: 500 })
+    return secureErrorResponse(error, "[PROFILE_GET]", "Failed to retrieve profile")
   }
 }
 
@@ -28,7 +38,19 @@ function extractFilenameFromUrl(url: string | null | undefined): string | null {
   return match ? match[1] : null
 }
 
-export async function PATCH(req: Request) {
+export async function PATCH(req: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResponse = await rateLimitPresets.moderate(req)
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
+
+  // Apply CSRF protection
+  const csrfResponse = await csrfProtection(req)
+  if (csrfResponse) {
+    return csrfResponse
+  }
+
   try {
     const profile = await currentProfile()
 
@@ -36,7 +58,15 @@ export async function PATCH(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const { name, imageUrl } = await req.json()
+    const body = await req.json()
+
+    // Validate request body with Zod
+    const validation = validateRequestBody(profileUpdateSchema, body)
+    if (!validation.success) {
+      return validationErrorResponse(validation)
+    }
+
+    const { name, imageUrl } = validation.data
 
     // Build update data object
     const updateData: { name?: string; imageUrl?: string } = {}
@@ -106,17 +136,18 @@ export async function PATCH(req: Request) {
       },
     })
   } catch (error) {
-    console.error("[PROFILE_PATCH]", error)
-    
-    // Handle unique constraint violation
-    if (error instanceof Error && error.message.includes("unique")) {
-      return NextResponse.json(
-        { error: "ALREADY_TAKEN", message: "This username is already taken" },
-        { status: 409 }
-      )
+    const prismaError = handlePrismaError(error, "[PROFILE_PATCH]")
+    if (prismaError) {
+      // Override generic message for username conflicts
+      if (error instanceof Error && error.message.includes("unique") && error.message.includes("name")) {
+        return NextResponse.json(
+          { error: "ALREADY_TAKEN", message: "This username is already taken" },
+          { status: 409 }
+        )
+      }
+      return prismaError
     }
-
-    return new NextResponse("Internal Server Error", { status: 500 })
+    return secureErrorResponse(error, "[PROFILE_PATCH]", "Failed to update profile")
   }
 }
 

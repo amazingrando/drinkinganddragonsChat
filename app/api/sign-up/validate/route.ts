@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { rateLimitPresets } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResponse = await rateLimitPresets.signUpValidation(req)
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
   try {
     const { code } = await req.json()
 
