@@ -13,12 +13,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut } from "lucide-react"
+import { LogOut, CircleUserRound } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useModal } from "@/hooks/use-modal-store"
+import { Profile } from "@prisma/client"
 
 export function UserButton() {
   const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const { onOpen } = useModal()
   const supabase = createClient()
   const router = useRouter()
 
@@ -26,14 +30,42 @@ export function UserButton() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+
+      if (user) {
+        try {
+          const response = await fetch('/api/profile')
+          if (response.ok) {
+            const profileData = await response.json()
+            setProfile(profileData)
+          }
+        } catch (error) {
+          console.error('Failed to fetch profile:', error)
+        }
+      }
+
       setLoading(false)
     }
 
     getUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setUser(session?.user ?? null)
+
+        if (session?.user) {
+          try {
+            const response = await fetch('/api/profile')
+            if (response.ok) {
+              const profileData = await response.json()
+              setProfile(profileData)
+            }
+          } catch (error) {
+            console.error('Failed to fetch profile:', error)
+          }
+        } else {
+          setProfile(null)
+        }
+
         setLoading(false)
       }
     )
@@ -90,6 +122,11 @@ export function UserButton() {
             </p>
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => onOpen("account", profile ? { profile } : undefined)} >
+          <CircleUserRound className="mr-2 h-4 w-4" />
+          Your Account
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
