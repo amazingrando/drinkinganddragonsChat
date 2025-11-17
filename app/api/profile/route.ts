@@ -39,7 +39,7 @@ export async function PATCH(req: Request) {
     const { name, imageUrl } = await req.json()
 
     // Build update data object
-    const updateData: { name?: string; imageUrl?: string | null } = {}
+    const updateData: { name?: string; imageUrl?: string } = {}
 
     // Handle name update if provided
     if (name !== undefined) {
