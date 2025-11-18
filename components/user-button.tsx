@@ -114,7 +114,7 @@ export function UserButton() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button type="button" className="relative rounded-full border border-border hover:border-white/80 transition-all duration-300">
-          <UserAvatar src={user.email} imageUrl={profile?.imageUrl} className="size-4" />
+          <UserAvatar src={user.email} imageUrl={profile?.imageUrl} size={40} />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
