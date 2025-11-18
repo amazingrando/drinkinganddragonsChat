@@ -16,7 +16,7 @@ export const MobileToggle = ({ serverId }: { serverId: string }) => {
           <Menu />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="p-0 flex flex-row gap-0 overflow-hidden w-[90vw]">
+      <SheetContent side="left" className="p-0 flex flex-row gap-0 overflow-hidden w-[90vw]" hideClose>
         <div className="w-[72px]">
           <NavigationSidebar />
         </div>
