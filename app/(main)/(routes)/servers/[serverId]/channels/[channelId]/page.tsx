@@ -52,6 +52,15 @@ const ChannelIdPage = async ({ params }: ChannelIdPageProps) => {
     return redirect('/')
   }
 
+  // Update profile with last visited server and channel
+  await db.profile.update({
+    where: { id: profile.id },
+    data: {
+      lastServerId: (await params).serverId,
+      lastChannelId: (await params).channelId,
+    },
+  })
+
   const [readState, latestMessage] = await Promise.all([
     db.channelReadState.findUnique({
       where: {
