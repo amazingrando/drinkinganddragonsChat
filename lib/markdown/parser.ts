@@ -1,0 +1,154 @@
+/**
+ * Markdown parser for chat messages
+ * Supports: **bold**, *italic*, > quotes, ||spoiler||, [text](url), and auto-detected URLs
+ */
+
+export type MarkdownToken =
+  | { type: "text"; content: string }
+  | { type: "bold"; content: MarkdownToken[] }
+  | { type: "italic"; content: MarkdownToken[] }
+  | { type: "spoiler"; content: MarkdownToken[] }
+  | { type: "link"; text: string; url: string }
+  | { type: "quote"; content: MarkdownToken[] }
+  | { type: "lineBreak" }
+
+/**
+ * Parses markdown text into a tree of tokens
+ */
+export function parseMarkdown(text: string): MarkdownToken[] {
+  if (!text) return []
+
+  const tokens: MarkdownToken[] = []
+  const i = 0
+  const lines = text.split("\n")
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex]
+    const isQuote = line.trim().startsWith(">")
+
+    if (isQuote) {
+      // Remove the > prefix and parse the rest
+      const quoteContent = line.replace(/^>\s*/, "")
+      tokens.push({
+        type: "quote",
+        content: parseInlineMarkdown(quoteContent),
+      })
+    } else {
+      // Parse regular line with inline markdown
+      const lineTokens = parseInlineMarkdown(line)
+      tokens.push(...lineTokens)
+    }
+
+    // Add line break except for the last line
+    if (lineIndex < lines.length - 1) {
+      tokens.push({ type: "lineBreak" })
+    }
+  }
+
+  return tokens
+}
+
+/**
+ * Parses inline markdown (bold, italic, spoiler, links, URLs)
+ */
+function parseInlineMarkdown(text: string): MarkdownToken[] {
+  if (!text) return []
+
+  const tokens: MarkdownToken[] = []
+  let i = 0
+
+  while (i < text.length) {
+    // Try to match markdown patterns in order of specificity
+    // 1. Links [text](url) - most specific
+    const linkMatch = text.slice(i).match(/^\[([^\]]+)\]\(([^)]+)\)/)
+    if (linkMatch) {
+      tokens.push({
+        type: "link",
+        text: linkMatch[1],
+        url: linkMatch[2],
+      })
+      i += linkMatch[0].length
+      continue
+    }
+
+    // 2. Bold **text** - non-greedy match to handle nested formatting
+    const boldMatch = text.slice(i).match(/^\*\*(.+?)\*\*/)
+    if (boldMatch && boldMatch[1].length > 0) {
+      const boldContent = parseInlineMarkdown(boldMatch[1])
+      tokens.push({
+        type: "bold",
+        content: boldContent,
+      })
+      i += boldMatch[0].length
+      continue
+    }
+
+    // 3. Spoiler ||text|| - non-greedy match to handle nested formatting
+    const spoilerMatch = text.slice(i).match(/^\|\|(.+?)\|\|/)
+    if (spoilerMatch && spoilerMatch[1].length > 0) {
+      const spoilerContent = parseInlineMarkdown(spoilerMatch[1])
+      tokens.push({
+        type: "spoiler",
+        content: spoilerContent,
+      })
+      i += spoilerMatch[0].length
+      continue
+    }
+
+    // 4. Italic *text* (but not **text**)
+    const italicMatch = text.slice(i).match(/^\*([^*\n]+)\*/)
+    if (italicMatch) {
+      const italicContent = parseInlineMarkdown(italicMatch[1])
+      tokens.push({
+        type: "italic",
+        content: italicContent,
+      })
+      i += italicMatch[0].length
+      continue
+    }
+
+    // 5. Auto-detect URLs (http://, https://)
+    const urlMatch = text.slice(i).match(/^(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/i)
+    if (urlMatch) {
+      tokens.push({
+        type: "link",
+        text: urlMatch[1],
+        url: urlMatch[1],
+      })
+      i += urlMatch[1].length
+      continue
+    }
+
+    // 6. Regular text - collect until next markdown pattern
+    let textEnd = i
+    while (textEnd < text.length) {
+      const remaining = text.slice(textEnd)
+      // Check if any markdown pattern starts here
+      if (
+        remaining.match(/^(\[|https?:\/\/|\*\*|\*|\|\|)/i)
+      ) {
+        break
+      }
+      textEnd++
+    }
+
+    if (textEnd > i) {
+      const textContent = text.slice(i, textEnd)
+      tokens.push({
+        type: "text",
+        content: textContent,
+      })
+      i = textEnd
+    } else {
+      // Fallback: single character
+      tokens.push({
+        type: "text",
+        content: text[i],
+      })
+      i++
+    }
+  }
+
+  return tokens
+}
+

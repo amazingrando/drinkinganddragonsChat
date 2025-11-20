@@ -3,9 +3,9 @@
 import { Member, MemberRole, Profile } from "@prisma/client"
 import UserAvatar from "@/components/user-avatar"
 import { ActionTooltip } from "@/components//action-tooltip"
-import { ShieldCheck, ShieldAlert, Users, Pencil, Trash, Loader2 } from "lucide-react"
+import { Pencil, Trash, Loader2 } from "lucide-react"
 import Image from "next/image"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
@@ -20,6 +20,8 @@ import { useRouter, useParams } from "next/navigation"
 import { PollDisplay } from "@/components/poll/poll-display"
 import { PollWithOptionsAndVotes } from "@/types"
 import { RoleIcon } from "@/components/role-icon"
+import { MarkdownRenderer } from "@/components/chat/markdown-renderer"
+import { FormattingToolbar } from "@/components/chat/formatting-toolbar"
 
 interface ChatItemProps {
   id: string,
@@ -61,6 +63,9 @@ export const ChatItem = ({
   isUnread = false,
 }: ChatItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [toolbarOpen, setToolbarOpen] = useState(false);
+  const editInputRef = useRef<HTMLInputElement>(null);
   const { onOpen } = useModal();
   const router = useRouter();
   const params = useParams();
@@ -103,10 +108,98 @@ export const ChatItem = ({
       await axios.patch(url, values);
       form.reset();
       setIsEditing(false);
+      setToolbarOpen(false);
+      setIsFocused(false);
     } catch (error) {
       console.error(error);
     }
   }
+
+  const insertMarkdown = useCallback((markdown: string) => {
+    const input = editInputRef.current;
+    if (!input) return;
+
+    const start = input.selectionStart || 0;
+    const end = input.selectionEnd || 0;
+    const currentValue = form.getValues("content");
+    const selectedText = currentValue.substring(start, end);
+
+    let newValue: string;
+    let newCursorPos: number;
+
+    // Handle different markdown insertion patterns
+    if (markdown === "**" || markdown === "*" || markdown === "||") {
+      // Wrap selected text or insert markers
+      if (selectedText) {
+        newValue =
+          currentValue.substring(0, start) +
+          `${markdown}${selectedText}${markdown}` +
+          currentValue.substring(end);
+        newCursorPos = start + markdown.length + selectedText.length + markdown.length;
+      } else {
+        newValue =
+          currentValue.substring(0, start) +
+          `${markdown}${markdown}` +
+          currentValue.substring(end);
+        newCursorPos = start + markdown.length;
+      }
+    } else if (markdown === "> ") {
+      // Quote: insert at start of line
+      const lineStart = currentValue.lastIndexOf("\n", start - 1) + 1;
+      const lineEnd = currentValue.indexOf("\n", end);
+      const lineEndPos = lineEnd === -1 ? currentValue.length : lineEnd;
+      const line = currentValue.substring(lineStart, lineEndPos);
+
+      if (line.startsWith("> ")) {
+        // Remove quote if already quoted
+        newValue =
+          currentValue.substring(0, lineStart) +
+          line.substring(2) +
+          currentValue.substring(lineEndPos);
+        newCursorPos = start - 2;
+      } else {
+        // Add quote
+        newValue =
+          currentValue.substring(0, lineStart) +
+          "> " +
+          line +
+          currentValue.substring(lineEndPos);
+        newCursorPos = start + 2;
+      }
+    } else if (markdown === "[text](url)") {
+      // Link: replace selected text or insert template
+      if (selectedText) {
+        newValue =
+          currentValue.substring(0, start) +
+          `[${selectedText}](url)` +
+          currentValue.substring(end);
+        newCursorPos = start + selectedText.length + 3; // Position after selected text, before "url"
+      } else {
+        newValue =
+          currentValue.substring(0, start) +
+          "[text](url)" +
+          currentValue.substring(end);
+        newCursorPos = start + 1; // Position after "["
+      }
+    } else {
+      // Default: just insert
+      newValue =
+        currentValue.substring(0, start) +
+        markdown +
+        currentValue.substring(end);
+      newCursorPos = start + markdown.length;
+    }
+
+    form.setValue("content", newValue);
+
+    // Restore cursor position after React updates
+    setTimeout(() => {
+      if (input) {
+        input.focus();
+        input.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
+  }, [form]);
 
   useEffect(() => {
     form.reset({
@@ -175,17 +268,21 @@ export const ChatItem = ({
           )}
 
           {!fileUrl && !poll && !isEditing && (
-            <p className={cn(
+            <div className={cn(
               "text-sm text-foreground font-medium",
               deleted && "line-through cursor-not-allowed"
             )}>
-              {content}
+              {deleted ? (
+                <span>{content}</span>
+              ) : (
+                <MarkdownRenderer content={content} />
+              )}
               {isUpdated && !deleted && (
                 <span className="text-[12px] mx-2 text-foreground/80">
                   (edited)
                 </span>
               )}
-            </p>
+            </div>
           )}
           {!fileUrl && isEditing && (
             <Form {...form}>
@@ -194,13 +291,59 @@ export const ChatItem = ({
                   <FormItem className="flex-1">
                     <FormControl>
                       <div className="relative w-full">
-                        <Input disabled={isLoading} {...field} className="p-2 bg-zinc-200/90 dark:bg-zinc-700/75 border-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-zinc-600 dark:text-zinc-200" placeholder="Edit message" />
+                        <FormattingToolbar
+                          onFormat={insertMarkdown}
+                          open={toolbarOpen && isFocused}
+                          onOpenChange={setToolbarOpen}
+                        >
+                          <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              className="h-6 w-6"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                editInputRef.current?.focus();
+                              }}
+                            >
+                              <span className="text-[10px] font-bold">Aa</span>
+                            </Button>
+                          </div>
+                        </FormattingToolbar>
+                        <Input
+                          disabled={isLoading}
+                          {...field}
+                          ref={(e) => {
+                            field.ref(e);
+                            editInputRef.current = e;
+                          }}
+                          className="pl-8 p-2 bg-zinc-200/90 dark:bg-zinc-700/75 border-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-zinc-600 dark:text-zinc-200"
+                          placeholder="Edit message"
+                          onFocus={() => {
+                            setIsFocused(true);
+                            setToolbarOpen(true);
+                          }}
+                          onBlur={(e) => {
+                            // Delay to allow toolbar button clicks
+                            setTimeout(() => {
+                              if (!e.currentTarget.contains(document.activeElement)) {
+                                setIsFocused(false);
+                                setToolbarOpen(false);
+                              }
+                            }, 200);
+                          }}
+                        />
                       </div>
                     </FormControl>
                   </FormItem>
                 )} />
                 <Button size="sm" type="submit" className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md" disabled={isLoading}>Save</Button>
-                <Button size="sm" type="button" className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md" onClick={() => setIsEditing(false)} disabled={isLoading}>Cancel</Button>
+                <Button size="sm" type="button" className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md" onClick={() => {
+                  setIsEditing(false);
+                  setToolbarOpen(false);
+                  setIsFocused(false);
+                }} disabled={isLoading}>Cancel</Button>
               </form>
               <span className="text-[10px] text-zinc-400 mt-1">
                 Press escape to cancel, enter to save.
