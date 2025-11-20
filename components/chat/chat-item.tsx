@@ -65,7 +65,11 @@ export const ChatItem = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [toolbarOpen, setToolbarOpen] = useState(false);
+  const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number; width: number } | null>(null);
+  const [showSelectionHighlight, setShowSelectionHighlight] = useState(false);
+  const selectionRangeRef = useRef<{ start: number; end: number } | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
+  const editInputElementRef = useRef<HTMLInputElement | null>(null);
   const { onOpen } = useModal();
   const router = useRouter();
   const params = useParams();
@@ -115,9 +119,79 @@ export const ChatItem = ({
     }
   }
 
+  const updateSelectionPosition = useCallback(() => {
+    const input = editInputRef.current;
+    if (!input) return;
+
+    const start = input.selectionStart || 0;
+    const end = input.selectionEnd || 0;
+    const hasTextSelected = start !== end;
+
+    if (hasTextSelected) {
+      // Store the selection range
+      selectionRangeRef.current = { start, end };
+      setShowSelectionHighlight(true);
+      // Use setTimeout to ensure DOM is ready
+      setTimeout(() => {
+        const currentInput = editInputRef.current;
+        if (!currentInput) return;
+
+        const currentStart = currentInput.selectionStart || 0;
+        const currentEnd = currentInput.selectionEnd || 0;
+        if (currentStart !== start || currentEnd !== end) return;
+
+        // Calculate selection position for input elements
+        const inputRect = currentInput.getBoundingClientRect();
+        const computedStyle = window.getComputedStyle(currentInput);
+        const textBeforeSelection = currentInput.value.substring(0, currentStart);
+        
+        // Create a temporary span to measure text width
+        const measureSpan = document.createElement("span");
+        measureSpan.style.position = "absolute";
+        measureSpan.style.visibility = "hidden";
+        measureSpan.style.whiteSpace = "pre";
+        measureSpan.style.font = computedStyle.font;
+        measureSpan.style.fontSize = computedStyle.fontSize;
+        measureSpan.style.fontFamily = computedStyle.fontFamily;
+        measureSpan.style.fontWeight = computedStyle.fontWeight;
+        measureSpan.style.letterSpacing = computedStyle.letterSpacing;
+        measureSpan.style.textTransform = computedStyle.textTransform;
+        measureSpan.textContent = textBeforeSelection;
+        document.body.appendChild(measureSpan);
+        
+        const textWidth = measureSpan.offsetWidth;
+        
+        // Measure selected text width
+        const selectedText = currentInput.value.substring(currentStart, currentEnd);
+        measureSpan.textContent = selectedText;
+        const selectedWidth = Math.max(measureSpan.offsetWidth, 1);
+        
+        document.body.removeChild(measureSpan);
+
+        // Calculate position relative to viewport
+        const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
+        const borderLeft = parseFloat(computedStyle.borderLeftWidth) || 0;
+        const x = inputRect.left + paddingLeft + borderLeft + textWidth;
+        const y = inputRect.top;
+        
+        setSelectionPosition({ x, y, width: selectedWidth });
+      }, 0);
+    } else {
+      setSelectionPosition(null);
+      selectionRangeRef.current = null;
+      setShowSelectionHighlight(false);
+    }
+  }, []);
+
   const insertMarkdown = useCallback((markdown: string) => {
     const input = editInputRef.current;
     if (!input) return;
+
+    // Restore selection if it was lost
+    if (selectionRangeRef.current && input.selectionStart === input.selectionEnd) {
+      input.setSelectionRange(selectionRangeRef.current.start, selectionRangeRef.current.end);
+      input.focus();
+    }
 
     const start = input.selectionStart || 0;
     const end = input.selectionEnd || 0;
@@ -191,6 +265,10 @@ export const ChatItem = ({
     }
 
     form.setValue("content", newValue);
+
+    // Clear selection highlight
+    setShowSelectionHighlight(false);
+    selectionRangeRef.current = null;
 
     // Restore cursor position after React updates
     setTimeout(() => {
@@ -293,8 +371,14 @@ export const ChatItem = ({
                       <div className="relative w-full">
                         <FormattingToolbar
                           onFormat={insertMarkdown}
-                          open={toolbarOpen && isFocused}
-                          onOpenChange={setToolbarOpen}
+                          open={!!selectionPosition}
+                          onOpenChange={(open) => {
+                            if (!open) {
+                              setToolbarOpen(false)
+                              setSelectionPosition(null)
+                            }
+                          }}
+                          selectionPosition={selectionPosition}
                         >
                           <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10">
                             <Button
@@ -317,21 +401,55 @@ export const ChatItem = ({
                           ref={(e) => {
                             field.ref(e);
                             editInputRef.current = e;
+                            editInputElementRef.current = e;
                           }}
                           className="pl-8 p-2 bg-zinc-200/90 dark:bg-zinc-700/75 border-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-zinc-600 dark:text-zinc-200"
                           placeholder="Edit message"
                           onFocus={() => {
                             setIsFocused(true);
-                            setToolbarOpen(true);
+                            // Restore selection if we have one stored
+                            if (selectionRangeRef.current) {
+                              setTimeout(() => {
+                                const input = editInputRef.current;
+                                if (input && selectionRangeRef.current) {
+                                  input.setSelectionRange(selectionRangeRef.current.start, selectionRangeRef.current.end);
+                                  updateSelectionPosition();
+                                }
+                              }, 0);
+                            }
                           }}
-                          onBlur={(e) => {
-                            // Delay to allow toolbar button clicks
-                            setTimeout(() => {
-                              if (!e.currentTarget.contains(document.activeElement)) {
-                                setIsFocused(false);
-                                setToolbarOpen(false);
+                          onSelect={() => {
+                            // Only update when there's a selection
+                            const input = editInputRef.current;
+                            if (input) {
+                              const start = input.selectionStart || 0;
+                              const end = input.selectionEnd || 0;
+                              if (start !== end) {
+                                setIsFocused(true);
+                                updateSelectionPosition();
+                              } else {
+                                setSelectionPosition(null);
+                                setShowSelectionHighlight(false);
+                                selectionRangeRef.current = null;
                               }
-                            }, 200);
+                            }
+                          }}
+                          onBlur={() => {
+                            // Delay to allow toolbar button clicks
+                            const input = editInputElementRef.current;
+                            setTimeout(() => {
+                              const activeElement = document.activeElement;
+                              // Check if focus moved to toolbar or is still on input
+                              if (input && activeElement !== input && !input.contains(activeElement)) {
+                                // Check if focus is on a toolbar button
+                                const isToolbarButton = activeElement?.closest('[data-slot="popover-content"]');
+                                if (!isToolbarButton) {
+                                  setIsFocused(false);
+                                  setToolbarOpen(false);
+                                  setSelectionPosition(null);
+                                }
+                              }
+                            }, 150);
                           }}
                         />
                       </div>
@@ -343,6 +461,7 @@ export const ChatItem = ({
                   setIsEditing(false);
                   setToolbarOpen(false);
                   setIsFocused(false);
+                  setSelectionPosition(null);
                 }} disabled={isLoading}>Cancel</Button>
               </form>
               <span className="text-[10px] text-zinc-400 mt-1">
