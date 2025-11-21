@@ -3,7 +3,8 @@
 import * as z from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import axios from "axios"
+import axios, { isAxiosError } from "axios"
+import { axiosClient } from "@/lib/axios-client"
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useFileUpload } from '@/hooks/use-file-upload'
@@ -137,10 +138,16 @@ const EditAccountModal = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setError(null)
-      const response = await axios.patch("/api/profile", { 
+      const payload: { name?: string; imageUrl?: string } = {
         name: values.name,
-        imageUrl: values.imageUrl || null,
-      })
+      }
+      
+      // Only include imageUrl if it has a value, otherwise send empty string to clear it
+      if (values.imageUrl !== undefined) {
+        payload.imageUrl = values.imageUrl || ''
+      }
+      
+      const response = await axiosClient.patch("/api/profile", payload)
 
       form.reset()
       dropzoneProps.setFiles([])
@@ -155,7 +162,7 @@ const EditAccountModal = () => {
       router.refresh()
       onClose()
     } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response) {
+      if (isAxiosError(err) && err.response) {
         const errorData = err.response.data as
           | { message?: string; error?: string }
           | undefined
@@ -170,7 +177,7 @@ const EditAccountModal = () => {
   const handleRemoveAvatar = async () => {
     try {
       setError(null)
-      const response = await axios.patch("/api/profile", { imageUrl: null })
+      const response = await axiosClient.patch("/api/profile", { imageUrl: "" })
       
       // Update form value and local state immediately so the avatar updates in the UI
       form.setValue("imageUrl", "")
@@ -191,7 +198,7 @@ const EditAccountModal = () => {
       
       router.refresh()
     } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response) {
+      if (isAxiosError(err) && err.response) {
         const errorData = err.response.data as
           | { message?: string; error?: string }
           | undefined

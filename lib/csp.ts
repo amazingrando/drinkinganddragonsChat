@@ -134,7 +134,7 @@ export function getCSPPolicy(nonce?: string): string {
         'default-src': ["'self'"],
         'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Required for Next.js dev mode
         'style-src': ["'self'", "'unsafe-inline'"], // Required for Tailwind CSS and CSS-in-JS
-        'img-src': ["'self'", 'data:', 'https:'],
+        'img-src': ["'self'", 'data:', 'https:', 'blob:'],
         'font-src': ["'self'", 'data:'],
         'connect-src': [
           "'self'",
