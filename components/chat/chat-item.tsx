@@ -559,9 +559,8 @@ export const ChatItem = ({
                     disabled={isReacting}
                     className={cn(
                       "flex items-center gap-1 px-2 py-1 rounded-md text-sm transition",
-                      "hover:bg-zinc-200 dark:hover:bg-zinc-700",
-                      userHasReacted && "bg-purple-500/20 border border-purple-500/50",
-                      !userHasReacted && "bg-zinc-100 dark:bg-zinc-800 border border-transparent"
+                      userHasReacted && "bg-mana-200 dark:bg-mana-700 border border-mana-500/50 dark:hover:bg-mana-800 hover:bg-mana-300",
+                      !userHasReacted && "bg-lavender-200 dark:bg-lavender-800 border border-lavender-400 dark:hover:border-lavender-600 hover:bg-lavender-300"
                     )}
                   >
                     <span>{emoji}</span>
