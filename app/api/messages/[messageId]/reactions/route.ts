@@ -76,7 +76,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     })
 
-    let updatedMessage
     if (existingReaction) {
       // Remove reaction (toggle off)
       await db.messageReaction.delete({
@@ -94,7 +93,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // Fetch updated message with all reactions
-    updatedMessage = await db.message.findFirst({
+    const updatedMessage = await db.message.findFirst({
       where: { id: messageId },
       include: { 
         member: { include: { profile: true } },
