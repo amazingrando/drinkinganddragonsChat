@@ -33,7 +33,7 @@ const NavigationSidebar = async () => {
     <div data-nav className='space-y-4 flex flex-col items-center h-full w-full bg-background-dark py-3 text-foreground'>
       <NavigationAction />
       <Separator className='h-[3px] bg-border/50 rounded-md w-10 mx-auto' />
-      <ScrollArea className='flex-1 w-full'>
+      <ScrollArea className='flex-1 w-full max-h-svh overflow-auto'>
         {servers.map((server) => (
           <div key={server.id} className='mb-4'>
             <NavigationItem id={server.id} name={server.name} imageUrl={server.imageUrl} />
