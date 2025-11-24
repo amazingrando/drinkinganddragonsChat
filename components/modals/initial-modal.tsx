@@ -7,9 +7,8 @@ import { ModalHeader } from "./_modal-header"
 
 const InitialModal = () => {
   const [isMounted, setIsMounted] = useState(false)
-  const [isOpen, setIsOpen] = useState(false)
   const [hasChecked, setHasChecked] = useState(false)
-  const { onOpen } = useModal()
+  const { type, isOpen, onOpen, onClose } = useModal()
 
   useEffect(() => {
     setIsMounted(true)
@@ -17,15 +16,15 @@ const InitialModal = () => {
 
   useEffect(() => {
     const checkServerMembership = async () => {
-      if (!isMounted) return
+      if (!isMounted || hasChecked) return
 
       try {
         const response = await fetch("/api/servers")
         if (response.ok) {
           const data = await response.json()
-          // Only show modal if user has no servers
+          // Auto-open modal if user has no servers (first-time visitor)
           if (!data.hasServers) {
-            setIsOpen(true)
+            onOpen("initialModal")
           }
         }
       } catch (error) {
@@ -35,27 +34,46 @@ const InitialModal = () => {
       }
     }
 
-    if (isMounted) {
-      checkServerMembership()
-    }
+    checkServerMembership()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted])
 
   if (!isMounted || !hasChecked) {
     return null
   }
 
+  // Only render if this modal is open via the modal store
+  if (type !== "initialModal" || !isOpen) {
+    return null
+  }
+
   const handleCreate = () => {
-    setIsOpen(false)
+    onClose()
     onOpen("createServer")
   }
 
   const handleJoin = () => {
-    setIsOpen(false)
+    onClose()
     onOpen("joinServer")
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        // Re-check if user has servers before allowing close
+        fetch("/api/servers")
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.hasServers) {
+              onClose()
+            }
+          })
+          .catch(() => {
+            // On error, allow closing
+            onClose()
+          })
+      }
+    }}>
       <DialogContent>
         <ModalHeader title="Welcome to Guildhall" description="Create a server or join with an invite." />
         <div className="px-6 pb-6 grid gap-3">
