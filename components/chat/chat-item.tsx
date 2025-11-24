@@ -3,7 +3,7 @@
 import { Member, MemberRole, Profile } from "@prisma/client"
 import UserAvatar from "@/components/user-avatar"
 import { ActionTooltip } from "@/components//action-tooltip"
-import { Pencil, Trash, Loader2 } from "lucide-react"
+import { Pencil, Trash, Loader2, Smile } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useState, useRef, useCallback } from "react"
 import { cn } from "@/lib/utils"
@@ -18,10 +18,14 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useModal } from "@/hooks/use-modal-store"
 import { useRouter, useParams } from "next/navigation"
 import { PollDisplay } from "@/components/poll/poll-display"
-import { PollWithOptionsAndVotes } from "@/types"
+import { PollWithOptionsAndVotes, MessageReactionWithMember } from "@/types"
 import { RoleIcon } from "@/components/role-icon"
 import { MarkdownRenderer } from "@/components/chat/markdown-renderer"
 import { FormattingToolbar } from "@/components/chat/formatting-toolbar"
+import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
+import data from "@emoji-mart/data"
+import Picker from "@emoji-mart/react"
+import { useTheme } from "next-themes"
 
 interface ChatItemProps {
   id: string,
@@ -39,6 +43,7 @@ interface ChatItemProps {
   onRetry?: () => void,
   isRetrying?: boolean,
   isUnread?: boolean,
+  reactions?: MessageReactionWithMember[],
 }
 
 const formSchema = z.object({
@@ -61,18 +66,27 @@ export const ChatItem = ({
   onRetry,
   isRetrying,
   isUnread = false,
+  reactions = [],
 }: ChatItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [toolbarOpen, setToolbarOpen] = useState(false);
   const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number; width: number } | null>(null);
   const [showSelectionHighlight, setShowSelectionHighlight] = useState(false);
+  const [isReacting, setIsReacting] = useState(false);
+  const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
+  const [isMouseOverPicker, setIsMouseOverPicker] = useState(false);
+  const [anchorPosition, setAnchorPosition] = useState<{ x: number; y: number } | null>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
   const selectionRangeRef = useRef<{ start: number; end: number } | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   const editInputElementRef = useRef<HTMLInputElement | null>(null);
   const { onOpen } = useModal();
   const router = useRouter();
   const params = useParams();
+  const { resolvedTheme } = useTheme();
 
   const onMemberClick = () => {
     if (currentMember.id !== member.id) {
@@ -144,7 +158,7 @@ export const ChatItem = ({
         const inputRect = currentInput.getBoundingClientRect();
         const computedStyle = window.getComputedStyle(currentInput);
         const textBeforeSelection = currentInput.value.substring(0, currentStart);
-        
+
         // Create a temporary span to measure text width
         const measureSpan = document.createElement("span");
         measureSpan.style.position = "absolute";
@@ -158,14 +172,14 @@ export const ChatItem = ({
         measureSpan.style.textTransform = computedStyle.textTransform;
         measureSpan.textContent = textBeforeSelection;
         document.body.appendChild(measureSpan);
-        
+
         const textWidth = measureSpan.offsetWidth;
-        
+
         // Measure selected text width
         const selectedText = currentInput.value.substring(currentStart, currentEnd);
         measureSpan.textContent = selectedText;
         const selectedWidth = Math.max(measureSpan.offsetWidth, 1);
-        
+
         document.body.removeChild(measureSpan);
 
         // Calculate position relative to viewport
@@ -173,7 +187,7 @@ export const ChatItem = ({
         const borderLeft = parseFloat(computedStyle.borderLeftWidth) || 0;
         const x = inputRect.left + paddingLeft + borderLeft + textWidth;
         const y = inputRect.top;
-        
+
         setSelectionPosition({ x, y, width: selectedWidth });
       }, 0);
     } else {
@@ -291,6 +305,35 @@ export const ChatItem = ({
   const canDeleteMessage = !deleted && (viewerIsAdmin || viewerIsModerator || isOwner);
   const canEditMessage = !deleted && isOwner && !fileUrl;
   const isImage = fileUrl;
+
+  // Group reactions by emoji
+  const reactionsByEmoji: Record<string, MessageReactionWithMember[]> = reactions.reduce((acc, reaction) => {
+    if (!acc[reaction.emoji]) {
+      acc[reaction.emoji] = [];
+    }
+    acc[reaction.emoji].push(reaction);
+    return acc;
+  }, {} as Record<string, MessageReactionWithMember[]>);
+
+  const handleReaction = async (emoji: string) => {
+    try {
+      setIsReacting(true);
+      setIsReactionPickerOpen(false);
+      const url = qs.stringifyUrl({
+        url: `/api/messages/${id}/reactions`,
+        query: socketQuery,
+      });
+      await axios.post(url, { emoji });
+    } catch (error) {
+      console.error("Failed to toggle reaction:", error);
+    } finally {
+      setIsReacting(false);
+    }
+  };
+
+  const hasUserReacted = (emoji: string) => {
+    return reactionsByEmoji[emoji]?.some((r: MessageReactionWithMember) => r.memberId === currentMember.id) || false;
+  };
 
   const isPending = status === "pending"
   const isFailed = status === "failed"
@@ -501,24 +544,159 @@ export const ChatItem = ({
               )}
             </div>
           )}
+
+          {/* Reactions */}
+          {!deleted && Object.keys(reactionsByEmoji).length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {Object.entries(reactionsByEmoji).map(([emoji, reactionList]) => {
+                const count = reactionList.length;
+                const userHasReacted = hasUserReacted(emoji);
+                return (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => handleReaction(emoji)}
+                    disabled={isReacting}
+                    className={cn(
+                      "flex items-center gap-1 px-2 py-1 rounded-md text-sm transition",
+                      "hover:bg-zinc-200 dark:hover:bg-zinc-700",
+                      userHasReacted && "bg-purple-500/20 border border-purple-500/50",
+                      !userHasReacted && "bg-zinc-100 dark:bg-zinc-800 border border-transparent"
+                    )}
+                  >
+                    <span>{emoji}</span>
+                    <span className="text-xs font-medium">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {canDeleteMessage && (
-        <div className={cn(
-          "hidden group-hover:flex items-center gap-x-2 absolute p-1 -top-2 right-5 rounded-sm border border-border",
-          "bg-lavender-200",
-          "dark:bg-background/70",
-        )}>
-          {canEditMessage && (
-            <ActionTooltip label="Edit">
-              <Pencil className="w-4 h-4 text-icon-muted-foreground hover:text-lavender-800 dark:hover:text-white transition cursor-pointer" onClick={() => setIsEditing(true)} />
+      {!deleted && (
+        <>
+          <div className={cn(
+            "hidden group-hover:flex items-center gap-x-2 absolute p-1 -top-2 right-5 rounded-sm border border-border",
+            "bg-lavender-200",
+            "dark:bg-background/70",
+          )}>
+            <ActionTooltip label="Add Reaction">
+              <button
+                ref={buttonRef}
+                type="button"
+                className="outline-none border-none bg-transparent p-0 cursor-pointer flex items-center justify-center"
+                aria-label="Add Reaction"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isReactionPickerOpen && buttonRef.current) {
+                    const rect = buttonRef.current.getBoundingClientRect();
+                    setAnchorPosition({
+                      x: rect.left + rect.width / 2,
+                      y: rect.top
+                    });
+                  }
+                  setIsReactionPickerOpen(!isReactionPickerOpen);
+                }}
+              >
+                <Smile className="w-4 h-4 text-icon-muted-foreground hover:text-lavender-800 dark:hover:text-white transition" />
+              </button>
             </ActionTooltip>
+            {canDeleteMessage && (
+              <>
+                {canEditMessage && (
+                  <ActionTooltip label="Edit">
+                    <Pencil className="w-4 h-4 text-icon-muted-foreground hover:text-lavender-800 dark:hover:text-white transition cursor-pointer" onClick={() => setIsEditing(true)} />
+                  </ActionTooltip>
+                )}
+                <ActionTooltip label="Delete">
+                  <Trash className="w-4 h-4 text-icon-muted-foreground hover:text-lavender-800 dark:hover:text-white transition cursor-pointer" onClick={() => onOpen("deleteMessage", { apiUrl: `${socketUrl}/${id}`, query: socketQuery })} />
+                </ActionTooltip>
+              </>
+            )}
+          </div>
+
+          {/* Popover rendered outside hover container with stable anchor */}
+          {isReactionPickerOpen && anchorPosition && (
+            <Popover open={isReactionPickerOpen} onOpenChange={(open) => {
+              setIsReactionPickerOpen(open);
+              if (!open) {
+                setAnchorPosition(null);
+              }
+            }} modal={false}>
+              <PopoverAnchor asChild>
+                <div
+                  ref={anchorRef}
+                  style={{
+                    position: 'fixed',
+                    left: `${anchorPosition.x}px`,
+                    top: `${anchorPosition.y}px`,
+                    width: 0,
+                    height: 0,
+                    pointerEvents: 'none',
+                    zIndex: 0
+                  }}
+                />
+              </PopoverAnchor>
+              <PopoverContent
+                side="top"
+                align="start"
+                sideOffset={8}
+                className="bg-transparent border-none shadow-none drop-shadow-none p-0 w-auto z-[100]"
+                onMouseEnter={() => setIsMouseOverPicker(true)}
+                onMouseLeave={() => setIsMouseOverPicker(false)}
+                onOpenAutoFocus={(e) => e.preventDefault()}
+                onPointerDownOutside={(e) => {
+                  const target = e.target as HTMLElement;
+                  // Check if click is inside the picker or its container
+                  if (
+                    pickerRef.current?.contains(target) ||
+                    target.closest('.emoji-mart') ||
+                    target.closest('[data-slot="popover-content"]') ||
+                    target.closest('em-emoji-picker')
+                  ) {
+                    e.preventDefault();
+                    return;
+                  }
+                  // Only close if mouse is not over picker
+                  if (!isMouseOverPicker) {
+                    setIsReactionPickerOpen(false);
+                    setAnchorPosition(null);
+                  }
+                }}
+                onInteractOutside={(e) => {
+                  const target = e.target as HTMLElement;
+                  if (
+                    pickerRef.current?.contains(target) ||
+                    target.closest('.emoji-mart') ||
+                    target.closest('[data-slot="popover-content"]') ||
+                    target.closest('em-emoji-picker')
+                  ) {
+                    e.preventDefault();
+                    return;
+                  }
+                }}
+              >
+                <div
+                  ref={pickerRef}
+                  onMouseEnter={() => setIsMouseOverPicker(true)}
+                  onMouseLeave={() => setIsMouseOverPicker(false)}
+                  className="relative"
+                >
+                  <Picker
+                    theme={resolvedTheme}
+                    data={data}
+                    onEmojiSelect={(emoji: { native: string }) => {
+                      handleReaction(emoji.native);
+                      setIsReactionPickerOpen(false);
+                      setAnchorPosition(null);
+                    }}
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
           )}
-          <ActionTooltip label="Delete">
-            <Trash className="w-4 h-4 text-icon-muted-foreground hover:text-lavender-800 dark:hover:text-white transition cursor-pointer" onClick={() => onOpen("deleteMessage", { apiUrl: `${socketUrl}/${id}`, query: socketQuery })} />
-          </ActionTooltip>
-        </div>
+        </>
       )}
     </div>
   )

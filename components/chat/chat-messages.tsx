@@ -111,12 +111,14 @@ const ChatMessages = ({
     const seenIds = new Set<string>()
     const flattened: ChatMessage[] = []
     data?.pages?.forEach((group) => {
-      group.items.forEach((message: ChatMessage) => {
-        if (!seenIds.has(message.id)) {
-          seenIds.add(message.id)
-          flattened.push(message)
-        }
-      })
+      if (group?.items && Array.isArray(group.items)) {
+        group.items.forEach((message: ChatMessage) => {
+          if (!seenIds.has(message.id)) {
+            seenIds.add(message.id)
+            flattened.push(message)
+          }
+        })
+      }
     })
     return flattened
   }, [data])
@@ -465,7 +467,7 @@ const ChatMessages = ({
     bottomRef: bottomRef as React.RefObject<HTMLDivElement>,
     loadMore: fetchNextPage,
     shouldLoadMore: !isFetchingNextPage && !!hasNextPage,
-    count: data?.pages?.[0]?.items.length || 0,
+    count: data?.pages?.[0]?.items?.length || 0,
     disableInitialScroll: shouldDisableInitialScroll,
     autoScrollEnabled: !showUnreadSeparator,
     onAtBottomChange: handleAtBottomChange,
@@ -574,6 +576,7 @@ const ChatMessages = ({
                 isRetrying={isRetrying && pendingTempId === message.id}
                 onRetry={message.status === "failed" ? () => handleRetry(message) : undefined}
                 isUnread={isUnread}
+                reactions={"reactions" in message && message.reactions ? message.reactions : undefined}
               />
             )
 

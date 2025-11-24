@@ -1,4 +1,4 @@
-import { Member, Profile, Server, Poll, PollOption, PollVote, Message, DirectMessage } from "@prisma/client"
+import { Member, Profile, Server, Poll, PollOption, PollVote, Message, DirectMessage, MessageReaction } from "@prisma/client"
 
 export type ServerWithMembersWithProfiles = Server & {
   members: (Member & { profile: Profile })[]
@@ -18,11 +18,18 @@ export type PollWithOptionsAndVotes = Poll & {
   }
 }
 
+export type MessageReactionWithMember = MessageReaction & {
+  member: Member & {
+    profile: Profile
+  }
+}
+
 export type MessageWithPoll = Message & {
   poll: PollWithOptionsAndVotes | null
   member: Member & {
     profile: Profile
   }
+  reactions?: MessageReactionWithMember[]
 }
 
 export type DirectMessageWithMemberProfile = DirectMessage & {

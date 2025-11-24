@@ -103,6 +103,15 @@ export async function GET(request: NextRequest) {
               },
             },
           },
+          reactions: {
+            include: {
+              member: {
+                include: {
+                  profile: true,
+                },
+              },
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc',
@@ -139,6 +148,15 @@ export async function GET(request: NextRequest) {
                 },
               },
               creator: {
+                include: {
+                  profile: true,
+                },
+              },
+            },
+          },
+          reactions: {
+            include: {
+              member: {
                 include: {
                   profile: true,
                 },

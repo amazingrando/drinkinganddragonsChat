@@ -60,6 +60,7 @@ const InviteModal = () => {
               placeholder="Enter invite link"
               value={inviteURL}
               disabled={isLoading}
+              readOnly
             />
             <Button variant="primary" onClick={onCopy} disabled={isLoading}>
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}

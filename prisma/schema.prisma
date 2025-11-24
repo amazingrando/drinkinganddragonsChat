@@ -79,6 +79,8 @@ model Member {
   pollOptions PollOption[]
   pollVotes   PollVote[]
 
+  messageReactions MessageReaction[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -157,6 +159,8 @@ model Message {
   deleted Boolean @default(false)
 
   poll Poll?
+
+  reactions MessageReaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -280,5 +284,21 @@ model ChannelReadState {
 
   @@unique([memberId, channelId])
   @@index([channelId])
+  @@index([memberId])
+}
+
+model MessageReaction {
+  id        String @id @default(uuid())
+  emoji     String // Store the emoji character(s)
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([messageId, memberId, emoji])
+  @@index([messageId])
   @@index([memberId])
 }
