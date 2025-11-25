@@ -100,6 +100,20 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           </a>
         )
 
+      case "mention":
+        return (
+          <span
+            key={key}
+            className="text-primary font-medium bg-primary/10 px-1 py-0.5 rounded"
+            data-mention-name={token.name}
+            data-mention-type={token.mentionType}
+            data-mention-id={token.mentionId}
+          >
+            {token.mentionType === "user" ? "@" : "#"}
+            {token.name}
+          </span>
+        )
+
       case "quote":
         return (
           <blockquote

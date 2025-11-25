@@ -10,6 +10,7 @@ export type MarkdownToken =
   | { type: "spoiler"; content: MarkdownToken[] }
   | { type: "link"; text: string; url: string }
   | { type: "quote"; content: MarkdownToken[] }
+  | { type: "mention"; name: string; mentionType: "user" | "channel"; mentionId?: string }
   | { type: "lineBreak" }
 
 /**
@@ -59,7 +60,19 @@ function parseInlineMarkdown(text: string): MarkdownToken[] {
 
   while (i < text.length) {
     // Try to match markdown patterns in order of specificity
-    // 1. Links [text](url) - most specific
+    // 1. Mentions @username or #channelname
+    const mentionMatch = text.slice(i).match(/^(@|#)([a-zA-Z0-9_-]+)/)
+    if (mentionMatch) {
+      tokens.push({
+        type: "mention",
+        name: mentionMatch[2],
+        mentionType: mentionMatch[1] === "@" ? "user" : "channel",
+      })
+      i += mentionMatch[0].length
+      continue
+    }
+
+    // 2. Links [text](url) - most specific
     const linkMatch = text.slice(i).match(/^\[([^\]]+)\]\(([^)]+)\)/)
     if (linkMatch) {
       tokens.push({
@@ -71,7 +84,7 @@ function parseInlineMarkdown(text: string): MarkdownToken[] {
       continue
     }
 
-    // 2. Bold **text** - non-greedy match to handle nested formatting
+    // 3. Bold **text** - non-greedy match to handle nested formatting
     const boldMatch = text.slice(i).match(/^\*\*(.+?)\*\*/)
     if (boldMatch && boldMatch[1].length > 0) {
       const boldContent = parseInlineMarkdown(boldMatch[1])
@@ -83,7 +96,7 @@ function parseInlineMarkdown(text: string): MarkdownToken[] {
       continue
     }
 
-    // 3. Spoiler ||text|| - non-greedy match to handle nested formatting
+    // 4. Spoiler ||text|| - non-greedy match to handle nested formatting
     const spoilerMatch = text.slice(i).match(/^\|\|(.+?)\|\|/)
     if (spoilerMatch && spoilerMatch[1].length > 0) {
       const spoilerContent = parseInlineMarkdown(spoilerMatch[1])
@@ -95,7 +108,7 @@ function parseInlineMarkdown(text: string): MarkdownToken[] {
       continue
     }
 
-    // 4. Italic *text* (but not **text**)
+    // 5. Italic *text* (but not **text**)
     const italicMatch = text.slice(i).match(/^\*([^*\n]+)\*/)
     if (italicMatch) {
       const italicContent = parseInlineMarkdown(italicMatch[1])
@@ -107,7 +120,7 @@ function parseInlineMarkdown(text: string): MarkdownToken[] {
       continue
     }
 
-    // 5. Auto-detect URLs (http://, https://)
+    // 6. Auto-detect URLs (http://, https://)
     const urlMatch = text.slice(i).match(/^(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/i)
     if (urlMatch) {
       tokens.push({
@@ -119,13 +132,13 @@ function parseInlineMarkdown(text: string): MarkdownToken[] {
       continue
     }
 
-    // 6. Regular text - collect until next markdown pattern
+    // 7. Regular text - collect until next markdown pattern
     let textEnd = i
     while (textEnd < text.length) {
       const remaining = text.slice(textEnd)
       // Check if any markdown pattern starts here
       if (
-        remaining.match(/^(\[|https?:\/\/|\*\*|\*|\|\|)/i)
+        remaining.match(/^(\[|https?:\/\/|\*\*|\*|\|\||@|#)/i)
       ) {
         break
       }
