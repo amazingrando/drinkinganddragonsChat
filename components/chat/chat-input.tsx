@@ -37,11 +37,15 @@ export const ChatInput = ({ apiUrl, query, name, type, chatId, currentMember }: 
         return
       }
 
-      await sendMessage(trimmedContent)
+      // Clear editor immediately before sending
       setContent("")
       setClearTrigger((prev) => prev + 1)
+
+      // Send message (don't await to clear UI immediately)
+      await sendMessage(trimmedContent)
     } catch (error) {
       console.error(error)
+      // If sending fails, we could restore the content here if needed
     }
   }, [content, sendMessage])
 

@@ -29,8 +29,6 @@ import { Plus, BarChart3, Send } from "lucide-react"
 import { useModal } from "@/hooks/use-modal-store"
 import { EmojiPicker } from "@/components/emoji-picker"
 import { Member, Profile } from "@prisma/client"
-import { FormattingToolbar } from "@/components/chat/formatting-toolbar"
-import { useMarkdownFormatting } from "./lexical-markdown-shortcuts"
 import { $getSelection, $isRangeSelection, KEY_ENTER_COMMAND, COMMAND_PRIORITY_LOW } from "lexical"
 
 interface LexicalChatInputProps {
@@ -56,9 +54,7 @@ function EditorUI({
 }: Omit<LexicalChatInputProps, "chatId" | "currentMember" | "onContentChange">) {
   const [editor] = useLexicalComposerContext()
   const { onOpen } = useModal()
-  const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number; width: number } | null>(null)
   const [isEmpty, setIsEmpty] = useState(true)
-  const { applyBold, applyItalic, applyQuote, applySpoiler, applyLink } = useMarkdownFormatting()
   const editorContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -94,43 +90,6 @@ function EditorUI({
     )
   }, [editor, onSubmit, isEmpty, isLoading])
 
-  const updateSelectionPosition = useCallback(() => {
-    const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0) {
-      setSelectionPosition(null)
-      return
-    }
-
-    const range = selection.getRangeAt(0)
-    if (range.collapsed) {
-      setSelectionPosition(null)
-      return
-    }
-
-    const rect = range.getBoundingClientRect()
-    setSelectionPosition({
-      x: rect.left,
-      y: rect.top,
-      width: rect.width,
-    })
-  }, [])
-
-  const handleFormat = useCallback(
-    (markdown: string) => {
-      if (markdown === "**") {
-        applyBold()
-      } else if (markdown === "*") {
-        applyItalic()
-      } else if (markdown === "> ") {
-        applyQuote()
-      } else if (markdown === "||") {
-        applySpoiler()
-      } else if (markdown === "[text](url)") {
-        applyLink()
-      }
-    },
-    [applyBold, applyItalic, applyQuote, applySpoiler, applyLink],
-  )
 
   const handleEmojiChange = useCallback(
     (emoji: string) => {
@@ -184,30 +143,9 @@ function EditorUI({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <FormattingToolbar
-        onFormat={handleFormat}
-        open={!!selectionPosition}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectionPosition(null)
-          }
-        }}
-        selectionPosition={selectionPosition}
-      >
-        <div className="absolute top-5.75 left-14 z-10">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="h-8 w-8 rounded-full"
-          >
-            <span className="text-xs font-bold">Aa</span>
-          </Button>
-        </div>
-      </FormattingToolbar>
 
       {/* Editor container and placeholder will be handled by RichTextPlugin */}
-      <div className="relative" ref={editorContainerRef} onSelect={updateSelectionPosition} onMouseUp={updateSelectionPosition}>
+      <div className="relative" ref={editorContainerRef}>
         {/* Placeholder */}
         {isEmpty && (
           <div
