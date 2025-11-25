@@ -9,11 +9,10 @@ interface UserAvatarProps {
 }
 
 const UserAvatar = ({ src, imageUrl, size = 40, className }: UserAvatarProps) => {
-  // If there's a custom imageUrl and it's not empty, use it
   if (imageUrl && imageUrl.trim() !== "") {
     return (
       <UIAvatar className={className} style={{ width: size, height: size }}>
-        <AvatarImage src={imageUrl} alt={src ? `Avatar for ${src}` : "User avatar"} />
+        <AvatarImage src={imageUrl} alt={src ? `Avatar for ${src}` : "User avatar"} style={{ width: size, height: size }} />
         <AvatarFallback>
           <Avatar
             className={className}
