@@ -73,9 +73,9 @@ function EditorUI({
       KEY_ENTER_COMMAND,
       (event: KeyboardEvent | null) => {
         if (!event) return false
-        
+
         const isModifierPressed = event.metaKey || event.ctrlKey
-        
+
         // Command/Ctrl + Enter to submit
         if (isModifierPressed) {
           event.preventDefault()
@@ -150,8 +150,8 @@ function EditorUI({
         {isEmpty && (
           <div
             className={cn(
-              "absolute top-6 left-14 pointer-events-none text-muted-foreground/70 z-0",
-              type === "channel" && "left-20",
+              "absolute top-3.5 left-14 pointer-events-none text-muted-foreground/70 z-0",
+              type === "channel" && "left-15",
             )}
           >
             {`Message ${type === "conversation" ? name : "#" + name}`}
@@ -159,7 +159,7 @@ function EditorUI({
         )}
       </div>
 
-      <div className="absolute top-7 right-8 z-10 flex items-center gap-2">
+      <div className="absolute top-6 right-8 z-10 flex items-center gap-2">
         <EmojiPicker onChange={handleEmojiChange} />
         <Button
           type="button"
@@ -252,10 +252,10 @@ export function LexicalChatInput({
               <div
                 className={cn(
                   "relative min-h-[48px] max-h-[200px] overflow-y-auto",
-                  "px-14 pr-20 py-6 bg-muted/50 font-medium rounded-md",
+                  "px-14 pr-15 py-3 bg-muted/50 font-medium rounded-md",
                   "text-foreground",
                   "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring",
-                  type === "channel" && "pl-20",
+                  type === "channel" && "pl-15",
                 )}
               >
                 <ContentEditable

@@ -94,7 +94,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             href={token.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary hover:underline"
+            className="chat-link"
           >
             {token.text}
           </a>
@@ -104,7 +104,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         return (
           <span
             key={key}
-            className="text-primary font-medium bg-primary/10 px-1 py-0.5 rounded"
+            className="chat-link bg-lavender-800/50 font-medium px-1 py-0.5 rounded"
             data-mention-name={token.name}
             data-mention-type={token.mentionType}
             data-mention-id={token.mentionId}

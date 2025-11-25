@@ -83,6 +83,6 @@ export const chatEditorTheme: EditorThemeClasses = {
   tableCellHeader: "bg-muted font-bold",
   
   // Mention
-  mention: "text-primary font-medium bg-primary/10 px-1 py-0.5 rounded",
+  mention: "text-mana-200 decoration-mana-300/50 underline font-medium bg-lavender-800/50 px-1 py-0.5 rounded hover:text-mana-100 hover:decoration-mana-100/50 transition-colors duration-150",
 }
 

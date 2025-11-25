@@ -217,3 +217,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .chat-link {
+    @apply text-mana-200 decoration-mana-300/50;
+    @apply hover:text-mana-100 hover:decoration-mana-100/50;
+    @apply underline transition-colors duration-150;
+  }
+}
