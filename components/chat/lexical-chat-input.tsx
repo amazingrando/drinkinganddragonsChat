@@ -6,7 +6,8 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable"
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin"
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
-import { $getRoot, $isParagraphNode, EditorState, $createParagraphNode } from "lexical"
+import { $getRoot, $isParagraphNode, EditorState, $createParagraphNode, $isTextNode, $insertNodes, $createTextNode } from "lexical"
+import { $isLinkNode } from "@lexical/link"
 import { chatEditorTheme } from "@/lib/lexical/theme"
 import { MarkdownShortcutsPlugin } from "./lexical-markdown-shortcuts"
 import { MentionsPlugin } from "./lexical-mentions-plugin"
@@ -15,7 +16,7 @@ import { LinkNode } from "@lexical/link"
 import { ListPlugin } from "@lexical/react/LexicalListPlugin"
 import { ListNode, ListItemNode } from "@lexical/list"
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary"
-import { MentionNode } from "@/lib/lexical/nodes"
+import { MentionNode, $isMentionNode } from "@/lib/lexical/nodes"
 import { cn } from "@/lib/utils"
 import { useEffect, useRef, useState, useCallback } from "react"
 import {
@@ -96,19 +97,11 @@ function EditorUI({
       editor.update(() => {
         const selection = $getSelection()
         if ($isRangeSelection(selection)) {
-          const textNode = selection.anchor.getNode()
-          if (textNode) {
-            const text = textNode.getTextContent()
-            const offset = selection.anchor.offset
-            textNode.setTextContent(text.slice(0, offset) + ` ${emoji}` + text.slice(offset))
-          }
+          const textNode = $createTextNode(` ${emoji}`)
+          $insertNodes([textNode])
         } else {
-          const root = $getRoot()
-          const lastChild = root.getLastChild()
-          if ($isParagraphNode(lastChild)) {
-            const text = lastChild.getTextContent()
-            lastChild.setTextContent(text + ` ${emoji}`)
-          }
+          const textNode = $createTextNode(` ${emoji}`)
+          $insertNodes([textNode])
         }
       })
     },
@@ -208,8 +201,50 @@ export function LexicalChatInput({
     (editorState: EditorState) => {
       editorState.read(() => {
         const root = $getRoot()
-        const textContent = root.getTextContent()
-        onContentChange(textContent)
+
+        function convertToMarkdown(node: typeof root): string {
+          let result = ""
+          const children = node.getChildren()
+
+          for (const child of children) {
+            if ($isMentionNode(child)) {
+              const mentionType = child.getMentionType()
+              const mentionName = child.getMentionName()
+              result += mentionType === "user" ? `@${mentionName}` : `#${mentionName}`
+            } else if ($isTextNode(child)) {
+              // Handle text formatting
+              const text = child.getTextContent()
+              const isBold = child.hasFormat("bold")
+              const isItalic = child.hasFormat("italic")
+
+              if (isBold && isItalic) {
+                result += `***${text}***`
+              } else if (isBold) {
+                result += `**${text}**`
+              } else if (isItalic) {
+                result += `*${text}*`
+              } else {
+                result += text
+              }
+            } else if ($isLinkNode(child)) {
+              const text = child.getTextContent()
+              const url = child.getURL()
+              result += `[${text}](${url})`
+            } else if ($isParagraphNode(child)) {
+              const paragraphContent = convertToMarkdown(child as unknown as typeof root)
+              result += paragraphContent
+            } else if ("getChildren" in child && typeof child.getChildren === "function") {
+              result += convertToMarkdown(child as unknown as typeof root)
+            } else {
+              result += child.getTextContent()
+            }
+          }
+
+          return result
+        }
+
+        const markdownContent = convertToMarkdown(root)
+        onContentChange(markdownContent)
       })
     },
     [onContentChange],
@@ -241,9 +276,6 @@ export function LexicalChatInput({
             query={query}
             name={name}
             type={type}
-            chatId={chatId}
-            currentMember={currentMember}
-            onContentChange={onContentChange}
             onSubmit={onSubmit}
             isLoading={isLoading}
           />
