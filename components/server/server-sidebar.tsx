@@ -64,17 +64,122 @@ export const ServerSidebar = async ({ serverId }: ServerSidebarProps) => {
   }
 
   // Separate channels by category and ungrouped
-  const channelsByCategory = new Map<string, typeof server.channels>()
   const ungroupedChannels = server.channels.filter((channel) => !channel.categoryId)
 
-  for (const category of server.categories) {
-    channelsByCategory.set(category.id, category.channels)
+  // Ensure default "Channels" category exists for ungrouped channels
+  const updatedCategories = [...server.categories]
+  const categoryMap = new Map(updatedCategories.map((cat) => [cat.name.toLowerCase(), cat]))
+
+  // Create a single "Channels" category for all ungrouped channels
+  if (ungroupedChannels.length > 0) {
+    const categoryName = "Channels"
+    const categoryKey = categoryName.toLowerCase()
+    let category = categoryMap.get(categoryKey)
+
+    if (!category) {
+      // Create default category
+      const maxOrder = updatedCategories.length > 0
+        ? Math.max(...updatedCategories.map((cat) => cat.order))
+        : -1
+
+      category = await db.channelCategory.create({
+        data: {
+          name: categoryName,
+          serverID: serverId,
+          order: maxOrder + 1,
+        },
+        include: {
+          channels: {
+            orderBy: [
+              {
+                order: "asc",
+              },
+              {
+                createdAt: "asc",
+              },
+            ],
+          },
+        },
+      })
+
+      updatedCategories.push(category)
+      categoryMap.set(categoryKey, category)
+    }
+
+    // Assign all ungrouped channels to this category
+    const existingChannelCount = category.channels.length
+    for (let i = 0; i < ungroupedChannels.length; i++) {
+      await db.channel.update({
+        where: { id: ungroupedChannels[i].id },
+        data: {
+          categoryId: category.id,
+          order: existingChannelCount + i,
+        },
+      })
+    }
+
+    // Reload category with updated channels
+    const updatedCategory = await db.channelCategory.findUnique({
+      where: { id: category.id },
+      include: {
+        channels: {
+          orderBy: [
+            {
+              order: "asc",
+            },
+            {
+              createdAt: "asc",
+            },
+          ],
+        },
+      },
+    })
+
+    if (updatedCategory) {
+      const index = updatedCategories.findIndex((cat) => cat.id === category.id)
+      if (index !== -1) {
+        updatedCategories[index] = updatedCategory
+      }
+    }
   }
 
-  // For backward compatibility, also provide type-based filtering
-  const textChannels = ungroupedChannels.filter((channel) => channel.type === ChannelType.TEXT)
-  const audioChannels = ungroupedChannels.filter((channel) => channel.type === ChannelType.AUDIO)
-  const videoChannels = ungroupedChannels.filter((channel) => channel.type === ChannelType.VIDEO)
+  // Reload all categories to get the latest state
+  const finalCategories = await db.channelCategory.findMany({
+    where: {
+      serverID: serverId,
+    },
+    include: {
+      channels: {
+        orderBy: [
+          {
+            order: "asc",
+          },
+          {
+            createdAt: "asc",
+          },
+        ],
+      },
+    },
+    orderBy: {
+      order: "asc",
+    },
+  })
+
+  // Get remaining ungrouped channels (those that weren't assigned)
+  const remainingUngrouped = await db.channel.findMany({
+    where: {
+      serverID: serverId,
+      categoryId: null,
+    },
+    orderBy: [
+      {
+        order: "asc",
+      },
+      {
+        createdAt: "asc",
+      },
+    ],
+  })
 
   const members = server.members.filter((member) => member.profileID !== profile.id)
 
@@ -126,11 +231,11 @@ export const ServerSidebar = async ({ serverId }: ServerSidebarProps) => {
 
   // Calculate mention counts for each channel
   const mentionCountByChannel = new Map<string, number>()
-  
+
   for (const channel of server.channels) {
     const readState = readByChannel.get(channel.id)
     const unreadCount = unreadCountForChannel(channel.id)
-    
+
     if (unreadCount === 0) {
       mentionCountByChannel.set(channel.id, 0)
       continue
@@ -143,10 +248,10 @@ export const ServerSidebar = async ({ serverId }: ServerSidebarProps) => {
         deleted: false,
         ...(readState?.lastReadAt
           ? {
-              createdAt: {
-                gt: readState.lastReadAt,
-              },
-            }
+            createdAt: {
+              gt: readState.lastReadAt,
+            },
+          }
           : {}),
       },
       select: {
@@ -160,7 +265,7 @@ export const ServerSidebar = async ({ serverId }: ServerSidebarProps) => {
     if (currentMember) {
       for (const message of unreadMessages) {
         const tokens = parseMarkdown(message.content)
-        
+
         // Recursively check all tokens for user mentions
         const checkTokens = (tokens: ReturnType<typeof parseMarkdown>) => {
           for (const token of tokens) {
@@ -172,11 +277,11 @@ export const ServerSidebar = async ({ serverId }: ServerSidebarProps) => {
             }
           }
         }
-        
+
         checkTokens(tokens)
       }
     }
-    
+
     mentionCountByChannel.set(channel.id, mentionCount)
   }
 
@@ -186,7 +291,7 @@ export const ServerSidebar = async ({ serverId }: ServerSidebarProps) => {
     <ServerSidebarClient
       server={server}
       role={role}
-      categories={server.categories.map((category) => ({
+      categories={finalCategories.map((category) => ({
         ...category,
         channels: category.channels.map((channel) => ({
           channel,
@@ -194,18 +299,8 @@ export const ServerSidebar = async ({ serverId }: ServerSidebarProps) => {
           mentionCount: mentionCountForChannel(channel.id),
         })),
       }))}
-      textChannels={textChannels.map((channel) => ({ 
-        channel, 
-        unreadCount: unreadCountForChannel(channel.id),
-        mentionCount: mentionCountForChannel(channel.id),
-      }))}
-      audioChannels={audioChannels.map((channel) => ({ 
-        channel, 
-        unreadCount: unreadCountForChannel(channel.id),
-        mentionCount: mentionCountForChannel(channel.id),
-      }))}
-      videoChannels={videoChannels.map((channel) => ({ 
-        channel, 
+      ungroupedChannels={remainingUngrouped.map((channel) => ({
+        channel,
         unreadCount: unreadCountForChannel(channel.id),
         mentionCount: mentionCountForChannel(channel.id),
       }))}

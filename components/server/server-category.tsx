@@ -82,14 +82,10 @@ export const ServerCategory = ({
               className="cursor-grab active:cursor-grabbing touch-none"
               onClick={(e) => e.stopPropagation()}
             >
-              <GripVertical className="w-4 h-4 text-muted-foreground/60 mr-1 flex-shrink-0" />
+              <GripVertical className="w-4 h-4 text-muted-foreground/60 mr-1 flex-shrink-0 hidden group-hover:block" />
             </div>
           )}
-          {collapsed ? (
-            <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          )}
+          <ChevronDown className={cn("w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform duration-150", collapsed ? "-rotate-90" : "rotate-0")} />
           <p className="text-xs uppercase font-semibold text-muted-foreground truncate">
             {category.name}
           </p>

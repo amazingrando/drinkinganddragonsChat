@@ -24,6 +24,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  useDroppable,
 } from "@dnd-kit/core"
 import {
   arrayMove,
@@ -50,9 +51,7 @@ type ServerSidebarClientProps = {
   server: ServerWithMembersWithProfiles
   role?: MemberRole
   categories?: CategoryWithChannels[]
-  textChannels: ChannelWithUnread[]
-  audioChannels: ChannelWithUnread[]
-  videoChannels: ChannelWithUnread[]
+  ungroupedChannels?: ChannelWithUnread[]
   members: (Member & { profile: Profile })[]
   currentMemberId: string | null
 }
@@ -83,13 +82,11 @@ const isChannelMessage = (message: ChatMessage | undefined): message is MessageW
 }
 
 const buildInitialMap = (
-  textChannels: ChannelWithUnread[],
-  audioChannels: ChannelWithUnread[],
-  videoChannels: ChannelWithUnread[],
+  ungroupedChannels: ChannelWithUnread[],
   categories?: CategoryWithChannels[],
 ): UnreadMap => {
   const map: UnreadMap = {}
-  for (const entry of [...textChannels, ...audioChannels, ...videoChannels]) {
+  for (const entry of ungroupedChannels) {
     map[entry.channel.id] = entry.unreadCount
   }
   if (categories) {
@@ -103,13 +100,11 @@ const buildInitialMap = (
 }
 
 const buildInitialMentionMap = (
-  textChannels: ChannelWithUnread[],
-  audioChannels: ChannelWithUnread[],
-  videoChannels: ChannelWithUnread[],
+  ungroupedChannels: ChannelWithUnread[],
   categories?: CategoryWithChannels[],
 ): MentionMap => {
   const map: MentionMap = {}
-  for (const entry of [...textChannels, ...audioChannels, ...videoChannels]) {
+  for (const entry of ungroupedChannels) {
     map[entry.channel.id] = entry.mentionCount
   }
   if (categories) {
@@ -126,9 +121,7 @@ export const ServerSidebarClient = ({
   server,
   role,
   categories = [],
-  textChannels,
-  audioChannels,
-  videoChannels,
+  ungroupedChannels = [],
   members,
   currentMemberId,
 }: ServerSidebarClientProps) => {
@@ -137,21 +130,17 @@ export const ServerSidebarClient = ({
   const router = useRouter()
   const params = useParams()
   const activeChannelId = typeof params?.channelId === "string" ? params.channelId : null
-  const [unreadMap, setUnreadMap] = useState<UnreadMap>(() => buildInitialMap(textChannels, audioChannels, videoChannels, categories))
-  const [mentionMap, setMentionMap] = useState<MentionMap>(() => buildInitialMentionMap(textChannels, audioChannels, videoChannels, categories))
+  const [unreadMap, setUnreadMap] = useState<UnreadMap>(() => buildInitialMap(ungroupedChannels, categories))
+  const [mentionMap, setMentionMap] = useState<MentionMap>(() => buildInitialMentionMap(ungroupedChannels, categories))
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
   
   // Optimistic state for drag-and-drop
   const [optimisticCategories, setOptimisticCategories] = useState<CategoryWithChannels[] | null>(null)
-  const [optimisticTextChannels, setOptimisticTextChannels] = useState<ChannelWithUnread[] | null>(null)
-  const [optimisticAudioChannels, setOptimisticAudioChannels] = useState<ChannelWithUnread[] | null>(null)
-  const [optimisticVideoChannels, setOptimisticVideoChannels] = useState<ChannelWithUnread[] | null>(null)
+  const [optimisticUngroupedChannels, setOptimisticUngroupedChannels] = useState<ChannelWithUnread[] | null>(null)
 
   // Use optimistic state if available, otherwise use props
   const displayCategories = optimisticCategories ?? categories
-  const displayTextChannels = optimisticTextChannels ?? textChannels
-  const displayAudioChannels = optimisticAudioChannels ?? audioChannels
-  const displayVideoChannels = optimisticVideoChannels ?? videoChannels
+  const displayUngroupedChannels = optimisticUngroupedChannels ?? ungroupedChannels
   const activeChannelIdRef = useRef<string | null>(activeChannelId)
   const lastMessageIdsRef = useRef<Record<string, string | undefined>>({})
   const processedMessageIdsRef = useRef<Record<string, { ids: Set<string>; order: string[] }>>({})
@@ -257,23 +246,19 @@ export const ServerSidebarClient = ({
 
   const allChannels = useMemo(
     () => [
-      ...displayTextChannels,
-      ...displayAudioChannels,
-      ...displayVideoChannels,
+      ...displayUngroupedChannels,
       ...displayCategories.flatMap((cat) => cat.channels),
     ].map((entry) => entry.channel),
-    [displayTextChannels, displayAudioChannels, displayVideoChannels, displayCategories],
+    [displayUngroupedChannels, displayCategories],
   )
 
   useEffect(() => {
     // Reset optimistic state when props change (after server refresh)
     setOptimisticCategories(null)
-    setOptimisticTextChannels(null)
-    setOptimisticAudioChannels(null)
-    setOptimisticVideoChannels(null)
+    setOptimisticUngroupedChannels(null)
     
-    const initialUnreadMap = buildInitialMap(textChannels, audioChannels, videoChannels, categories)
-    const initialMentionMap = buildInitialMentionMap(textChannels, audioChannels, videoChannels, categories)
+    const initialUnreadMap = buildInitialMap(ungroupedChannels, categories)
+    const initialMentionMap = buildInitialMentionMap(ungroupedChannels, categories)
     const activeChannelIds = new Set(Object.keys(initialUnreadMap))
 
     setUnreadMap((prev) => {
@@ -298,7 +283,7 @@ export const ServerSidebarClient = ({
     lastMessageIdsRef.current = Object.fromEntries(
       Object.entries(lastMessageIdsRef.current).filter(([channelId]) => activeChannelIds.has(channelId)),
     )
-  }, [textChannels, audioChannels, videoChannels, categories])
+  }, [ungroupedChannels, categories])
 
   useEffect(() => {
     activeChannelIdRef.current = activeChannelId
@@ -546,13 +531,163 @@ export const ServerSidebarClient = ({
 
       // Check if dragging a channel
       const allChannelsList = [
-        ...displayTextChannels,
-        ...displayAudioChannels,
-        ...displayVideoChannels,
+        ...displayUngroupedChannels,
         ...displayCategories.flatMap((cat) => cat.channels),
       ]
       const activeChannel = allChannelsList.find((entry) => entry.channel.id === activeId)
       const overChannel = allChannelsList.find((entry) => entry.channel.id === overId)
+      
+      // Check if dropping on a category header or ungrouped section
+      const overCategoryHeader = displayCategories.find((cat) => cat.id === overId)
+      const isDroppingOnUngrouped = overId === "ungrouped"
+
+      // If dragging a channel and dropping on ungrouped section
+      if (activeChannel && isDroppingOnUngrouped) {
+        const sourceCategoryId = activeChannel.channel.categoryId || null
+
+        // Add channel to ungrouped
+        const updatedChannel = { ...activeChannel, channel: { ...activeChannel.channel, categoryId: null } }
+        const newUngrouped = [...displayUngroupedChannels, updatedChannel]
+
+        // Optimistically update UI
+        setOptimisticUngroupedChannels(newUngrouped)
+
+        // Update source category if moving from a category
+        if (sourceCategoryId) {
+          const updatedCategories = displayCategories.map((cat) =>
+            cat.id === sourceCategoryId
+              ? { ...cat, channels: cat.channels.filter((ch) => ch.channel.id !== activeId) }
+              : cat
+          )
+          setOptimisticCategories(updatedCategories)
+        }
+
+        // Update in background
+        try {
+          await axios.patch(
+            `/api/channels/${activeId}/category?serverId=${server.id}`,
+            {
+              categoryId: null,
+              order: newUngrouped.length - 1,
+            }
+          )
+
+          // Update source category orders if moving from a category
+          if (sourceCategoryId) {
+            const sourceCategory = displayCategories.find((cat) => cat.id === sourceCategoryId)
+            if (sourceCategory) {
+              const sourceChannels = sourceCategory.channels.filter(
+                (entry) => entry.channel.id !== activeId
+              )
+              for (let i = 0; i < sourceChannels.length; i++) {
+                await axios.patch(
+                  `/api/channels/${sourceChannels[i].channel.id}/category?serverId=${server.id}`,
+                  {
+                    categoryId: sourceCategoryId,
+                    order: i,
+                  }
+                )
+              }
+            }
+          }
+
+          router.refresh()
+        } catch (error) {
+          console.error("[DRAG_END_ERROR]", error)
+          setOptimisticCategories(null)
+          setOptimisticUngroupedChannels(null)
+        }
+        return
+      }
+
+      // If dragging a channel and dropping on a category header
+      if (activeChannel && overCategoryHeader) {
+        const sourceCategoryId = activeChannel.channel.categoryId || null
+        const targetCategoryId = overCategoryHeader.id
+
+        // Get channels in target category
+        const targetCategoryChannels = overCategoryHeader.channels.filter(
+          (entry) => entry.channel.id !== activeId
+        )
+
+        // Add channel to end of target category
+        const reorderedChannels = [
+          ...targetCategoryChannels,
+          { ...activeChannel, channel: { ...activeChannel.channel, categoryId: targetCategoryId } },
+        ]
+
+        // Optimistically update UI
+        const updatedCategories = displayCategories.map((cat) =>
+          cat.id === targetCategoryId
+            ? { ...cat, channels: reorderedChannels }
+            : cat.id === sourceCategoryId
+            ? { ...cat, channels: cat.channels.filter((ch) => ch.channel.id !== activeId) }
+            : cat
+        )
+        setOptimisticCategories(updatedCategories)
+
+        // Update ungrouped if moving from ungrouped
+        if (sourceCategoryId === null) {
+          setOptimisticUngroupedChannels(
+            displayUngroupedChannels.filter((entry) => entry.channel.id !== activeId)
+          )
+        }
+
+        // Update all channels in the target category with new orders in the background
+        try {
+          for (let i = 0; i < reorderedChannels.length; i++) {
+            await axios.patch(
+              `/api/channels/${reorderedChannels[i].channel.id}/category?serverId=${server.id}`,
+              {
+                categoryId: targetCategoryId,
+                order: i,
+              }
+            )
+          }
+
+          // If moving from a different category, update the source category orders too
+          if (sourceCategoryId !== null && sourceCategoryId !== targetCategoryId) {
+            const sourceCategory = displayCategories.find((cat) => cat.id === sourceCategoryId)
+            if (sourceCategory) {
+              const sourceChannels = sourceCategory.channels.filter(
+                (entry) => entry.channel.id !== activeId
+              )
+              for (let i = 0; i < sourceChannels.length; i++) {
+                await axios.patch(
+                  `/api/channels/${sourceChannels[i].channel.id}/category?serverId=${server.id}`,
+                  {
+                    categoryId: sourceCategoryId,
+                    order: i,
+                  }
+                )
+              }
+            }
+          } else if (sourceCategoryId === null && targetCategoryId !== null) {
+            // Moving from ungrouped to category - update ungrouped channels
+            const remainingUngrouped = displayUngroupedChannels.filter(
+              (entry) => entry.channel.id !== activeId
+            )
+            
+            for (let i = 0; i < remainingUngrouped.length; i++) {
+              await axios.patch(
+                `/api/channels/${remainingUngrouped[i].channel.id}/category?serverId=${server.id}`,
+                {
+                  categoryId: null,
+                  order: i,
+                }
+              )
+            }
+          }
+          
+          router.refresh()
+        } catch (error) {
+          console.error("[DRAG_END_ERROR]", error)
+          // Revert optimistic update on error
+          setOptimisticCategories(null)
+          setOptimisticUngroupedChannels(null)
+        }
+        return
+      }
 
       if (activeChannel && overChannel) {
         // Moving channel within same category or between categories
@@ -563,7 +698,7 @@ export const ServerSidebarClient = ({
         const targetCategoryChannels =
           targetCategoryId
             ? displayCategories.find((cat) => cat.id === targetCategoryId)?.channels || []
-            : [...displayTextChannels, ...displayAudioChannels, ...displayVideoChannels]
+            : displayUngroupedChannels
 
         // Find the old and new indices
         const oldIndex = targetCategoryChannels.findIndex((entry) => entry.channel.id === activeId)
@@ -584,17 +719,8 @@ export const ServerSidebarClient = ({
             setOptimisticCategories(updatedCategories)
           } else {
             // Update ungrouped channels optimistically
-            const updatedChannel = { ...activeChannel, channel: { ...activeChannel.channel, categoryId: null } }
             const reordered = reorderedChannels.map((ch) => ({ ...ch, channel: { ...ch.channel, categoryId: null } }))
-            
-            // Split by type for ungrouped
-            const newText = reordered.filter((ch) => ch.channel.type === ChannelType.TEXT)
-            const newAudio = reordered.filter((ch) => ch.channel.type === ChannelType.AUDIO)
-            const newVideo = reordered.filter((ch) => ch.channel.type === ChannelType.VIDEO)
-            
-            setOptimisticTextChannels(newText)
-            setOptimisticAudioChannels(newAudio)
-            setOptimisticVideoChannels(newVideo)
+            setOptimisticUngroupedChannels(reordered)
           }
           
           // Update all channels in the new order in the background
@@ -646,15 +772,9 @@ export const ServerSidebarClient = ({
             
             // Update ungrouped if moving from ungrouped
             if (sourceCategoryId === null) {
-              const ungrouped = [
-                ...displayTextChannels,
-                ...displayAudioChannels,
-                ...displayVideoChannels,
-              ].filter((entry) => entry.channel.id !== activeId)
-              
-              setOptimisticTextChannels(ungrouped.filter((ch) => ch.channel.type === ChannelType.TEXT))
-              setOptimisticAudioChannels(ungrouped.filter((ch) => ch.channel.type === ChannelType.AUDIO))
-              setOptimisticVideoChannels(ungrouped.filter((ch) => ch.channel.type === ChannelType.VIDEO))
+              setOptimisticUngroupedChannels(
+                displayUngroupedChannels.filter((entry) => entry.channel.id !== activeId)
+              )
             }
           } else {
             // Moving to ungrouped
@@ -667,39 +787,17 @@ export const ServerSidebarClient = ({
               : displayCategories
             setOptimisticCategories(updatedCategories)
             
-            // Add to appropriate ungrouped list
+            // Add to ungrouped list
             const updatedChannel = { ...activeChannel, channel: { ...activeChannel.channel, categoryId: null } }
-            if (activeChannel.channel.type === ChannelType.TEXT) {
-              const insertIdx = displayTextChannels.findIndex((ch) => ch.channel.id === overId)
-              const newText = insertIdx >= 0
-                ? [
-                    ...displayTextChannels.slice(0, insertIdx),
-                    updatedChannel,
-                    ...displayTextChannels.slice(insertIdx),
-                  ]
-                : [...displayTextChannels, updatedChannel]
-              setOptimisticTextChannels(newText)
-            } else if (activeChannel.channel.type === ChannelType.AUDIO) {
-              const insertIdx = displayAudioChannels.findIndex((ch) => ch.channel.id === overId)
-              const newAudio = insertIdx >= 0
-                ? [
-                    ...displayAudioChannels.slice(0, insertIdx),
-                    updatedChannel,
-                    ...displayAudioChannels.slice(insertIdx),
-                  ]
-                : [...displayAudioChannels, updatedChannel]
-              setOptimisticAudioChannels(newAudio)
-            } else {
-              const insertIdx = displayVideoChannels.findIndex((ch) => ch.channel.id === overId)
-              const newVideo = insertIdx >= 0
-                ? [
-                    ...displayVideoChannels.slice(0, insertIdx),
-                    updatedChannel,
-                    ...displayVideoChannels.slice(insertIdx),
-                  ]
-                : [...displayVideoChannels, updatedChannel]
-              setOptimisticVideoChannels(newVideo)
-            }
+            const insertIdx = displayUngroupedChannels.findIndex((ch) => ch.channel.id === overId)
+            const newUngrouped = insertIdx >= 0
+              ? [
+                  ...displayUngroupedChannels.slice(0, insertIdx),
+                  updatedChannel,
+                  ...displayUngroupedChannels.slice(insertIdx),
+                ]
+              : [...displayUngroupedChannels, updatedChannel]
+            setOptimisticUngroupedChannels(newUngrouped)
           }
 
           // Update all channels in the target category with new orders in the background
@@ -733,29 +831,16 @@ export const ServerSidebarClient = ({
               }
             } else if (sourceCategoryId === null && targetCategoryId !== null) {
               // Moving from ungrouped to category - update ungrouped channels
-              const ungroupedChannels = [
-                ...displayTextChannels,
-                ...displayAudioChannels,
-                ...displayVideoChannels,
-              ].filter((entry) => entry.channel.id !== activeId)
+              const remainingUngrouped = displayUngroupedChannels.filter(
+                (entry) => entry.channel.id !== activeId
+              )
               
-              // Recalculate orders for ungrouped channels by type
-              let textOrder = 0
-              let audioOrder = 0
-              let videoOrder = 0
-              
-              for (const entry of ungroupedChannels) {
-                const order = entry.channel.type === ChannelType.TEXT 
-                  ? textOrder++ 
-                  : entry.channel.type === ChannelType.AUDIO 
-                  ? audioOrder++ 
-                  : videoOrder++
-                
+              for (let i = 0; i < remainingUngrouped.length; i++) {
                 await axios.patch(
-                  `/api/channels/${entry.channel.id}/category?serverId=${server.id}`,
+                  `/api/channels/${remainingUngrouped[i].channel.id}/category?serverId=${server.id}`,
                   {
                     categoryId: null,
-                    order,
+                    order: i,
                   }
                 )
               }
@@ -766,9 +851,7 @@ export const ServerSidebarClient = ({
             console.error("[DRAG_END_ERROR]", error)
             // Revert optimistic update on error
             setOptimisticCategories(null)
-            setOptimisticTextChannels(null)
-            setOptimisticAudioChannels(null)
-            setOptimisticVideoChannels(null)
+            setOptimisticUngroupedChannels(null)
           }
         }
       }
@@ -796,33 +879,34 @@ export const ServerSidebarClient = ({
         <div className="mt-2">
           <ServerSearch
             data={[
-              {
-                label: "Text Channels",
-                type: "channel",
-                data: textChannels.map(({ channel }) => ({
-                  icon: iconMap[channel.type],
-                  name: channel.name,
-                  id: channel.id,
-                })),
-              },
-              {
-                label: "Voice Channels",
-                type: "channel",
-                data: audioChannels.map(({ channel }) => ({
-                  icon: iconMap[channel.type],
-                  name: channel.name,
-                  id: channel.id,
-                })),
-              },
-              {
-                label: "Video Channels",
-                type: "channel",
-                data: videoChannels.map(({ channel }) => ({
-                  icon: iconMap[channel.type],
-                  name: channel.name,
-                  id: channel.id,
-                })),
-              },
+              ...(ungroupedChannels.length > 0
+                ? [
+                    {
+                      label: "Ungrouped Channels",
+                      type: "channel",
+                      data: ungroupedChannels.map(({ channel }) => ({
+                        icon: iconMap[channel.type],
+                        name: channel.name,
+                        id: channel.id,
+                      })),
+                    },
+                  ]
+                : []),
+              ...categories.flatMap((category) =>
+                category.channels.length > 0
+                  ? [
+                      {
+                        label: category.name,
+                        type: "channel",
+                        data: category.channels.map(({ channel }) => ({
+                          icon: iconMap[channel.type],
+                          name: channel.name,
+                          id: channel.id,
+                        })),
+                      },
+                    ]
+                  : []
+              ),
               {
                 label: "Members",
                 type: "member",
@@ -871,7 +955,7 @@ export const ServerSidebarClient = ({
             </SortableContext>
           )}
 
-          {role !== MemberRole.MEMBER && displayCategories.length > 0 && (
+          {role !== MemberRole.MEMBER && (
             <div className="mb-2 px-2">
               <ActionTooltip label="Create Category" side="top">
                 <button
@@ -885,71 +969,54 @@ export const ServerSidebarClient = ({
             </div>
           )}
 
-          {!!displayTextChannels?.length && (
-            <div className="mb-4">
-              <ServerSection label="Text Channels" sectionType="channels" channelType={ChannelType.TEXT} role={role} server={server} />
-              <SortableContext
-                items={displayTextChannels.map((entry) => entry.channel.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {displayTextChannels.map(({ channel }) => (
-                  <ServerChannel
-                    key={channel.id}
-                    channel={channel}
-                    server={server}
-                    role={role}
-                    unreadCount={getUnread(channel.id)}
-                    mentionCount={getMentionCount(channel.id)}
-                    categories={displayCategories.map((cat) => ({ id: cat.id, name: cat.name }))}
-                  />
-                ))}
-              </SortableContext>
-            </div>
-          )}
+          {(() => {
+            const UngroupedSection = () => {
+              const { setNodeRef, isOver } = useDroppable({
+                id: "ungrouped",
+              })
 
-          {!!displayAudioChannels?.length && (
-            <div className="mb-4">
-              <ServerSection label="Voice Channels" sectionType="channels" channelType={ChannelType.AUDIO} role={role} server={server} />
-              <SortableContext
-                items={displayAudioChannels.map((entry) => entry.channel.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {displayAudioChannels.map(({ channel }) => (
-                  <ServerChannel
-                    key={channel.id}
-                    channel={channel}
-                    server={server}
-                    role={role}
-                    unreadCount={getUnread(channel.id)}
-                    mentionCount={getMentionCount(channel.id)}
-                    categories={displayCategories.map((cat) => ({ id: cat.id, name: cat.name }))}
-                  />
-                ))}
-              </SortableContext>
-            </div>
-          )}
+              if (displayUngroupedChannels.length === 0 && !isOver) {
+                return null
+              }
 
-          {!!displayVideoChannels?.length && (
-            <div className="mb-4">
-              <ServerSection label="Video Channels" sectionType="channels" channelType={ChannelType.VIDEO} role={role} server={server} />
-              <SortableContext
-                items={displayVideoChannels.map((entry) => entry.channel.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {displayVideoChannels.map(({ channel }) => (
-                  <ServerChannel
-                    key={channel.id}
-                    channel={channel}
-                    server={server}
-                    role={role}
-                    unreadCount={getUnread(channel.id)}
-                    mentionCount={getMentionCount(channel.id)}
-                    categories={displayCategories.map((cat) => ({ id: cat.id, name: cat.name }))}
-                  />
-                ))}
-              </SortableContext>
-            </div>
-          )}
+              return (
+                <div className="mb-2" ref={setNodeRef}>
+                  <div
+                    className={cn(
+                      "flex items-center justify-between py-2 px-2 rounded-md cursor-default",
+                      isOver && "bg-muted/60"
+                    )}
+                  >
+                    <p className="text-xs uppercase font-semibold text-muted-foreground">
+                      Ungrouped
+                    </p>
+                  </div>
+                  {displayUngroupedChannels.length > 0 && (
+                    <SortableContext
+                      items={displayUngroupedChannels.map((entry) => entry.channel.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="pl-2">
+                        {displayUngroupedChannels.map(({ channel }) => (
+                          <ServerChannel
+                            key={channel.id}
+                            channel={channel}
+                            server={server}
+                            role={role}
+                            unreadCount={getUnread(channel.id)}
+                            mentionCount={getMentionCount(channel.id)}
+                            categories={displayCategories.map((cat) => ({ id: cat.id, name: cat.name }))}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  )}
+                </div>
+              )
+            }
+
+            return <UngroupedSection />
+          })()}
         </DndContext>
 
         {!!members?.length && (
