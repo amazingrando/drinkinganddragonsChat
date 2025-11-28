@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 
 import { currentProfile } from "@/lib/current-profile"
 import { db } from "@/lib/db"
+import { parseMarkdown } from "@/lib/markdown/parser"
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ channelId: string }> }) {
   try {
@@ -64,18 +65,20 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     ])
 
     if (!latestMessage) {
-      return NextResponse.json({ unreadCount: 0, lastMessageId: null }, { status: 200 })
+      return NextResponse.json({ unreadCount: 0, mentionCount: 0, lastMessageId: null }, { status: 200 })
     }
 
     const hasUnread = !readState || latestMessage.createdAt > readState.lastReadAt
 
     if (!hasUnread) {
-      return NextResponse.json({ unreadCount: 0, lastMessageId: latestMessage.id }, { status: 200 })
+      return NextResponse.json({ unreadCount: 0, mentionCount: 0, lastMessageId: latestMessage.id }, { status: 200 })
     }
 
-    const unreadCount = await db.message.count({
+    // Get all unread messages to count mentions
+    const unreadMessages = await db.message.findMany({
       where: {
         channelId,
+        deleted: false,
         ...(readState?.lastReadAt
           ? {
               createdAt: {
@@ -84,9 +87,35 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             }
           : {}),
       },
+      select: {
+        content: true,
+      },
     })
 
-    return NextResponse.json({ unreadCount, lastMessageId: latestMessage.id }, { status: 200 })
+    const unreadCount = unreadMessages.length
+
+    // Count mentions of the current user in unread messages
+    // Note: Mentions store member IDs, not profile IDs
+    let mentionCount = 0
+    for (const message of unreadMessages) {
+      const tokens = parseMarkdown(message.content)
+      
+      // Recursively check all tokens for user mentions
+      const checkTokens = (tokens: ReturnType<typeof parseMarkdown>) => {
+        for (const token of tokens) {
+          if (token.type === "mention" && token.mentionType === "user" && token.mentionId === member.id) {
+            mentionCount++
+          } else if (token.type === "bold" || token.type === "italic" || token.type === "spoiler" || token.type === "quote") {
+            // Recursively check nested tokens
+            checkTokens(token.content)
+          }
+        }
+      }
+      
+      checkTokens(tokens)
+    }
+
+    return NextResponse.json({ unreadCount, mentionCount, lastMessageId: latestMessage.id }, { status: 200 })
   } catch (error) {
     console.error("[CHANNEL_UNREAD_GET]", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

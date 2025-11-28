@@ -12,6 +12,7 @@ interface ServerChannelProps {
   server: Server
   role?: MemberRole
   unreadCount?: number
+  mentionCount?: number
 }
 
 const iconMap = {
@@ -20,13 +21,14 @@ const iconMap = {
   [ChannelType.VIDEO]: <Video className="w-4 h-4 mr-2 text-icon-foreground" />,
 }
 
-export const ServerChannel = ({ channel, server, role, unreadCount = 0 }: ServerChannelProps) => {
+export const ServerChannel = ({ channel, server, role, unreadCount = 0, mentionCount = 0 }: ServerChannelProps) => {
   const { onOpen } = useModal()
   const params = useParams()
   const router = useRouter()
 
   const hasUnread = unreadCount > 0
-  const formattedUnreadCount = unreadCount > 99 ? "99+" : unreadCount.toString()
+  const hasMentions = mentionCount > 0
+  const formattedMentionCount = mentionCount > 99 ? "99+" : mentionCount.toString()
 
   const onClick = () => {
     router.push(`/servers/${params?.serverId}/channels/${channel.id}`)
@@ -41,8 +43,10 @@ export const ServerChannel = ({ channel, server, role, unreadCount = 0 }: Server
   const showLock = channel.name === "general"
   const showTrailing = canManageChannel || showLock
 
-  const accessibilityLabel = hasUnread
-    ? `${channel.name} (${unreadCount} unread message${unreadCount === 1 ? "" : "s"})`
+  const accessibilityLabel = hasMentions
+    ? `${channel.name} (${mentionCount} mention${mentionCount === 1 ? "" : "s"})`
+    : hasUnread
+    ? `${channel.name} (unread)`
     : channel.name
 
   return (
@@ -64,10 +68,15 @@ export const ServerChannel = ({ channel, server, role, unreadCount = 0 }: Server
         >
           {channel.name}
         </p>
-        {hasUnread && (
+        {hasMentions && (
           <span className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-semibold text-primary-foreground">
-            <span className="sr-only">{`${unreadCount} unread message${unreadCount === 1 ? "" : "s"}`}</span>
-            <span aria-hidden="true">{formattedUnreadCount}</span>
+            <span className="sr-only">{`${mentionCount} mention${mentionCount === 1 ? "" : "s"}`}</span>
+            <span aria-hidden="true">{formattedMentionCount}</span>
+          </span>
+        )}
+        {hasUnread && !hasMentions && (
+          <span className="ml-1 inline-flex h-2 w-2 rounded-full bg-primary" aria-label="Unread messages">
+            <span className="sr-only">Unread messages</span>
           </span>
         )}
       </div>

@@ -17,6 +17,7 @@ import { useParams } from "next/navigation"
 type ChannelWithUnread = {
   channel: Channel
   unreadCount: number
+  mentionCount: number
 }
 
 type ServerSidebarClientProps = {
@@ -42,9 +43,11 @@ const roleIconMap = {
 }
 
 type UnreadMap = Record<string, number>
+type MentionMap = Record<string, number>
 
 type UnreadCountResponse = {
   unreadCount: number
+  mentionCount: number
   lastMessageId?: string | null
 }
 
@@ -64,6 +67,18 @@ const buildInitialMap = (
   return map
 }
 
+const buildInitialMentionMap = (
+  textChannels: ChannelWithUnread[],
+  audioChannels: ChannelWithUnread[],
+  videoChannels: ChannelWithUnread[],
+): MentionMap => {
+  const map: MentionMap = {}
+  for (const entry of [...textChannels, ...audioChannels, ...videoChannels]) {
+    map[entry.channel.id] = entry.mentionCount
+  }
+  return map
+}
+
 export const ServerSidebarClient = ({
   server,
   role,
@@ -77,6 +92,7 @@ export const ServerSidebarClient = ({
   const params = useParams()
   const activeChannelId = typeof params?.channelId === "string" ? params.channelId : null
   const [unreadMap, setUnreadMap] = useState<UnreadMap>(() => buildInitialMap(textChannels, audioChannels, videoChannels))
+  const [mentionMap, setMentionMap] = useState<MentionMap>(() => buildInitialMentionMap(textChannels, audioChannels, videoChannels))
   const activeChannelIdRef = useRef<string | null>(activeChannelId)
   const lastMessageIdsRef = useRef<Record<string, string | undefined>>({})
   const processedMessageIdsRef = useRef<Record<string, { ids: Set<string>; order: string[] }>>({})
@@ -110,33 +126,42 @@ export const ServerSidebarClient = ({
       if (!result) {
         return
       }
-      const { unreadCount, lastMessageId } = result
+      const { unreadCount, mentionCount, lastMessageId } = result
+      const messageIdentifier = messageId ?? (typeof lastMessageId === "string" ? lastMessageId : undefined)
+      if (messageIdentifier) {
+        lastMessageIdsRef.current[channelId] = messageIdentifier
+      }
       setUnreadMap((prev) => {
         if ((prev[channelId] ?? 0) === unreadCount) {
           return prev
         }
-        const messageIdentifier = messageId ?? (typeof lastMessageId === "string" ? lastMessageId : undefined)
-        if (messageIdentifier) {
-          lastMessageIdsRef.current[channelId] = messageIdentifier
-        }
-        const next = {
+        return {
           ...prev,
           [channelId]: unreadCount,
         }
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(
-            new CustomEvent("guildhall:channel-unread-change", {
-              detail: {
-                channelId,
-                unreadCount,
-                hasUnread: unreadCount > 0,
-                messageId: messageIdentifier,
-              },
-            }),
-          )
-        }
-        return next
       })
+      setMentionMap((prev) => {
+        if ((prev[channelId] ?? 0) === mentionCount) {
+          return prev
+        }
+        return {
+          ...prev,
+          [channelId]: mentionCount,
+        }
+      })
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("guildhall:channel-unread-change", {
+            detail: {
+              channelId,
+              unreadCount,
+              mentionCount,
+              hasUnread: unreadCount > 0,
+              messageId: messageIdentifier,
+            },
+          }),
+        )
+      }
     },
     [fetchUnreadCount],
   )
@@ -178,11 +203,20 @@ export const ServerSidebarClient = ({
 
   useEffect(() => {
     const initialUnreadMap = buildInitialMap(textChannels, audioChannels, videoChannels)
+    const initialMentionMap = buildInitialMentionMap(textChannels, audioChannels, videoChannels)
     const activeChannelIds = new Set(Object.keys(initialUnreadMap))
 
     setUnreadMap((prev) => {
       const next: UnreadMap = {}
       for (const [channelId, baselineCount] of Object.entries(initialUnreadMap)) {
+        next[channelId] = prev[channelId] ?? baselineCount
+      }
+      return next
+    })
+
+    setMentionMap((prev) => {
+      const next: MentionMap = {}
+      for (const [channelId, baselineCount] of Object.entries(initialMentionMap)) {
         next[channelId] = prev[channelId] ?? baselineCount
       }
       return next
@@ -211,24 +245,34 @@ export const ServerSidebarClient = ({
         ids: new Set<string>(),
         order: [],
       }
-      const next = {
+      return {
         ...prev,
         [activeChannelId]: 0,
       }
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("guildhall:channel-unread-change", {
-            detail: {
-              channelId: activeChannelId,
-              unreadCount: 0,
-              hasUnread: false,
-              messageId: undefined,
-            },
-          }),
-        )
-      }
-      return next
     })
+    setMentionMap((prev) => {
+      const currentCount = prev[activeChannelId] ?? 0
+      if (currentCount === 0) {
+        return prev
+      }
+      return {
+        ...prev,
+        [activeChannelId]: 0,
+      }
+    })
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("guildhall:channel-unread-change", {
+          detail: {
+            channelId: activeChannelId,
+            unreadCount: 0,
+            mentionCount: 0,
+            hasUnread: false,
+            messageId: undefined,
+          },
+        }),
+      )
+    }
   }, [activeChannelId])
 
   useEffect(() => {
@@ -277,24 +321,33 @@ export const ServerSidebarClient = ({
             if ((prev[channel.id] ?? 0) === 0) {
               return prev
             }
-            const next = {
+            return {
               ...prev,
               [channel.id]: 0,
             }
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(
-                new CustomEvent("guildhall:channel-unread-change", {
-                  detail: {
-                    channelId: channel.id,
-                    unreadCount: 0,
-                    hasUnread: false,
-                    messageId,
-                  },
-                }),
-              )
-            }
-            return next
           })
+          setMentionMap((prev) => {
+            if ((prev[channel.id] ?? 0) === 0) {
+              return prev
+            }
+            return {
+              ...prev,
+              [channel.id]: 0,
+            }
+          })
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("guildhall:channel-unread-change", {
+                detail: {
+                  channelId: channel.id,
+                  unreadCount: 0,
+                  mentionCount: 0,
+                  hasUnread: false,
+                  messageId,
+                },
+              }),
+            )
+          }
           return
         }
 
@@ -316,6 +369,7 @@ export const ServerSidebarClient = ({
       const customEvent = event as CustomEvent<{
         channelId: string
         unreadCount?: number
+        mentionCount?: number
         hasUnread?: boolean
         messageId?: string
       }>
@@ -324,6 +378,7 @@ export const ServerSidebarClient = ({
         return
       }
       const nextCount = customEvent.detail?.unreadCount ?? 0
+      const nextMentionCount = customEvent.detail?.mentionCount ?? 0
       const messageId = customEvent.detail?.messageId
       trackMessage(channelId, [messageId])
       setUnreadMap((prev) => {
@@ -336,6 +391,15 @@ export const ServerSidebarClient = ({
         return {
           ...prev,
           [channelId]: nextCount,
+        }
+      })
+      setMentionMap((prev) => {
+        if ((prev[channelId] ?? 0) === nextMentionCount) {
+          return prev
+        }
+        return {
+          ...prev,
+          [channelId]: nextMentionCount,
         }
       })
     }
@@ -353,6 +417,13 @@ export const ServerSidebarClient = ({
       return 0
     }
     return unreadMap[channelId] ?? 0
+  }
+
+  const getMentionCount = (channelId: string) => {
+    if (activeChannelId === channelId) {
+      return 0
+    }
+    return mentionMap[channelId] ?? 0
   }
 
   return (
@@ -414,6 +485,7 @@ export const ServerSidebarClient = ({
                 server={server}
                 role={role}
                 unreadCount={getUnread(channel.id)}
+                mentionCount={getMentionCount(channel.id)}
               />
             ))}
           </div>
@@ -429,6 +501,7 @@ export const ServerSidebarClient = ({
                 server={server}
                 role={role}
                 unreadCount={getUnread(channel.id)}
+                mentionCount={getMentionCount(channel.id)}
               />
             ))}
           </div>
@@ -444,6 +517,7 @@ export const ServerSidebarClient = ({
                 server={server}
                 role={role}
                 unreadCount={getUnread(channel.id)}
+                mentionCount={getMentionCount(channel.id)}
               />
             ))}
           </div>
