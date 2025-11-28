@@ -60,7 +60,18 @@ function parseInlineMarkdown(text: string): MarkdownToken[] {
 
   while (i < text.length) {
     // Try to match markdown patterns in order of specificity
-    // 1. Mentions @username or #channelname
+    // 1. Mentions @username[id] or #channelname[id] (with ID) or @username or #channelname (without ID)
+    const mentionWithIdMatch = text.slice(i).match(/^(@|#)([a-zA-Z0-9_-]+)\[([a-zA-Z0-9_-]+)\]/)
+    if (mentionWithIdMatch) {
+      tokens.push({
+        type: "mention",
+        name: mentionWithIdMatch[2],
+        mentionType: mentionWithIdMatch[1] === "@" ? "user" : "channel",
+        mentionId: mentionWithIdMatch[3],
+      })
+      i += mentionWithIdMatch[0].length
+      continue
+    }
     const mentionMatch = text.slice(i).match(/^(@|#)([a-zA-Z0-9_-]+)/)
     if (mentionMatch) {
       tokens.push({

@@ -3,10 +3,12 @@
 import React, { useState, useMemo } from "react"
 import { parseMarkdown, type MarkdownToken } from "@/lib/markdown/parser"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 interface MarkdownRendererProps {
   content: string
   className?: string
+  serverId?: string
 }
 
 /**
@@ -16,6 +18,7 @@ interface MarkdownRendererProps {
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   content,
   className,
+  serverId,
 }) => {
   const tokens = useMemo(() => parseMarkdown(content), [content])
   const [revealedSpoilers, setRevealedSpoilers] = useState<Set<number>>(
@@ -100,19 +103,40 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           </a>
         )
 
-      case "mention":
+      case "mention": {
+        const hasId = !!token.mentionId
+        const hasServerId = !!serverId
+        const canLink = hasId && hasServerId
+
+        if (canLink) {
+          const href =
+            token.mentionType === "user"
+              ? `/servers/${serverId}/conversations/${token.mentionId}`
+              : `/servers/${serverId}/channels/${token.mentionId}`
+
+          return (
+            <Link
+              key={key}
+              href={href}
+              className="chat-link bg-lavender-800/50 font-medium px-1 py-0.5 rounded hover:bg-lavender-700/50 transition-colors"
+              data-mention-name={token.name}
+              data-mention-type={token.mentionType}
+              data-mention-id={token.mentionId}
+            >
+              {token.mentionType === "user" ? "@" : "#"}
+              {token.name}
+            </Link>
+          )
+        }
+
+        // Render as plain text for mentions without ID or serverId
         return (
-          <span
-            key={key}
-            className="chat-link bg-lavender-800/50 font-medium px-1 py-0.5 rounded"
-            data-mention-name={token.name}
-            data-mention-type={token.mentionType}
-            data-mention-id={token.mentionId}
-          >
+          <span key={key}>
             {token.mentionType === "user" ? "@" : "#"}
             {token.name}
           </span>
         )
+      }
 
       case "quote":
         return (

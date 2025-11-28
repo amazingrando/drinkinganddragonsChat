@@ -396,7 +396,7 @@ export const ChatItem = ({
               {deleted ? (
                 <span>{content}</span>
               ) : (
-                <MarkdownRenderer content={content} />
+                <MarkdownRenderer content={content} serverId={params?.serverId as string | undefined} />
               )}
               {isUpdated && !deleted && (
                 <span className="text-[12px] mx-2 text-foreground/80">

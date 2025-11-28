@@ -210,7 +210,10 @@ export function LexicalChatInput({
             if ($isMentionNode(child)) {
               const mentionType = child.getMentionType()
               const mentionName = child.getMentionName()
-              result += mentionType === "user" ? `@${mentionName}` : `#${mentionName}`
+              const mentionId = child.getMentionId()
+              const prefix = mentionType === "user" ? "@" : "#"
+              // Include ID in format: @username[id] or #channelname[id]
+              result += `${prefix}${mentionName}[${mentionId}]`
             } else if ($isTextNode(child)) {
               // Handle text formatting
               const text = child.getTextContent()
