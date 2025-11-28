@@ -84,5 +84,7 @@ export const chatEditorTheme: EditorThemeClasses = {
   
   // Mention
   mention: "text-mana-200 decoration-mana-300/50 underline font-medium bg-lavender-800/50 px-1 py-0.5 rounded hover:text-mana-100 hover:decoration-mana-100/50 transition-colors duration-150",
+  // Self-mention (when user mentions themselves)
+  mentionSelf: "text-white font-semibold bg-atomicorange-600/80 px-1 py-0.5 rounded hover:bg-atomicorange-600 animate-pulse transition-colors duration-150",
 }
 

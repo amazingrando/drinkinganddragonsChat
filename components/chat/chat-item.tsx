@@ -389,7 +389,12 @@ export const ChatItem = ({
               {deleted ? (
                 <span>{content}</span>
               ) : (
-                <MarkdownRenderer content={content} serverId={params?.serverId as string | undefined} />
+                <MarkdownRenderer
+                  content={content}
+                  serverId={params?.serverId as string | undefined}
+                  currentUserId={currentMember.profile.id}
+                  currentUserName={currentMember.profile.name}
+                />
               )}
               {isUpdated && !deleted && (
                 <span className="text-[12px] mx-2 text-foreground/80">

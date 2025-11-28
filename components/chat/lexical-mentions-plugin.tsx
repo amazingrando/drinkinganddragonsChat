@@ -76,7 +76,7 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
         })
 
         const response = await fetch(`/api/mentions?${params.toString()}`)
-        
+
         if (!response.ok) {
           // Handle rate limiting
           if (response.status === 429) {
@@ -242,8 +242,8 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
             if (selection && selection.rangeCount > 0) {
               const domRange = selection.getRangeAt(0)
               const rect = domRange.getBoundingClientRect()
-              setTriggerPosition({ 
-                x: rect.left, 
+              setTriggerPosition({
+                x: rect.left,
                 y: rect.top
               })
             }
@@ -360,24 +360,24 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
     const offsetY = 20 // Space between cursor and menu
     const maxMenuHeight = 256 // max-h-64 = 256px
     const minMargin = 8 // Minimum margin from viewport edges
-    
+
     // Calculate space available
     const spaceBelow = viewportHeight - triggerPosition.y - offsetY
-    
+
     // Try to position below first
     let finalY = triggerPosition.y + offsetY
     let shouldPositionAbove = false
-    
+
     // If not enough space below, position above
     if (spaceBelow < Math.min(maxMenuHeight, options.length * 48)) {
       shouldPositionAbove = true
       finalY = triggerPosition.y - offsetY - maxMenuHeight
     }
-    
+
     // Measure actual menu height after render
     requestAnimationFrame(() => {
       const actualHeight = menuElement.offsetHeight || maxMenuHeight
-      
+
       if (shouldPositionAbove) {
         // Position above cursor
         const topPosition = triggerPosition.y - actualHeight - offsetY
@@ -386,7 +386,7 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
         // Position below cursor, but ensure it doesn't overflow
         const bottomPosition = triggerPosition.y + offsetY
         const menuBottom = bottomPosition + actualHeight
-        
+
         if (menuBottom > viewportHeight - minMargin) {
           // Would overflow, position above instead
           finalY = Math.max(minMargin, triggerPosition.y - actualHeight - offsetY)
@@ -394,10 +394,10 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
           finalY = bottomPosition
         }
       }
-      
+
       // Ensure menu stays within viewport bounds
       finalY = Math.max(minMargin, Math.min(finalY, viewportHeight - actualHeight - minMargin))
-      
+
       setMenuPosition({ x: triggerPosition.x, y: finalY })
     })
   }, [isOpen, triggerPosition, options.length])
@@ -407,9 +407,9 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
   }
 
   // Use calculated position if available, otherwise position below (will be adjusted by useEffect)
-  const displayPosition = menuPosition || { 
-    x: triggerPosition.x, 
-    y: triggerPosition.y + 20 
+  const displayPosition = menuPosition || {
+    x: triggerPosition.x,
+    y: triggerPosition.y + 20
   }
 
   return (

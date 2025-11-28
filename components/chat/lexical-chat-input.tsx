@@ -207,6 +207,7 @@ export function LexicalChatInput({
   onSubmit,
   isLoading,
   clearTrigger,
+  currentMember,
 }: LexicalChatInputProps) {
   const handleChange = useCallback(
     (editorState: EditorState) => {
@@ -266,7 +267,11 @@ export function LexicalChatInput({
 
   const initialConfig = {
     namespace: "ChatInput",
-    theme: chatEditorTheme,
+    theme: {
+      ...chatEditorTheme,
+      currentUserId: currentMember.profile.id,
+      currentUserName: currentMember.profile.name,
+    },
     onError: (error: Error) => {
       console.error("[LEXICAL_ERROR]", error)
     },

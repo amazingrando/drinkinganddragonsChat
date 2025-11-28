@@ -10,6 +10,8 @@ interface MarkdownRendererProps {
   content: string
   className?: string
   serverId?: string
+  currentUserId?: string
+  currentUserName?: string
 }
 
 /**
@@ -38,6 +40,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   content,
   className,
   serverId,
+  currentUserId,
+  currentUserName,
 }) => {
   const tokens = useMemo(() => parseMarkdown(content), [content])
   const [revealedSpoilers, setRevealedSpoilers] = useState<Set<number>>(
@@ -160,6 +164,12 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         const isValidId = hasId && token.mentionId ? isValidUuid(token.mentionId) : false
         const canLink = isValidId && hasServerId
 
+        // Check if this is a self-mention (user mentions themselves)
+        const isSelfMention = token.mentionType === "user" && (
+          (currentUserId && token.mentionId && token.mentionId === currentUserId) ||
+          (currentUserName && token.name && token.name.toLowerCase() === currentUserName.toLowerCase())
+        )
+
         if (canLink) {
           const href =
             token.mentionType === "user"
@@ -170,10 +180,16 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             <Link
               key={key}
               href={href}
-              className="chat-link bg-lavender-800/50 font-medium px-1 py-0.5 rounded hover:bg-lavender-700/50 transition-colors"
+              className={cn(
+                "chat-link font-medium px-1 py-0.5 rounded transition-colors",
+                isSelfMention
+                  ? "bg-atomicorange-700 text-white hover:bg-atomicorange-800 font-semibold decoration-atomicorange-300"
+                  : "bg-lavender-800/50 hover:bg-lavender-700/50"
+              )}
               data-mention-name={token.name}
               data-mention-type={token.mentionType}
               data-mention-id={token.mentionId}
+              data-self-mention={isSelfMention ? "true" : "false"}
             >
               {token.mentionType === "user" ? "@" : "#"}
               {token.name}
@@ -182,8 +198,15 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         }
 
         // Render as plain text for mentions without ID, invalid ID, or serverId
+        // Still check for self-mention to apply styling
         return (
-          <span key={key}>
+          <span
+            key={key}
+            className={cn(
+              isSelfMention &&
+              "bg-atomicorange-600/80 text-white font-semibold px-1 py-0.5 rounded"
+            )}
+          >
             {token.mentionType === "user" ? "@" : "#"}
             {token.name}
           </span>

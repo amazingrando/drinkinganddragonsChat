@@ -54,10 +54,26 @@ export class MentionNode extends TextNode {
 
   createDOM(config: EditorConfig): HTMLElement {
     const element = super.createDOM(config)
-    element.className = config.theme.mention || ""
+    
+    // Check if this is a self-mention
+    const theme = config.theme as typeof config.theme & {
+      mentionSelf?: string
+      currentUserId?: string
+      currentUserName?: string
+    }
+    
+    const isSelfMention = this.__mentionType === "user" && (
+      (theme.currentUserId && this.__mentionId && this.__mentionId === theme.currentUserId) ||
+      (theme.currentUserName && this.__mentionName && this.__mentionName.toLowerCase() === theme.currentUserName.toLowerCase())
+    )
+    
+    element.className = isSelfMention && theme.mentionSelf
+      ? theme.mentionSelf
+      : (config.theme.mention || "")
     element.setAttribute("data-mention-name", this.__mentionName)
     element.setAttribute("data-mention-type", this.__mentionType)
     element.setAttribute("data-mention-id", this.__mentionId)
+    element.setAttribute("data-self-mention", isSelfMention ? "true" : "false")
     return element
   }
 
