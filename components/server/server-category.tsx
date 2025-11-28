@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import { ChannelCategory, MemberRole, Server } from "@prisma/client"
-import { ChevronDown, ChevronRight, Edit, Trash, GripVertical } from "lucide-react"
+import { ChevronDown, Edit, Trash, GripVertical } from "lucide-react"
 import { useState } from "react"
 import { ActionTooltip } from "../action-tooltip"
 import { useModal, ModalType } from "@/hooks/use-modal-store"

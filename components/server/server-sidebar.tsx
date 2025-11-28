@@ -1,4 +1,3 @@
-import { ChannelType } from '@prisma/client'
 import { redirect } from 'next/navigation'
 import { currentProfile } from '@/lib/current-profile'
 import { db } from '@/lib/db'

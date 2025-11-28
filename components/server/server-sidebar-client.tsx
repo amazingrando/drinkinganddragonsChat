@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Channel, ChannelType, Member, MemberRole, Profile, ChannelCategory } from "@prisma/client"
 import { UseRealtime } from "@/components/providers/realtime-provider"
 import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
 import { ServerHeader } from "@/components/server/server-header"
 import { ScrollArea } from "@radix-ui/react-scroll-area"
 import { ServerSearch } from "@/components/server/server-search"
@@ -31,9 +32,7 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  useSortable,
 } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
 import axios from "axios"
 import { useRouter } from "next/navigation"
 
@@ -739,9 +738,7 @@ export const ServerSidebarClient = ({
             console.error("[DRAG_END_ERROR]", error)
             // Revert optimistic update on error
             setOptimisticCategories(null)
-            setOptimisticTextChannels(null)
-            setOptimisticAudioChannels(null)
-            setOptimisticVideoChannels(null)
+            setOptimisticUngroupedChannels(null)
           }
         } else {
           // Moving to a different category or from ungrouped to category
@@ -883,7 +880,7 @@ export const ServerSidebarClient = ({
                 ? [
                     {
                       label: "Ungrouped Channels",
-                      type: "channel",
+                      type: "channel" as const,
                       data: ungroupedChannels.map(({ channel }) => ({
                         icon: iconMap[channel.type],
                         name: channel.name,
@@ -897,7 +894,7 @@ export const ServerSidebarClient = ({
                   ? [
                       {
                         label: category.name,
-                        type: "channel",
+                        type: "channel" as const,
                         data: category.channels.map(({ channel }) => ({
                           icon: iconMap[channel.type],
                           name: channel.name,
@@ -909,7 +906,7 @@ export const ServerSidebarClient = ({
               ),
               {
                 label: "Members",
-                type: "member",
+                type: "member" as const,
                 data: members.map((member) => ({
                   icon: roleIconMap[member.role],
                   name: member.profile.name || member.profile.email,
@@ -928,7 +925,14 @@ export const ServerSidebarClient = ({
               {displayCategories.map((category) => (
                 <ServerCategory
                   key={category.id}
-                  category={category}
+                  category={{
+                    ...category,
+                    channels: category.channels.map(({ channel }) => ({
+                      id: channel.id,
+                      name: channel.name,
+                      type: channel.type,
+                    })),
+                  }}
                   server={server}
                   role={role}
                   isCollapsed={collapsedCategories.has(category.id)}

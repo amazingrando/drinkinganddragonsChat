@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useModal } from "@/hooks/use-modal-store"
-import qs from "query-string"
 import { useEffect } from "react"
 
 const formSchema = z.object({
