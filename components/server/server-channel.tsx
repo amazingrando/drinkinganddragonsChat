@@ -110,8 +110,8 @@ export const ServerChannel = ({ channel, server, role, unreadCount = 0, mentionC
   const accessibilityLabel = hasMentions
     ? `${channel.name} (${mentionCount} mention${mentionCount === 1 ? "" : "s"})`
     : hasUnread
-    ? `${channel.name} (unread)`
-    : channel.name
+      ? `${channel.name} (unread)`
+      : channel.name
 
   return (
     <div
@@ -132,62 +132,62 @@ export const ServerChannel = ({ channel, server, role, unreadCount = 0, mentionC
           params?.channelId === channel.id && "bg-muted hover:bg-muted",
         )}
       >
-      {isSortable && (
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing touch-none mr-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <GripVertical className="w-4 h-4 text-muted-foreground/60" />
-        </div>
-      )}
-      {iconMap[channel.type]}
-      <div className="flex items-center gap-x-1 min-w-0">
-        <p
-          className={cn(
-            "font-semibold text-sm text-muted-foreground group-hover:text-foreground transition whitespace-nowrap text-ellipsis max-w-full overflow-hidden",
-            params?.channelId === channel.id && "text-foreground",
-          )}
-        >
-          {channel.name}
-        </p>
-        {hasMentions && (
-          <span className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-semibold text-primary-foreground">
-            <span className="sr-only">{`${mentionCount} mention${mentionCount === 1 ? "" : "s"}`}</span>
-            <span aria-hidden="true">{formattedMentionCount}</span>
-          </span>
+        {isSortable && (
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing touch-none mr-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="w-4 h-4 text-muted-foreground/60 hidden group-hover:block" />
+          </div>
         )}
-        {hasUnread && !hasMentions && (
-          <span className="ml-1 inline-flex h-2 w-2 rounded-full bg-primary" aria-label="Unread messages">
-            <span className="sr-only">Unread messages</span>
-          </span>
-        )}
-      </div>
-      {showTrailing && (
-        <div className="ml-auto flex items-center gap-x-2">
-          {canManageChannel && (
-            <div className="flex items-center gap-x-2">
-              <ActionTooltip label="Edit">
-                <Edit
-                  onClick={(e) => onAction(e, "editChannel")}
-                  className="hidden group-hover:block w-4 h-4 text-icon-muted-foreground hover:text-foreground dark:hover:text-white transition"
-                />
-              </ActionTooltip>
-              <ActionTooltip label="Delete">
-                <Trash
-                  onClick={(e) => onAction(e, "deleteChannel")}
-                  className="hidden group-hover:block w-4 h-4 text-icon-muted-foreground hover:text-foreground dark:hover:text-white transition"
-                />
-              </ActionTooltip>
-            </div>
+        {iconMap[channel.type]}
+        <div className="flex items-center gap-x-1 min-w-0">
+          <p
+            className={cn(
+              "font-semibold text-sm text-muted-foreground group-hover:text-foreground transition whitespace-nowrap text-ellipsis max-w-full overflow-hidden",
+              params?.channelId === channel.id && "text-foreground",
+            )}
+          >
+            {channel.name}
+          </p>
+          {hasMentions && (
+            <span className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-semibold text-primary-foreground">
+              <span className="sr-only">{`${mentionCount} mention${mentionCount === 1 ? "" : "s"}`}</span>
+              <span aria-hidden="true">{formattedMentionCount}</span>
+            </span>
           )}
-          {showLock && (
-            <Lock className="w-4 h-4 text-muted-foreground/60" />
+          {hasUnread && !hasMentions && (
+            <span className="ml-1 inline-flex h-2 w-2 rounded-full bg-primary" aria-label="Unread messages">
+              <span className="sr-only">Unread messages</span>
+            </span>
           )}
         </div>
-      )}
-    </button>
+        {showTrailing && (
+          <div className="ml-auto flex items-center gap-x-2">
+            {canManageChannel && (
+              <div className="flex items-center gap-x-2">
+                <ActionTooltip label="Edit">
+                  <Edit
+                    onClick={(e) => onAction(e, "editChannel")}
+                    className="hidden group-hover:block w-4 h-4 text-icon-muted-foreground hover:text-foreground dark:hover:text-white transition"
+                  />
+                </ActionTooltip>
+                <ActionTooltip label="Delete">
+                  <Trash
+                    onClick={(e) => onAction(e, "deleteChannel")}
+                    className="hidden group-hover:block w-4 h-4 text-icon-muted-foreground hover:text-foreground dark:hover:text-white transition"
+                  />
+                </ActionTooltip>
+              </div>
+            )}
+            {showLock && (
+              <Lock className="w-4 h-4 text-muted-foreground/60" />
+            )}
+          </div>
+        )}
+      </button>
       {canManageChannel && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

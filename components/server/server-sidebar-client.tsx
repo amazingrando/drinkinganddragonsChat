@@ -140,6 +140,18 @@ export const ServerSidebarClient = ({
   const [unreadMap, setUnreadMap] = useState<UnreadMap>(() => buildInitialMap(textChannels, audioChannels, videoChannels, categories))
   const [mentionMap, setMentionMap] = useState<MentionMap>(() => buildInitialMentionMap(textChannels, audioChannels, videoChannels, categories))
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
+  
+  // Optimistic state for drag-and-drop
+  const [optimisticCategories, setOptimisticCategories] = useState<CategoryWithChannels[] | null>(null)
+  const [optimisticTextChannels, setOptimisticTextChannels] = useState<ChannelWithUnread[] | null>(null)
+  const [optimisticAudioChannels, setOptimisticAudioChannels] = useState<ChannelWithUnread[] | null>(null)
+  const [optimisticVideoChannels, setOptimisticVideoChannels] = useState<ChannelWithUnread[] | null>(null)
+
+  // Use optimistic state if available, otherwise use props
+  const displayCategories = optimisticCategories ?? categories
+  const displayTextChannels = optimisticTextChannels ?? textChannels
+  const displayAudioChannels = optimisticAudioChannels ?? audioChannels
+  const displayVideoChannels = optimisticVideoChannels ?? videoChannels
   const activeChannelIdRef = useRef<string | null>(activeChannelId)
   const lastMessageIdsRef = useRef<Record<string, string | undefined>>({})
   const processedMessageIdsRef = useRef<Record<string, { ids: Set<string>; order: string[] }>>({})
@@ -245,15 +257,21 @@ export const ServerSidebarClient = ({
 
   const allChannels = useMemo(
     () => [
-      ...textChannels,
-      ...audioChannels,
-      ...videoChannels,
-      ...categories.flatMap((cat) => cat.channels),
+      ...displayTextChannels,
+      ...displayAudioChannels,
+      ...displayVideoChannels,
+      ...displayCategories.flatMap((cat) => cat.channels),
     ].map((entry) => entry.channel),
-    [textChannels, audioChannels, videoChannels, categories],
+    [displayTextChannels, displayAudioChannels, displayVideoChannels, displayCategories],
   )
 
   useEffect(() => {
+    // Reset optimistic state when props change (after server refresh)
+    setOptimisticCategories(null)
+    setOptimisticTextChannels(null)
+    setOptimisticAudioChannels(null)
+    setOptimisticVideoChannels(null)
+    
     const initialUnreadMap = buildInitialMap(textChannels, audioChannels, videoChannels, categories)
     const initialMentionMap = buildInitialMentionMap(textChannels, audioChannels, videoChannels, categories)
     const activeChannelIds = new Set(Object.keys(initialUnreadMap))
@@ -502,28 +520,36 @@ export const ServerSidebarClient = ({
 
       if (activeCategory && overCategory) {
         // Reordering categories
-        const oldIndex = categories.findIndex((cat) => cat.id === activeId)
-        const newIndex = categories.findIndex((cat) => cat.id === overId)
-        const newCategories = arrayMove(categories, oldIndex, newIndex)
+        const oldIndex = displayCategories.findIndex((cat) => cat.id === activeId)
+        const newIndex = displayCategories.findIndex((cat) => cat.id === overId)
+        const newCategories = arrayMove([...displayCategories], oldIndex, newIndex)
 
-        // Update order for all affected categories
-        for (let i = 0; i < newCategories.length; i++) {
-          await axios.patch(
-            `/api/servers/${server.id}/categories/${newCategories[i].id}/reorder`,
-            { order: i }
-          )
+        // Optimistically update UI
+        setOptimisticCategories(newCategories)
+
+        // Update order for all affected categories in the background
+        try {
+          for (let i = 0; i < newCategories.length; i++) {
+            await axios.patch(
+              `/api/servers/${server.id}/categories/${newCategories[i].id}/reorder`,
+              { order: i }
+            )
+          }
+          router.refresh()
+        } catch (error) {
+          console.error("[DRAG_END_ERROR]", error)
+          // Revert optimistic update on error
+          setOptimisticCategories(null)
         }
-
-        router.refresh()
         return
       }
 
       // Check if dragging a channel
       const allChannelsList = [
-        ...textChannels,
-        ...audioChannels,
-        ...videoChannels,
-        ...categories.flatMap((cat) => cat.channels),
+        ...displayTextChannels,
+        ...displayAudioChannels,
+        ...displayVideoChannels,
+        ...displayCategories.flatMap((cat) => cat.channels),
       ]
       const activeChannel = allChannelsList.find((entry) => entry.channel.id === activeId)
       const overChannel = allChannelsList.find((entry) => entry.channel.id === overId)
@@ -536,8 +562,8 @@ export const ServerSidebarClient = ({
         // Get channels in target category (sorted by current order)
         const targetCategoryChannels =
           targetCategoryId
-            ? categories.find((cat) => cat.id === targetCategoryId)?.channels || []
-            : [...textChannels, ...audioChannels, ...videoChannels]
+            ? displayCategories.find((cat) => cat.id === targetCategoryId)?.channels || []
+            : [...displayTextChannels, ...displayAudioChannels, ...displayVideoChannels]
 
         // Find the old and new indices
         const oldIndex = targetCategoryChannels.findIndex((entry) => entry.channel.id === activeId)
@@ -546,17 +572,50 @@ export const ServerSidebarClient = ({
         // If moving within the same category
         if (targetCategoryId === sourceCategoryId && oldIndex !== -1 && newIndex !== -1) {
           // Reorder the array
-          const reorderedChannels = arrayMove(targetCategoryChannels, oldIndex, newIndex)
+          const reorderedChannels = arrayMove([...targetCategoryChannels], oldIndex, newIndex)
           
-          // Update all channels in the new order
-          for (let i = 0; i < reorderedChannels.length; i++) {
-            await axios.patch(
-              `/api/channels/${reorderedChannels[i].channel.id}/category?serverId=${server.id}`,
-              {
-                categoryId: targetCategoryId,
-                order: i,
-              }
+          // Optimistically update UI
+          if (targetCategoryId) {
+            const updatedCategories = displayCategories.map((cat) =>
+              cat.id === targetCategoryId
+                ? { ...cat, channels: reorderedChannels }
+                : cat
             )
+            setOptimisticCategories(updatedCategories)
+          } else {
+            // Update ungrouped channels optimistically
+            const updatedChannel = { ...activeChannel, channel: { ...activeChannel.channel, categoryId: null } }
+            const reordered = reorderedChannels.map((ch) => ({ ...ch, channel: { ...ch.channel, categoryId: null } }))
+            
+            // Split by type for ungrouped
+            const newText = reordered.filter((ch) => ch.channel.type === ChannelType.TEXT)
+            const newAudio = reordered.filter((ch) => ch.channel.type === ChannelType.AUDIO)
+            const newVideo = reordered.filter((ch) => ch.channel.type === ChannelType.VIDEO)
+            
+            setOptimisticTextChannels(newText)
+            setOptimisticAudioChannels(newAudio)
+            setOptimisticVideoChannels(newVideo)
+          }
+          
+          // Update all channels in the new order in the background
+          try {
+            for (let i = 0; i < reorderedChannels.length; i++) {
+              await axios.patch(
+                `/api/channels/${reorderedChannels[i].channel.id}/category?serverId=${server.id}`,
+                {
+                  categoryId: targetCategoryId,
+                  order: i,
+                }
+              )
+            }
+            router.refresh()
+          } catch (error) {
+            console.error("[DRAG_END_ERROR]", error)
+            // Revert optimistic update on error
+            setOptimisticCategories(null)
+            setOptimisticTextChannels(null)
+            setOptimisticAudioChannels(null)
+            setOptimisticVideoChannels(null)
           }
         } else {
           // Moving to a different category or from ungrouped to category
@@ -569,70 +628,149 @@ export const ServerSidebarClient = ({
           const insertIndex = newIndex >= 0 ? newIndex : channelsWithoutActive.length
           const reorderedChannels = [
             ...channelsWithoutActive.slice(0, insertIndex),
-            activeChannel,
+            { ...activeChannel, channel: { ...activeChannel.channel, categoryId: targetCategoryId } },
             ...channelsWithoutActive.slice(insertIndex),
           ]
 
-          // Update all channels in the target category with new orders
-          for (let i = 0; i < reorderedChannels.length; i++) {
-            await axios.patch(
-              `/api/channels/${reorderedChannels[i].channel.id}/category?serverId=${server.id}`,
-              {
-                categoryId: targetCategoryId,
-                order: i,
-              }
+          // Optimistically update UI
+          if (targetCategoryId) {
+            // Moving to a category
+            const updatedCategories = displayCategories.map((cat) =>
+              cat.id === targetCategoryId
+                ? { ...cat, channels: reorderedChannels }
+                : cat.id === sourceCategoryId
+                ? { ...cat, channels: cat.channels.filter((ch) => ch.channel.id !== activeId) }
+                : cat
             )
+            setOptimisticCategories(updatedCategories)
+            
+            // Update ungrouped if moving from ungrouped
+            if (sourceCategoryId === null) {
+              const ungrouped = [
+                ...displayTextChannels,
+                ...displayAudioChannels,
+                ...displayVideoChannels,
+              ].filter((entry) => entry.channel.id !== activeId)
+              
+              setOptimisticTextChannels(ungrouped.filter((ch) => ch.channel.type === ChannelType.TEXT))
+              setOptimisticAudioChannels(ungrouped.filter((ch) => ch.channel.type === ChannelType.AUDIO))
+              setOptimisticVideoChannels(ungrouped.filter((ch) => ch.channel.type === ChannelType.VIDEO))
+            }
+          } else {
+            // Moving to ungrouped
+            const updatedCategories = sourceCategoryId
+              ? displayCategories.map((cat) =>
+                  cat.id === sourceCategoryId
+                    ? { ...cat, channels: cat.channels.filter((ch) => ch.channel.id !== activeId) }
+                    : cat
+                )
+              : displayCategories
+            setOptimisticCategories(updatedCategories)
+            
+            // Add to appropriate ungrouped list
+            const updatedChannel = { ...activeChannel, channel: { ...activeChannel.channel, categoryId: null } }
+            if (activeChannel.channel.type === ChannelType.TEXT) {
+              const insertIdx = displayTextChannels.findIndex((ch) => ch.channel.id === overId)
+              const newText = insertIdx >= 0
+                ? [
+                    ...displayTextChannels.slice(0, insertIdx),
+                    updatedChannel,
+                    ...displayTextChannels.slice(insertIdx),
+                  ]
+                : [...displayTextChannels, updatedChannel]
+              setOptimisticTextChannels(newText)
+            } else if (activeChannel.channel.type === ChannelType.AUDIO) {
+              const insertIdx = displayAudioChannels.findIndex((ch) => ch.channel.id === overId)
+              const newAudio = insertIdx >= 0
+                ? [
+                    ...displayAudioChannels.slice(0, insertIdx),
+                    updatedChannel,
+                    ...displayAudioChannels.slice(insertIdx),
+                  ]
+                : [...displayAudioChannels, updatedChannel]
+              setOptimisticAudioChannels(newAudio)
+            } else {
+              const insertIdx = displayVideoChannels.findIndex((ch) => ch.channel.id === overId)
+              const newVideo = insertIdx >= 0
+                ? [
+                    ...displayVideoChannels.slice(0, insertIdx),
+                    updatedChannel,
+                    ...displayVideoChannels.slice(insertIdx),
+                  ]
+                : [...displayVideoChannels, updatedChannel]
+              setOptimisticVideoChannels(newVideo)
+            }
           }
 
-          // If moving from a different category, update the source category orders too
-          if (sourceCategoryId !== null && sourceCategoryId !== targetCategoryId) {
-            const sourceCategory = categories.find((cat) => cat.id === sourceCategoryId)
-            if (sourceCategory) {
-              const sourceChannels = sourceCategory.channels.filter(
-                (entry) => entry.channel.id !== activeId
+          // Update all channels in the target category with new orders in the background
+          try {
+            for (let i = 0; i < reorderedChannels.length; i++) {
+              await axios.patch(
+                `/api/channels/${reorderedChannels[i].channel.id}/category?serverId=${server.id}`,
+                {
+                  categoryId: targetCategoryId,
+                  order: i,
+                }
               )
-              for (let i = 0; i < sourceChannels.length; i++) {
+            }
+
+            // If moving from a different category, update the source category orders too
+            if (sourceCategoryId !== null && sourceCategoryId !== targetCategoryId) {
+              const sourceCategory = displayCategories.find((cat) => cat.id === sourceCategoryId)
+              if (sourceCategory) {
+                const sourceChannels = sourceCategory.channels.filter(
+                  (entry) => entry.channel.id !== activeId
+                )
+                for (let i = 0; i < sourceChannels.length; i++) {
+                  await axios.patch(
+                    `/api/channels/${sourceChannels[i].channel.id}/category?serverId=${server.id}`,
+                    {
+                      categoryId: sourceCategoryId,
+                      order: i,
+                    }
+                  )
+                }
+              }
+            } else if (sourceCategoryId === null && targetCategoryId !== null) {
+              // Moving from ungrouped to category - update ungrouped channels
+              const ungroupedChannels = [
+                ...displayTextChannels,
+                ...displayAudioChannels,
+                ...displayVideoChannels,
+              ].filter((entry) => entry.channel.id !== activeId)
+              
+              // Recalculate orders for ungrouped channels by type
+              let textOrder = 0
+              let audioOrder = 0
+              let videoOrder = 0
+              
+              for (const entry of ungroupedChannels) {
+                const order = entry.channel.type === ChannelType.TEXT 
+                  ? textOrder++ 
+                  : entry.channel.type === ChannelType.AUDIO 
+                  ? audioOrder++ 
+                  : videoOrder++
+                
                 await axios.patch(
-                  `/api/channels/${sourceChannels[i].channel.id}/category?serverId=${server.id}`,
+                  `/api/channels/${entry.channel.id}/category?serverId=${server.id}`,
                   {
-                    categoryId: sourceCategoryId,
-                    order: i,
+                    categoryId: null,
+                    order,
                   }
                 )
               }
             }
-          } else if (sourceCategoryId === null && targetCategoryId !== null) {
-            // Moving from ungrouped to category - update ungrouped channels
-            const ungroupedChannels = [
-              ...textChannels,
-              ...audioChannels,
-              ...videoChannels,
-            ].filter((entry) => entry.channel.id !== activeId)
             
-            // Recalculate orders for ungrouped channels by type
-            let textOrder = 0
-            let audioOrder = 0
-            let videoOrder = 0
-            
-            for (const entry of ungroupedChannels) {
-              const order = entry.channel.type === ChannelType.TEXT 
-                ? textOrder++ 
-                : entry.channel.type === ChannelType.AUDIO 
-                ? audioOrder++ 
-                : videoOrder++
-              
-              await axios.patch(
-                `/api/channels/${entry.channel.id}/category?serverId=${server.id}`,
-                {
-                  categoryId: null,
-                  order,
-                }
-              )
-            }
+            router.refresh()
+          } catch (error) {
+            console.error("[DRAG_END_ERROR]", error)
+            // Revert optimistic update on error
+            setOptimisticCategories(null)
+            setOptimisticTextChannels(null)
+            setOptimisticAudioChannels(null)
+            setOptimisticVideoChannels(null)
           }
         }
-
-        router.refresh()
       }
     } catch (error) {
       console.error("[DRAG_END_ERROR]", error)
@@ -701,9 +839,9 @@ export const ServerSidebarClient = ({
         <Separator className="h-[2px] bg-border rounded-md my-4" />
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          {categories.length > 0 && (
-            <SortableContext items={categories.map((cat) => cat.id)} strategy={verticalListSortingStrategy}>
-              {categories.map((category) => (
+          {displayCategories.length > 0 && (
+            <SortableContext items={displayCategories.map((cat) => cat.id)} strategy={verticalListSortingStrategy}>
+              {displayCategories.map((category) => (
                 <ServerCategory
                   key={category.id}
                   category={category}
@@ -733,7 +871,7 @@ export const ServerSidebarClient = ({
             </SortableContext>
           )}
 
-          {role !== MemberRole.MEMBER && categories.length > 0 && (
+          {role !== MemberRole.MEMBER && displayCategories.length > 0 && (
             <div className="mb-2 px-2">
               <ActionTooltip label="Create Category" side="top">
                 <button
@@ -747,14 +885,14 @@ export const ServerSidebarClient = ({
             </div>
           )}
 
-          {!!textChannels?.length && (
+          {!!displayTextChannels?.length && (
             <div className="mb-4">
               <ServerSection label="Text Channels" sectionType="channels" channelType={ChannelType.TEXT} role={role} server={server} />
               <SortableContext
-                items={textChannels.map((entry) => entry.channel.id)}
+                items={displayTextChannels.map((entry) => entry.channel.id)}
                 strategy={verticalListSortingStrategy}
               >
-                {textChannels.map(({ channel }) => (
+                {displayTextChannels.map(({ channel }) => (
                   <ServerChannel
                     key={channel.id}
                     channel={channel}
@@ -762,21 +900,21 @@ export const ServerSidebarClient = ({
                     role={role}
                     unreadCount={getUnread(channel.id)}
                     mentionCount={getMentionCount(channel.id)}
-                    categories={categories.map((cat) => ({ id: cat.id, name: cat.name }))}
+                    categories={displayCategories.map((cat) => ({ id: cat.id, name: cat.name }))}
                   />
                 ))}
               </SortableContext>
             </div>
           )}
 
-          {!!audioChannels?.length && (
+          {!!displayAudioChannels?.length && (
             <div className="mb-4">
               <ServerSection label="Voice Channels" sectionType="channels" channelType={ChannelType.AUDIO} role={role} server={server} />
               <SortableContext
-                items={audioChannels.map((entry) => entry.channel.id)}
+                items={displayAudioChannels.map((entry) => entry.channel.id)}
                 strategy={verticalListSortingStrategy}
               >
-                {audioChannels.map(({ channel }) => (
+                {displayAudioChannels.map(({ channel }) => (
                   <ServerChannel
                     key={channel.id}
                     channel={channel}
@@ -784,21 +922,21 @@ export const ServerSidebarClient = ({
                     role={role}
                     unreadCount={getUnread(channel.id)}
                     mentionCount={getMentionCount(channel.id)}
-                    categories={categories.map((cat) => ({ id: cat.id, name: cat.name }))}
+                    categories={displayCategories.map((cat) => ({ id: cat.id, name: cat.name }))}
                   />
                 ))}
               </SortableContext>
             </div>
           )}
 
-          {!!videoChannels?.length && (
+          {!!displayVideoChannels?.length && (
             <div className="mb-4">
               <ServerSection label="Video Channels" sectionType="channels" channelType={ChannelType.VIDEO} role={role} server={server} />
               <SortableContext
-                items={videoChannels.map((entry) => entry.channel.id)}
+                items={displayVideoChannels.map((entry) => entry.channel.id)}
                 strategy={verticalListSortingStrategy}
               >
-                {videoChannels.map(({ channel }) => (
+                {displayVideoChannels.map(({ channel }) => (
                   <ServerChannel
                     key={channel.id}
                     channel={channel}
@@ -806,7 +944,7 @@ export const ServerSidebarClient = ({
                     role={role}
                     unreadCount={getUnread(channel.id)}
                     mentionCount={getMentionCount(channel.id)}
-                    categories={categories.map((cat) => ({ id: cat.id, name: cat.name }))}
+                    categories={displayCategories.map((cat) => ({ id: cat.id, name: cat.name }))}
                   />
                 ))}
               </SortableContext>
