@@ -22,8 +22,30 @@ export const ServerSidebar = async ({ serverId }: ServerSidebarProps) => {
     },
     include: {
       channels: {
+        orderBy: [
+          {
+            order: 'asc',
+          },
+          {
+            createdAt: 'asc',
+          },
+        ],
+      },
+      categories: {
+        include: {
+          channels: {
+            orderBy: [
+              {
+                order: 'asc',
+              },
+              {
+                createdAt: 'asc',
+              },
+            ],
+          },
+        },
         orderBy: {
-          createdAt: 'asc',
+          order: 'asc',
         },
       },
       members: {
@@ -41,9 +63,18 @@ export const ServerSidebar = async ({ serverId }: ServerSidebarProps) => {
     return redirect('/')
   }
 
-  const textChannels = server.channels.filter((channel) => channel.type === ChannelType.TEXT)
-  const audioChannels = server.channels.filter((channel) => channel.type === ChannelType.AUDIO)
-  const videoChannels = server.channels.filter((channel) => channel.type === ChannelType.VIDEO)
+  // Separate channels by category and ungrouped
+  const channelsByCategory = new Map<string, typeof server.channels>()
+  const ungroupedChannels = server.channels.filter((channel) => !channel.categoryId)
+
+  for (const category of server.categories) {
+    channelsByCategory.set(category.id, category.channels)
+  }
+
+  // For backward compatibility, also provide type-based filtering
+  const textChannels = ungroupedChannels.filter((channel) => channel.type === ChannelType.TEXT)
+  const audioChannels = ungroupedChannels.filter((channel) => channel.type === ChannelType.AUDIO)
+  const videoChannels = ungroupedChannels.filter((channel) => channel.type === ChannelType.VIDEO)
 
   const members = server.members.filter((member) => member.profileID !== profile.id)
 
@@ -155,6 +186,14 @@ export const ServerSidebar = async ({ serverId }: ServerSidebarProps) => {
     <ServerSidebarClient
       server={server}
       role={role}
+      categories={server.categories.map((category) => ({
+        ...category,
+        channels: category.channels.map((channel) => ({
+          channel,
+          unreadCount: unreadCountForChannel(channel.id),
+          mentionCount: mentionCountForChannel(channel.id),
+        })),
+      }))}
       textChannels={textChannels.map((channel) => ({ 
         channel, 
         unreadCount: unreadCountForChannel(channel.id),

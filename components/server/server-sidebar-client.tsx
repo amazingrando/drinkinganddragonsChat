@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Channel, ChannelType, Member, MemberRole, Profile } from "@prisma/client"
+import { Channel, ChannelType, Member, MemberRole, Profile, ChannelCategory } from "@prisma/client"
 import { UseRealtime } from "@/components/providers/realtime-provider"
 import { Separator } from "@/components/ui/separator"
 import { ServerHeader } from "@/components/server/server-header"
@@ -10,9 +10,31 @@ import { ServerSearch } from "@/components/server/server-search"
 import { ServerSection } from "@/components/server/server-section"
 import { ServerChannel } from "@/components/server/server-channel"
 import { ServerMember } from "@/components/server/server-member"
-import { Hash, Mic, ShieldAlert, ShieldCheck, Users, Video } from "lucide-react"
+import { ServerCategory } from "@/components/server/server-category"
+import { Hash, Mic, ShieldAlert, ShieldCheck, Users, Video, Plus } from "lucide-react"
 import { ChatMessage, MessageWithPoll, ServerWithMembersWithProfiles } from "@/types"
 import { useParams } from "next/navigation"
+import { useModal } from "@/hooks/use-modal-store"
+import { ActionTooltip } from "@/components/action-tooltip"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import axios from "axios"
+import { useRouter } from "next/navigation"
 
 type ChannelWithUnread = {
   channel: Channel
@@ -20,9 +42,14 @@ type ChannelWithUnread = {
   mentionCount: number
 }
 
+type CategoryWithChannels = ChannelCategory & {
+  channels: ChannelWithUnread[]
+}
+
 type ServerSidebarClientProps = {
   server: ServerWithMembersWithProfiles
   role?: MemberRole
+  categories?: CategoryWithChannels[]
   textChannels: ChannelWithUnread[]
   audioChannels: ChannelWithUnread[]
   videoChannels: ChannelWithUnread[]
@@ -59,10 +86,18 @@ const buildInitialMap = (
   textChannels: ChannelWithUnread[],
   audioChannels: ChannelWithUnread[],
   videoChannels: ChannelWithUnread[],
+  categories?: CategoryWithChannels[],
 ): UnreadMap => {
   const map: UnreadMap = {}
   for (const entry of [...textChannels, ...audioChannels, ...videoChannels]) {
     map[entry.channel.id] = entry.unreadCount
+  }
+  if (categories) {
+    for (const category of categories) {
+      for (const entry of category.channels) {
+        map[entry.channel.id] = entry.unreadCount
+      }
+    }
   }
   return map
 }
@@ -71,10 +106,18 @@ const buildInitialMentionMap = (
   textChannels: ChannelWithUnread[],
   audioChannels: ChannelWithUnread[],
   videoChannels: ChannelWithUnread[],
+  categories?: CategoryWithChannels[],
 ): MentionMap => {
   const map: MentionMap = {}
   for (const entry of [...textChannels, ...audioChannels, ...videoChannels]) {
     map[entry.channel.id] = entry.mentionCount
+  }
+  if (categories) {
+    for (const category of categories) {
+      for (const entry of category.channels) {
+        map[entry.channel.id] = entry.mentionCount
+      }
+    }
   }
   return map
 }
@@ -82,6 +125,7 @@ const buildInitialMentionMap = (
 export const ServerSidebarClient = ({
   server,
   role,
+  categories = [],
   textChannels,
   audioChannels,
   videoChannels,
@@ -89,10 +133,13 @@ export const ServerSidebarClient = ({
   currentMemberId,
 }: ServerSidebarClientProps) => {
   const { subscribe, unsubscribe } = UseRealtime()
+  const { onOpen } = useModal()
+  const router = useRouter()
   const params = useParams()
   const activeChannelId = typeof params?.channelId === "string" ? params.channelId : null
-  const [unreadMap, setUnreadMap] = useState<UnreadMap>(() => buildInitialMap(textChannels, audioChannels, videoChannels))
-  const [mentionMap, setMentionMap] = useState<MentionMap>(() => buildInitialMentionMap(textChannels, audioChannels, videoChannels))
+  const [unreadMap, setUnreadMap] = useState<UnreadMap>(() => buildInitialMap(textChannels, audioChannels, videoChannels, categories))
+  const [mentionMap, setMentionMap] = useState<MentionMap>(() => buildInitialMentionMap(textChannels, audioChannels, videoChannels, categories))
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
   const activeChannelIdRef = useRef<string | null>(activeChannelId)
   const lastMessageIdsRef = useRef<Record<string, string | undefined>>({})
   const processedMessageIdsRef = useRef<Record<string, { ids: Set<string>; order: string[] }>>({})
@@ -197,13 +244,18 @@ export const ServerSidebarClient = ({
   }
 
   const allChannels = useMemo(
-    () => [...textChannels, ...audioChannels, ...videoChannels].map((entry) => entry.channel),
-    [textChannels, audioChannels, videoChannels],
+    () => [
+      ...textChannels,
+      ...audioChannels,
+      ...videoChannels,
+      ...categories.flatMap((cat) => cat.channels),
+    ].map((entry) => entry.channel),
+    [textChannels, audioChannels, videoChannels, categories],
   )
 
   useEffect(() => {
-    const initialUnreadMap = buildInitialMap(textChannels, audioChannels, videoChannels)
-    const initialMentionMap = buildInitialMentionMap(textChannels, audioChannels, videoChannels)
+    const initialUnreadMap = buildInitialMap(textChannels, audioChannels, videoChannels, categories)
+    const initialMentionMap = buildInitialMentionMap(textChannels, audioChannels, videoChannels, categories)
     const activeChannelIds = new Set(Object.keys(initialUnreadMap))
 
     setUnreadMap((prev) => {
@@ -228,7 +280,7 @@ export const ServerSidebarClient = ({
     lastMessageIdsRef.current = Object.fromEntries(
       Object.entries(lastMessageIdsRef.current).filter(([channelId]) => activeChannelIds.has(channelId)),
     )
-  }, [textChannels, audioChannels, videoChannels])
+  }, [textChannels, audioChannels, videoChannels, categories])
 
   useEffect(() => {
     activeChannelIdRef.current = activeChannelId
@@ -426,6 +478,179 @@ export const ServerSidebarClient = ({
     return mentionMap[channelId] ?? 0
   }
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id || role === MemberRole.MEMBER) {
+      return
+    }
+
+    const activeId = active.id as string
+    const overId = over.id as string
+
+    try {
+      // Check if dragging a category
+      const activeCategory = categories.find((cat) => cat.id === activeId)
+      const overCategory = categories.find((cat) => cat.id === overId)
+
+      if (activeCategory && overCategory) {
+        // Reordering categories
+        const oldIndex = categories.findIndex((cat) => cat.id === activeId)
+        const newIndex = categories.findIndex((cat) => cat.id === overId)
+        const newCategories = arrayMove(categories, oldIndex, newIndex)
+
+        // Update order for all affected categories
+        for (let i = 0; i < newCategories.length; i++) {
+          await axios.patch(
+            `/api/servers/${server.id}/categories/${newCategories[i].id}/reorder`,
+            { order: i }
+          )
+        }
+
+        router.refresh()
+        return
+      }
+
+      // Check if dragging a channel
+      const allChannelsList = [
+        ...textChannels,
+        ...audioChannels,
+        ...videoChannels,
+        ...categories.flatMap((cat) => cat.channels),
+      ]
+      const activeChannel = allChannelsList.find((entry) => entry.channel.id === activeId)
+      const overChannel = allChannelsList.find((entry) => entry.channel.id === overId)
+
+      if (activeChannel && overChannel) {
+        // Moving channel within same category or between categories
+        const targetCategoryId = overChannel.channel.categoryId || null
+        const sourceCategoryId = activeChannel.channel.categoryId || null
+
+        // Get channels in target category (sorted by current order)
+        const targetCategoryChannels =
+          targetCategoryId
+            ? categories.find((cat) => cat.id === targetCategoryId)?.channels || []
+            : [...textChannels, ...audioChannels, ...videoChannels]
+
+        // Find the old and new indices
+        const oldIndex = targetCategoryChannels.findIndex((entry) => entry.channel.id === activeId)
+        const newIndex = targetCategoryChannels.findIndex((entry) => entry.channel.id === overId)
+
+        // If moving within the same category
+        if (targetCategoryId === sourceCategoryId && oldIndex !== -1 && newIndex !== -1) {
+          // Reorder the array
+          const reorderedChannels = arrayMove(targetCategoryChannels, oldIndex, newIndex)
+          
+          // Update all channels in the new order
+          for (let i = 0; i < reorderedChannels.length; i++) {
+            await axios.patch(
+              `/api/channels/${reorderedChannels[i].channel.id}/category?serverId=${server.id}`,
+              {
+                categoryId: targetCategoryId,
+                order: i,
+              }
+            )
+          }
+        } else {
+          // Moving to a different category or from ungrouped to category
+          // Remove the active channel from the list temporarily
+          const channelsWithoutActive = targetCategoryChannels.filter(
+            (entry) => entry.channel.id !== activeId
+          )
+          
+          // Insert at the new position
+          const insertIndex = newIndex >= 0 ? newIndex : channelsWithoutActive.length
+          const reorderedChannels = [
+            ...channelsWithoutActive.slice(0, insertIndex),
+            activeChannel,
+            ...channelsWithoutActive.slice(insertIndex),
+          ]
+
+          // Update all channels in the target category with new orders
+          for (let i = 0; i < reorderedChannels.length; i++) {
+            await axios.patch(
+              `/api/channels/${reorderedChannels[i].channel.id}/category?serverId=${server.id}`,
+              {
+                categoryId: targetCategoryId,
+                order: i,
+              }
+            )
+          }
+
+          // If moving from a different category, update the source category orders too
+          if (sourceCategoryId !== null && sourceCategoryId !== targetCategoryId) {
+            const sourceCategory = categories.find((cat) => cat.id === sourceCategoryId)
+            if (sourceCategory) {
+              const sourceChannels = sourceCategory.channels.filter(
+                (entry) => entry.channel.id !== activeId
+              )
+              for (let i = 0; i < sourceChannels.length; i++) {
+                await axios.patch(
+                  `/api/channels/${sourceChannels[i].channel.id}/category?serverId=${server.id}`,
+                  {
+                    categoryId: sourceCategoryId,
+                    order: i,
+                  }
+                )
+              }
+            }
+          } else if (sourceCategoryId === null && targetCategoryId !== null) {
+            // Moving from ungrouped to category - update ungrouped channels
+            const ungroupedChannels = [
+              ...textChannels,
+              ...audioChannels,
+              ...videoChannels,
+            ].filter((entry) => entry.channel.id !== activeId)
+            
+            // Recalculate orders for ungrouped channels by type
+            let textOrder = 0
+            let audioOrder = 0
+            let videoOrder = 0
+            
+            for (const entry of ungroupedChannels) {
+              const order = entry.channel.type === ChannelType.TEXT 
+                ? textOrder++ 
+                : entry.channel.type === ChannelType.AUDIO 
+                ? audioOrder++ 
+                : videoOrder++
+              
+              await axios.patch(
+                `/api/channels/${entry.channel.id}/category?serverId=${server.id}`,
+                {
+                  categoryId: null,
+                  order,
+                }
+              )
+            }
+          }
+        }
+
+        router.refresh()
+      }
+    } catch (error) {
+      console.error("[DRAG_END_ERROR]", error)
+    }
+  }
+
+  const toggleCategoryCollapse = (categoryId: string) => {
+    setCollapsedCategories((prev) => {
+      const next = new Set(prev)
+      if (next.has(categoryId)) {
+        next.delete(categoryId)
+      } else {
+        next.add(categoryId)
+      }
+      return next
+    })
+  }
+
   return (
     <div className="flex flex-col h-full w-full bg-lavender-200 dark:bg-background text-foreground border-r border-border/60">
       <ServerHeader server={server} role={role} />
@@ -475,53 +700,119 @@ export const ServerSidebarClient = ({
 
         <Separator className="h-[2px] bg-border rounded-md my-4" />
 
-        {!!textChannels?.length && (
-          <div className="mb-4">
-            <ServerSection label="Text Channels" sectionType="channels" channelType={ChannelType.TEXT} role={role} />
-            {textChannels.map(({ channel }) => (
-              <ServerChannel
-                key={channel.id}
-                channel={channel}
-                server={server}
-                role={role}
-                unreadCount={getUnread(channel.id)}
-                mentionCount={getMentionCount(channel.id)}
-              />
-            ))}
-          </div>
-        )}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          {categories.length > 0 && (
+            <SortableContext items={categories.map((cat) => cat.id)} strategy={verticalListSortingStrategy}>
+              {categories.map((category) => (
+                <ServerCategory
+                  key={category.id}
+                  category={category}
+                  server={server}
+                  role={role}
+                  isCollapsed={collapsedCategories.has(category.id)}
+                  onToggleCollapse={() => toggleCategoryCollapse(category.id)}
+                >
+                  <SortableContext
+                    items={category.channels.map((entry) => entry.channel.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {category.channels.map(({ channel }) => (
+                      <ServerChannel
+                        key={channel.id}
+                        channel={channel}
+                        server={server}
+                        role={role}
+                        unreadCount={getUnread(channel.id)}
+                        mentionCount={getMentionCount(channel.id)}
+                        categories={categories.map((cat) => ({ id: cat.id, name: cat.name }))}
+                      />
+                    ))}
+                  </SortableContext>
+                </ServerCategory>
+              ))}
+            </SortableContext>
+          )}
 
-        {!!audioChannels?.length && (
-          <div className="mb-4">
-            <ServerSection label="Voice Channels" sectionType="channels" channelType={ChannelType.AUDIO} role={role} />
-            {audioChannels.map(({ channel }) => (
-              <ServerChannel
-                key={channel.id}
-                channel={channel}
-                server={server}
-                role={role}
-                unreadCount={getUnread(channel.id)}
-                mentionCount={getMentionCount(channel.id)}
-              />
-            ))}
-          </div>
-        )}
+          {role !== MemberRole.MEMBER && categories.length > 0 && (
+            <div className="mb-2 px-2">
+              <ActionTooltip label="Create Category" side="top">
+                <button
+                  onClick={() => onOpen("createCategory", { server })}
+                  className="text-muted-foreground hover:text-foreground transition text-xs uppercase font-semibold flex items-center gap-x-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Category</span>
+                </button>
+              </ActionTooltip>
+            </div>
+          )}
 
-        {!!videoChannels?.length && (
-          <div className="mb-4">
-            <ServerSection label="Video Channels" sectionType="channels" channelType={ChannelType.VIDEO} role={role} />
-            {videoChannels.map(({ channel }) => (
-              <ServerChannel
-                key={channel.id}
-                channel={channel}
-                server={server}
-                role={role}
-                unreadCount={getUnread(channel.id)}
-                mentionCount={getMentionCount(channel.id)}
-              />
-            ))}
-          </div>
-        )}
+          {!!textChannels?.length && (
+            <div className="mb-4">
+              <ServerSection label="Text Channels" sectionType="channels" channelType={ChannelType.TEXT} role={role} server={server} />
+              <SortableContext
+                items={textChannels.map((entry) => entry.channel.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {textChannels.map(({ channel }) => (
+                  <ServerChannel
+                    key={channel.id}
+                    channel={channel}
+                    server={server}
+                    role={role}
+                    unreadCount={getUnread(channel.id)}
+                    mentionCount={getMentionCount(channel.id)}
+                    categories={categories.map((cat) => ({ id: cat.id, name: cat.name }))}
+                  />
+                ))}
+              </SortableContext>
+            </div>
+          )}
+
+          {!!audioChannels?.length && (
+            <div className="mb-4">
+              <ServerSection label="Voice Channels" sectionType="channels" channelType={ChannelType.AUDIO} role={role} server={server} />
+              <SortableContext
+                items={audioChannels.map((entry) => entry.channel.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {audioChannels.map(({ channel }) => (
+                  <ServerChannel
+                    key={channel.id}
+                    channel={channel}
+                    server={server}
+                    role={role}
+                    unreadCount={getUnread(channel.id)}
+                    mentionCount={getMentionCount(channel.id)}
+                    categories={categories.map((cat) => ({ id: cat.id, name: cat.name }))}
+                  />
+                ))}
+              </SortableContext>
+            </div>
+          )}
+
+          {!!videoChannels?.length && (
+            <div className="mb-4">
+              <ServerSection label="Video Channels" sectionType="channels" channelType={ChannelType.VIDEO} role={role} server={server} />
+              <SortableContext
+                items={videoChannels.map((entry) => entry.channel.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {videoChannels.map(({ channel }) => (
+                  <ServerChannel
+                    key={channel.id}
+                    channel={channel}
+                    server={server}
+                    role={role}
+                    unreadCount={getUnread(channel.id)}
+                    mentionCount={getMentionCount(channel.id)}
+                    categories={categories.map((cat) => ({ id: cat.id, name: cat.name }))}
+                  />
+                ))}
+              </SortableContext>
+            </div>
+          )}
+        </DndContext>
 
         {!!members?.length && (
           <div className="mb-4">

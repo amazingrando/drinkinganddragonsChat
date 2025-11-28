@@ -1,8 +1,8 @@
 import { create } from "zustand"
-import { Channel, ChannelType, Server, MemberRole, Member, Profile } from "@prisma/client"
+import { Channel, ChannelType, Server, MemberRole, Member, Profile, ChannelCategory } from "@prisma/client"
 import { PollWithOptionsAndVotes } from "@/types"
 
-export type ModalType = "createServer" | "joinServer" | "invite" | "editServer" | "members" | "createChannel" | "leaveServer" | "deleteServer" | "deleteChannel" | "editChannel" | "channelDetails" | "messageFile" | "deleteMessage" | "createPoll" | "editPoll" | "initialModal" | "account" | "pinnedMessages"
+export type ModalType = "createServer" | "joinServer" | "invite" | "editServer" | "members" | "createChannel" | "leaveServer" | "deleteServer" | "deleteChannel" | "editChannel" | "channelDetails" | "messageFile" | "deleteMessage" | "createPoll" | "editPoll" | "initialModal" | "account" | "pinnedMessages" | "createCategory" | "editCategory" | "deleteCategory"
 
 interface ModalData {
   server?: Server | Partial<Server>
@@ -17,6 +17,7 @@ interface ModalData {
   currentMemberRole?: MemberRole
   member?: Member & { profile: Profile }
   profile?: Profile
+  category?: ChannelCategory | Partial<ChannelCategory>
 }
 
 interface ModalStore {

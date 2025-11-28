@@ -6,7 +6,7 @@ import { NextResponse } from "next/server"
 export async function POST(req: Request) {
   try {
     const profile = await currentProfile()
-    const { name, type } = await req.json()
+    const { name, type, categoryId } = await req.json()
     const { searchParams } = new URL(req.url)
     const serverId = searchParams.get("serverId")
 
@@ -21,6 +21,36 @@ export async function POST(req: Request) {
     if ( name === "general" ) {
       return new NextResponse("Name cannot be 'general'", { status: 400 })
     }
+
+    // If categoryId is provided, verify it belongs to this server
+    if (categoryId) {
+      const category = await db.channelCategory.findFirst({
+        where: {
+          id: categoryId,
+          serverID: serverId,
+        },
+      })
+
+      if (!category) {
+        return new NextResponse("Category not found", { status: 404 })
+      }
+    }
+
+    // Get the highest order value for channels in this category (or ungrouped)
+    const maxOrderChannel = await db.channel.findFirst({
+      where: {
+        serverID: serverId,
+        categoryId: categoryId || null,
+      },
+      orderBy: {
+        order: "desc",
+      },
+      select: {
+        order: true,
+      },
+    })
+
+    const newOrder = maxOrderChannel ? maxOrderChannel.order + 1 : 0
 
     const server = await db.server.update({
       where: {
@@ -40,6 +70,8 @@ export async function POST(req: Request) {
             profileID: profile.id,
             name,
             type,
+            categoryId: categoryId || null,
+            order: newOrder,
           },
         },
       }

@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input"
 import { useModal } from "@/hooks/use-modal-store"
 import { ChannelType } from "@prisma/client"
 import qs from "query-string"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { ModalHeader } from "./_modal-header"
 
 const formSchema = z.object({
@@ -40,11 +40,13 @@ const formSchema = z.object({
     message: "Channel name cannot be 'general'",
   }),
   type: z.enum(ChannelType),
+  categoryId: z.string().nullable().optional(),
 })
 
 const EditChannelModal = () => {
   const { isOpen, type, onClose, data } = useModal()
   const router = useRouter()
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
 
   const isModalOpen = isOpen && type === "editChannel"
   const { channel, server } = data || {}
@@ -54,8 +56,23 @@ const EditChannelModal = () => {
     defaultValues: {
       name: "",
       type: channel?.type ?? ChannelType.TEXT,
+      categoryId: null,
     },
   })
+
+  useEffect(() => {
+    if (isModalOpen && server?.id) {
+      const fetchCategories = async () => {
+        try {
+          const response = await axios.get(`/api/servers/${server.id}/categories`)
+          setCategories(response.data)
+        } catch (error) {
+          console.error("Failed to fetch categories", error)
+        }
+      }
+      void fetchCategories()
+    }
+  }, [isModalOpen, server?.id])
 
   useEffect(() => {
     if (channel) {
@@ -64,6 +81,9 @@ const EditChannelModal = () => {
       }
       if (channel.type) {
         form.setValue("type", channel.type)
+      }
+      if ("categoryId" in channel) {
+        form.setValue("categoryId", (channel.categoryId as string | null) || null)
       }
     }
   }, [channel, form])
@@ -78,7 +98,19 @@ const EditChannelModal = () => {
           serverId: server?.id,
         },
       })
-      await axios.patch(url, values)
+      const payload = {
+        name: values.name,
+        type: values.type,
+      }
+      await axios.patch(url, payload)
+
+      // Update category separately if changed
+      if (values.categoryId !== (channel?.categoryId || null)) {
+        await axios.patch(
+          `/api/channels/${channel?.id}/category?serverId=${server?.id}`,
+          { categoryId: values.categoryId || null }
+        )
+      }
 
       form.reset()
       router.refresh()
@@ -135,6 +167,34 @@ const EditChannelModal = () => {
                   <FormMessage />
                 </FormItem>
               )} />
+
+              {categories.length > 0 && (
+                <FormField control={form.control} name="categoryId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="uppercase text-xs font-bold">Category (optional)</FormLabel>
+                    <Select
+                      disabled={isLoading}
+                      onValueChange={(value) => field.onChange(value === "none" ? null : value)}
+                      value={field.value || "none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="outline-none">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Ungrouped</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
             </div>
             <DialogFooter className="px-6 py-4">
               <Button disabled={isLoading} variant="primary">Save</Button>

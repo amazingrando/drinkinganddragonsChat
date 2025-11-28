@@ -46,6 +46,7 @@ model Server {
   updatedAt DateTime  @updatedAt
   members   Member[]
   channels  Channel[]
+  categories ChannelCategory[]
   files     File[]
 
   @@index([profileID])
@@ -107,6 +108,10 @@ model Channel {
   serverID String
   server   Server @relation(fields: [serverID], references: [id], onDelete: Cascade)
 
+  categoryId String?
+  category   ChannelCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  order      Int @default(0)
+
   messages   Message[]
   readStates ChannelReadState[]
 
@@ -116,6 +121,22 @@ model Channel {
 
   @@index([serverID])
   @@index([profileID])
+  @@index([categoryId])
+}
+
+model ChannelCategory {
+  id       String @id @default(uuid())
+  name     String
+  serverID String
+  server   Server @relation(fields: [serverID], references: [id], onDelete: Cascade)
+  order    Int @default(0)
+
+  channels Channel[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([serverID])
 }
 
 model File {

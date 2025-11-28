@@ -31,7 +31,7 @@ import { Input } from "@/components/ui/input"
 import { useModal } from "@/hooks/use-modal-store"
 import { ChannelType } from "@prisma/client"
 import qs from "query-string"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -40,12 +40,14 @@ const formSchema = z.object({
     message: "Channel name cannot be 'general'",
   }),
   type: z.enum(ChannelType),
+  categoryId: z.string().nullable().optional(),
 })
 
 const CreateChannelModal = () => {
   const { isOpen, type, onClose, data } = useModal()
   const router = useRouter()
   const params = useParams()
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
 
   const isModalOpen = isOpen && type === "createChannel"
   const { channelType } = data || {}
@@ -55,8 +57,23 @@ const CreateChannelModal = () => {
     defaultValues: {
       name: "",
       type: ChannelType.TEXT,
+      categoryId: null,
     },
   })
+
+  useEffect(() => {
+    if (isModalOpen && params?.serverId) {
+      const fetchCategories = async () => {
+        try {
+          const response = await axios.get(`/api/servers/${params.serverId}/categories`)
+          setCategories(response.data)
+        } catch (error) {
+          console.error("Failed to fetch categories", error)
+        }
+      }
+      void fetchCategories()
+    }
+  }, [isModalOpen, params?.serverId])
 
   useEffect(() => {
     if (channelType) {
@@ -69,7 +86,6 @@ const CreateChannelModal = () => {
   const isLoading = form.formState.isSubmitting
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    console.log(values)
     try {
       const url = qs.stringifyUrl({
         url: "/api/channels",
@@ -77,7 +93,12 @@ const CreateChannelModal = () => {
           serverId: params?.serverId,
         },
       })
-      await axios.post(url, values)
+      const payload = {
+        name: values.name,
+        type: values.type,
+        ...(values.categoryId ? { categoryId: values.categoryId } : {}),
+      }
+      await axios.post(url, payload)
 
       form.reset()
       router.refresh()
@@ -133,6 +154,34 @@ const CreateChannelModal = () => {
                   <FormMessage />
                 </FormItem>
               )} />
+
+              {categories.length > 0 && (
+                <FormField control={form.control} name="categoryId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="uppercase text-xs font-bold">Category (optional)</FormLabel>
+                    <Select
+                      disabled={isLoading}
+                      onValueChange={(value) => field.onChange(value === "none" ? null : value)}
+                      value={field.value || "none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="outline-none">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Ungrouped</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
             </div>
             <DialogFooter className="px-6 py-4">
               <Button disabled={isLoading} variant="primary">Create Channel</Button>

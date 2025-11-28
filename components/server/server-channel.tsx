@@ -2,10 +2,24 @@
 
 import { cn } from "@/lib/utils"
 import { Channel, ChannelType, MemberRole, Server } from "@prisma/client"
-import { Hash, Mic, Video, Lock, Edit, Trash } from "lucide-react"
+import { Hash, Mic, Video, Lock, Edit, Trash, Move, GripVertical } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { ActionTooltip } from "../action-tooltip"
 import { useModal, ModalType } from "@/hooks/use-modal-store"
+import { useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import axios from "axios"
+import { useState, useEffect } from "react"
 
 interface ServerChannelProps {
   channel: Channel
@@ -13,6 +27,7 @@ interface ServerChannelProps {
   role?: MemberRole
   unreadCount?: number
   mentionCount?: number
+  categories?: Array<{ id: string; name: string }>
 }
 
 const iconMap = {
@@ -21,10 +36,60 @@ const iconMap = {
   [ChannelType.VIDEO]: <Video className="w-4 h-4 mr-2 text-icon-foreground" />,
 }
 
-export const ServerChannel = ({ channel, server, role, unreadCount = 0, mentionCount = 0 }: ServerChannelProps) => {
+export const ServerChannel = ({ channel, server, role, unreadCount = 0, mentionCount = 0, categories = [] }: ServerChannelProps) => {
   const { onOpen } = useModal()
   const params = useParams()
   const router = useRouter()
+  const [availableCategories, setAvailableCategories] = useState(categories)
+
+  useEffect(() => {
+    if (categories.length === 0 && role !== MemberRole.MEMBER) {
+      // Fetch categories if not provided
+      const fetchCategories = async () => {
+        try {
+          const response = await axios.get(`/api/servers/${server.id}/categories`)
+          setAvailableCategories(response.data)
+        } catch (error) {
+          console.error("Failed to fetch categories", error)
+        }
+      }
+      void fetchCategories()
+    } else {
+      setAvailableCategories(categories)
+    }
+  }, [categories, server.id, role])
+
+  const canManageChannel = channel.name !== "general" && role !== MemberRole.MEMBER
+  const isSortable = role !== MemberRole.MEMBER // Allow sorting for all channels (including general) if admin/moderator
+
+  const handleMoveToCategory = async (categoryId: string | null) => {
+    try {
+      await axios.patch(
+        `/api/channels/${channel.id}/category?serverId=${server.id}`,
+        { categoryId }
+      )
+      router.refresh()
+    } catch (error) {
+      console.error("Failed to move channel", error)
+    }
+  }
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: channel.id,
+    disabled: !isSortable,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
 
   const hasUnread = unreadCount > 0
   const hasMentions = mentionCount > 0
@@ -39,7 +104,6 @@ export const ServerChannel = ({ channel, server, role, unreadCount = 0, mentionC
     onOpen(action, { channel, server })
   }
 
-  const canManageChannel = channel.name !== "general" && role !== MemberRole.MEMBER
   const showLock = channel.name === "general"
   const showTrailing = canManageChannel || showLock
 
@@ -50,14 +114,34 @@ export const ServerChannel = ({ channel, server, role, unreadCount = 0, mentionC
     : channel.name
 
   return (
-    <button
-      onClick={onClick}
-      aria-label={accessibilityLabel}
-      className={cn(
-        "group px-2 py-2 rounded-md flex items-center gap-x-1 w-full hover:bg-muted/60 transition mb-1",
-        params?.channelId === channel.id && "bg-muted hover:bg-muted",
-      )}
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(isDragging && "opacity-50", "relative")}
     >
+      <button
+        onClick={onClick}
+        onContextMenu={(e) => {
+          if (canManageChannel) {
+            e.preventDefault()
+          }
+        }}
+        aria-label={accessibilityLabel}
+        className={cn(
+          "group px-2 py-2 rounded-md flex items-center gap-x-1 w-full hover:bg-muted/60 transition mb-1",
+          params?.channelId === channel.id && "bg-muted hover:bg-muted",
+        )}
+      >
+      {isSortable && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing touch-none mr-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="w-4 h-4 text-muted-foreground/60" />
+        </div>
+      )}
       {iconMap[channel.type]}
       <div className="flex items-center gap-x-1 min-w-0">
         <p
@@ -104,5 +188,61 @@ export const ServerChannel = ({ channel, server, role, unreadCount = 0, mentionC
         </div>
       )}
     </button>
+      {canManageChannel && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition">
+              <button
+                className="p-1 rounded hover:bg-muted"
+                onClick={(e) => {
+                  e.stopPropagation()
+                }}
+                aria-label="Channel options"
+              >
+                <Edit className="w-3 h-3" />
+              </button>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={(e) => onAction(e, "editChannel")}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Channel
+            </DropdownMenuItem>
+            {availableCategories.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Move className="w-4 h-4 mr-2" />
+                    Move to Category
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onClick={() => handleMoveToCategory(null)}>
+                      Ungrouped
+                    </DropdownMenuItem>
+                    {availableCategories.map((category) => (
+                      <DropdownMenuItem
+                        key={category.id}
+                        onClick={() => handleMoveToCategory(category.id)}
+                      >
+                        {category.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            <DropdownMenuItem
+              onClick={(e) => onAction(e, "deleteChannel")}
+              className="text-destructive"
+            >
+              <Trash className="w-4 h-4 mr-2" />
+              Delete Channel
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
   )
 }
