@@ -45,7 +45,7 @@ const JoinServerModal = () => {
       } else {
         form.setError("invite", { type: "manual", message: res.data?.error || "Invalid invite" })
       }
-    } catch (err) {
+    } catch {
       form.setError("invite", { type: "manual", message: "Invalid or expired invite" })
     }
   }

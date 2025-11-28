@@ -3,7 +3,7 @@
 import * as z from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import axios, { isAxiosError } from "axios"
+import { isAxiosError } from "axios"
 import { axiosClient } from "@/lib/axios-client"
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
@@ -249,7 +249,7 @@ const EditAccountModal = () => {
               <FormField
                 control={form.control}
                 name="imageUrl"
-                render={({ field }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel className="uppercase text-xs font-bold">
                       Avatar (Optional)

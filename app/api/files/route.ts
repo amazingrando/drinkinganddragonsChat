@@ -1,7 +1,6 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { currentProfile } from '@/lib/current-profile'
-import { MemberRole } from '@prisma/client'
 import { rateLimitPresets } from '@/lib/rate-limit'
 import { csrfProtection } from '@/lib/csrf'
 import { fileUploadSchema, validateRequestBody, validationErrorResponse } from '@/lib/validation'

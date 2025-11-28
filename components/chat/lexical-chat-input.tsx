@@ -203,8 +203,6 @@ export function LexicalChatInput({
   query,
   name,
   type,
-  chatId,
-  currentMember,
   onContentChange,
   onSubmit,
   isLoading,

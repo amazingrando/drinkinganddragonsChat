@@ -19,8 +19,7 @@ export default async function RootLayout({
   // Get nonce from headers (set by middleware)
   // Next.js Script component will automatically use this nonce
   // In Next.js 15, headers() must be awaited
-  const headersList = await headers()
-  const nonce = headersList.get('x-nonce') || undefined
+  await headers()
 
   return (
     <html lang="en" suppressHydrationWarning className="h-svh">

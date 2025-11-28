@@ -18,6 +18,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react"
 import { $createMentionNode } from "@/lib/lexical/nodes"
 import { $isMentionNode } from "@/lib/lexical/nodes"
 import { isValidUrl, isValidUuid } from "@/lib/url-validation"
+import Image from "next/image"
 
 interface MentionOption {
   id: string
@@ -54,8 +55,6 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
   const [options, setOptions] = useState<MentionOption[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [triggerPosition, setTriggerPosition] = useState<{ x: number; y: number } | null>(null)
-  const [query, setQuery] = useState("")
-  const [mentionType, setMentionType] = useState<"user" | "channel" | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const fetchMentions = useCallback(
@@ -169,8 +168,6 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
         }
 
         setIsOpen(false)
-        setQuery("")
-        setMentionType(null)
         setTriggerPosition(null)
       })
     },
@@ -232,13 +229,10 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
           const charBefore = triggerPos > 0 ? textContent[triggerPos - 1] : " "
           if (charBefore === " " || charBefore === "\n" || triggerPos === 0) {
             const queryText = textContent.slice(triggerPos + 1, offset)
-            setQuery(queryText)
-            setMentionType(triggerChar === "@" ? "user" : "channel")
             setIsOpen(true)
             setSelectedIndex(0)
 
             // Calculate position for menu
-            const range = document.createRange()
             const selection = window.getSelection()
             if (selection && selection.rangeCount > 0) {
               const domRange = selection.getRangeAt(0)
@@ -370,9 +364,11 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
           onMouseEnter={() => setSelectedIndex(index)}
         >
           {option.type === "user" && option.imageUrl && isValidUrl(option.imageUrl) && (
-            <img
+            <Image
               src={option.imageUrl}
               alt={option.name}
+              width={24}
+              height={24}
               className="w-6 h-6 rounded-full"
             />
           )}

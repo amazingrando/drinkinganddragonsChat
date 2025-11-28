@@ -9,7 +9,6 @@ import {
   PopoverTrigger,
   PopoverAnchor,
 } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
 
 interface FormattingToolbarProps {
   onFormat: (markdown: string) => void

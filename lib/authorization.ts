@@ -1,6 +1,5 @@
 import { db } from '@/lib/db'
 import { MemberRole } from '@prisma/client'
-import type { Profile } from '@prisma/client'
 
 /**
  * Authorization helper functions for consistent access control

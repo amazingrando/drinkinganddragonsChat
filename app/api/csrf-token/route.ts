@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { generateCsrfToken } from '@/lib/csrf'
 
 /**
  * Endpoint to generate and retrieve a CSRF token
  * This should be called from the client side before making state-changing requests
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const token = await generateCsrfToken()
     

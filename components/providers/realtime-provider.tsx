@@ -160,14 +160,16 @@ export const RealtimeProvider = ({ children }: { children: React.ReactNode }) =>
   // Cleanup all channels on unmount
   useEffect(() => {
     const channelsMap = channelsRef.current
+    const subscriptionPromises = subscriptionPromisesRef.current
+    const activeChannels = activeChannelsRef.current
     return () => {
       channelsMap.forEach((channel) => {
         supabase.removeChannel(channel)
-        subscriptionPromisesRef.current.delete(channel)
-        activeChannelsRef.current.delete(channel)
+        subscriptionPromises.delete(channel)
+        activeChannels.delete(channel)
       })
       channelsMap.clear()
-      setIsConnected(hasSessionRef.current || activeChannelsRef.current.size > 0)
+      setIsConnected(hasSessionRef.current || activeChannels.size > 0)
     }
   }, [supabase])
 

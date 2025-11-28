@@ -6,7 +6,6 @@ import { rateLimitPresets } from "@/lib/rate-limit"
 import {
   createMockProfile,
   createMockMember,
-  createMockServer,
   createMockChannel,
   parseNextResponse,
 } from "@/__tests__/utils/test-helpers"
@@ -214,12 +213,6 @@ describe("GET /api/mentions", () => {
         id: "channel-id-1",
         name: "general",
         type: "TEXT",
-        serverID: validUuid,
-      })
-      const audioChannel = createMockChannel({
-        id: "channel-id-2",
-        name: "voice",
-        type: "AUDIO",
         serverID: validUuid,
       })
 

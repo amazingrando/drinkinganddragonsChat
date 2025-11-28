@@ -1,8 +1,6 @@
 import {
   $applyNodeReplacement,
-  $isTextNode,
   DOMConversionMap,
-  DOMConversionOutput,
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
@@ -69,7 +67,7 @@ export class MentionNode extends TextNode {
    */
   static importDOM(): DOMConversionMap | null {
     return {
-      span: (node: Node) => ({
+      span: () => ({
         conversion: (domNode: HTMLElement) => {
           if (!domNode.hasAttribute("data-mention-name")) {
             return null

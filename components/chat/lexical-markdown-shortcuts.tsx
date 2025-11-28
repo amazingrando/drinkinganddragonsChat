@@ -8,7 +8,7 @@ import {
   $isQuoteNode,
 } from "@lexical/rich-text"
 import { $createParagraphNode, $getRoot, $createTextNode, $isParagraphNode, $isTextNode } from "lexical"
-import { $isLinkNode, $createLinkNode } from "@lexical/link"
+import { $isLinkNode } from "@lexical/link"
 import { $isMentionNode } from "@/lib/lexical/nodes"
 import { isValidUrl } from "@/lib/url-validation"
 
@@ -45,7 +45,6 @@ export function MarkdownShortcutsPlugin(): null {
         // Handle bold **text**
         if (textContent.slice(offset - 2, offset) === "**" && textContent.slice(offset - 3, offset - 2) !== "*") {
           const textBefore = textContent.slice(0, offset - 2)
-          const textAfter = textContent.slice(offset)
           const boldMatch = textBefore.match(/\*\*([^*]+)\*\*$/)
 
           if (boldMatch && boldMatch[1]) {
@@ -57,7 +56,6 @@ export function MarkdownShortcutsPlugin(): null {
         // Handle italic *text* (but not **text**)
         if (textContent.slice(offset - 1, offset) === "*" && textContent.slice(offset - 2, offset - 1) !== "*") {
           const textBefore = textContent.slice(0, offset - 1)
-          const textAfter = textContent.slice(offset)
           const italicMatch = textBefore.match(/(?:^|[^*])\*([^*\n]+)\*$/)
 
           if (italicMatch && italicMatch[1]) {
@@ -69,7 +67,6 @@ export function MarkdownShortcutsPlugin(): null {
         // Handle spoiler ||text||
         if (textContent.slice(offset - 2, offset) === "||") {
           const textBefore = textContent.slice(0, offset - 2)
-          const textAfter = textContent.slice(offset)
           const spoilerMatch = textBefore.match(/\|\|([^|]+)\|\|$/)
 
           if (spoilerMatch && spoilerMatch[1]) {

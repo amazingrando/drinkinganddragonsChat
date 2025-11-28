@@ -1,5 +1,5 @@
 import { updateSession } from '@/lib/supabase/middleware'
-import { type NextRequest, NextResponse } from 'next/server'
+import { type NextRequest } from 'next/server'
 import { generateNonce, getCSPPolicy, getCSPReportOnlyPolicy } from '@/lib/csp'
 
 export async function middleware(request: NextRequest) {

@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import { MentionNode, $createMentionNode, $isMentionNode } from "@/lib/lexical/nodes"
-import { $getRoot, $createParagraphNode, createEditor } from "lexical"
+import { $createParagraphNode, createEditor } from "lexical"
 import { MentionNode as MentionNodeType } from "@/lib/lexical/nodes"
 
 describe("MentionNode", () => {

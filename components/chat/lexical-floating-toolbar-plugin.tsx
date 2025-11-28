@@ -4,7 +4,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $isMentionNode } from "@/lib/lexical/nodes"
 import { $isLinkNode } from "@lexical/link"
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useCallback } from "react"
 
 export interface SelectionPosition {
   x: number

@@ -81,7 +81,7 @@ describe('chat message optimistic helpers', () => {
   })
 
   it('updates message status using provided updater', () => {
-    const { helperParams, member } = createParams()
+    const { member } = createParams()
 
     const existing: ChatMessage = {
       id: 'temp-1',
@@ -121,7 +121,7 @@ describe('chat message optimistic helpers', () => {
   })
 
   it('replaces optimistic message with server payload', () => {
-    const { helperParams, member } = createParams()
+    const { member } = createParams()
 
     const existing: ChatMessage = {
       id: 'temp-1',

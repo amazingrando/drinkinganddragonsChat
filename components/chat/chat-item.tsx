@@ -69,10 +69,7 @@ export const ChatItem = ({
   reactions = [],
 }: ChatItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
-  const [toolbarOpen, setToolbarOpen] = useState(false);
   const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number; width: number } | null>(null);
-  const [showSelectionHighlight, setShowSelectionHighlight] = useState(false);
   const [isReacting, setIsReacting] = useState(false);
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
   const [isMouseOverPicker, setIsMouseOverPicker] = useState(false);
@@ -126,8 +123,6 @@ export const ChatItem = ({
       await axios.patch(url, values);
       form.reset();
       setIsEditing(false);
-      setToolbarOpen(false);
-      setIsFocused(false);
     } catch (error) {
       console.error(error);
     }
@@ -144,7 +139,6 @@ export const ChatItem = ({
     if (hasTextSelected) {
       // Store the selection range
       selectionRangeRef.current = { start, end };
-      setShowSelectionHighlight(true);
       // Use setTimeout to ensure DOM is ready
       setTimeout(() => {
         const currentInput = editInputRef.current;
@@ -280,8 +274,7 @@ export const ChatItem = ({
 
     form.setValue("content", newValue);
 
-    // Clear selection highlight
-    setShowSelectionHighlight(false);
+    // Clear selection
     selectionRangeRef.current = null;
 
     // Restore cursor position after React updates
@@ -417,7 +410,6 @@ export const ChatItem = ({
                           open={!!selectionPosition}
                           onOpenChange={(open) => {
                             if (!open) {
-                              setToolbarOpen(false)
                               setSelectionPosition(null)
                             }
                           }}
@@ -449,7 +441,6 @@ export const ChatItem = ({
                           className="pl-8 p-2 bg-zinc-200/90 dark:bg-zinc-700/75 border-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-zinc-600 dark:text-zinc-200"
                           placeholder="Edit message"
                           onFocus={() => {
-                            setIsFocused(true);
                             // Restore selection if we have one stored
                             if (selectionRangeRef.current) {
                               setTimeout(() => {
@@ -468,11 +459,9 @@ export const ChatItem = ({
                               const start = input.selectionStart || 0;
                               const end = input.selectionEnd || 0;
                               if (start !== end) {
-                                setIsFocused(true);
                                 updateSelectionPosition();
                               } else {
                                 setSelectionPosition(null);
-                                setShowSelectionHighlight(false);
                                 selectionRangeRef.current = null;
                               }
                             }
@@ -487,8 +476,6 @@ export const ChatItem = ({
                                 // Check if focus is on a toolbar button
                                 const isToolbarButton = activeElement?.closest('[data-slot="popover-content"]');
                                 if (!isToolbarButton) {
-                                  setIsFocused(false);
-                                  setToolbarOpen(false);
                                   setSelectionPosition(null);
                                 }
                               }
@@ -502,8 +489,6 @@ export const ChatItem = ({
                 <Button size="sm" type="submit" className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md" disabled={isLoading}>Save</Button>
                 <Button size="sm" type="button" className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md" onClick={() => {
                   setIsEditing(false);
-                  setToolbarOpen(false);
-                  setIsFocused(false);
                   setSelectionPosition(null);
                 }} disabled={isLoading}>Cancel</Button>
               </form>
