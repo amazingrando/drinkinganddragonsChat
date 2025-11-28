@@ -55,6 +55,9 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
   const [options, setOptions] = useState<MentionOption[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [triggerPosition, setTriggerPosition] = useState<{ x: number; y: number } | null>(null)
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null)
+  const [query, setQuery] = useState("")
+  const [mentionType, setMentionType] = useState<"user" | "channel" | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const fetchMentions = useCallback(
@@ -231,13 +234,18 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
             const queryText = textContent.slice(triggerPos + 1, offset)
             setIsOpen(true)
             setSelectedIndex(0)
+            setQuery(queryText)
+            setMentionType(triggerChar === "@" ? "user" : "channel")
 
             // Calculate position for menu
             const selection = window.getSelection()
             if (selection && selection.rangeCount > 0) {
               const domRange = selection.getRangeAt(0)
               const rect = domRange.getBoundingClientRect()
-              setTriggerPosition({ x: rect.left, y: rect.top })
+              setTriggerPosition({ 
+                x: rect.left, 
+                y: rect.top
+              })
             }
 
             // Fetch mentions
@@ -340,8 +348,68 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
     )
   }, [editor, isOpen])
 
+  // Calculate menu position after render to avoid viewport overflow
+  useEffect(() => {
+    if (!isOpen || !triggerPosition || !menuRef.current) {
+      setMenuPosition(null)
+      return
+    }
+
+    const menuElement = menuRef.current
+    const viewportHeight = window.innerHeight
+    const offsetY = 20 // Space between cursor and menu
+    const maxMenuHeight = 256 // max-h-64 = 256px
+    const minMargin = 8 // Minimum margin from viewport edges
+    
+    // Calculate space available
+    const spaceBelow = viewportHeight - triggerPosition.y - offsetY
+    
+    // Try to position below first
+    let finalY = triggerPosition.y + offsetY
+    let shouldPositionAbove = false
+    
+    // If not enough space below, position above
+    if (spaceBelow < Math.min(maxMenuHeight, options.length * 48)) {
+      shouldPositionAbove = true
+      finalY = triggerPosition.y - offsetY - maxMenuHeight
+    }
+    
+    // Measure actual menu height after render
+    requestAnimationFrame(() => {
+      const actualHeight = menuElement.offsetHeight || maxMenuHeight
+      
+      if (shouldPositionAbove) {
+        // Position above cursor
+        const topPosition = triggerPosition.y - actualHeight - offsetY
+        finalY = Math.max(minMargin, topPosition)
+      } else {
+        // Position below cursor, but ensure it doesn't overflow
+        const bottomPosition = triggerPosition.y + offsetY
+        const menuBottom = bottomPosition + actualHeight
+        
+        if (menuBottom > viewportHeight - minMargin) {
+          // Would overflow, position above instead
+          finalY = Math.max(minMargin, triggerPosition.y - actualHeight - offsetY)
+        } else {
+          finalY = bottomPosition
+        }
+      }
+      
+      // Ensure menu stays within viewport bounds
+      finalY = Math.max(minMargin, Math.min(finalY, viewportHeight - actualHeight - minMargin))
+      
+      setMenuPosition({ x: triggerPosition.x, y: finalY })
+    })
+  }, [isOpen, triggerPosition, options.length])
+
   if (!isOpen || !triggerPosition || options.length === 0) {
     return null
+  }
+
+  // Use calculated position if available, otherwise position below (will be adjusted by useEffect)
+  const displayPosition = menuPosition || { 
+    x: triggerPosition.x, 
+    y: triggerPosition.y + 20 
   }
 
   return (
@@ -349,8 +417,8 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
       ref={menuRef}
       className="fixed z-50 bg-popover border border-border rounded-md shadow-lg max-h-64 overflow-y-auto"
       style={{
-        left: `${triggerPosition.x}px`,
-        top: `${triggerPosition.y + 20}px`,
+        left: `${displayPosition.x}px`,
+        top: `${displayPosition.y}px`,
       }}
     >
       {options.map((option, index) => (
