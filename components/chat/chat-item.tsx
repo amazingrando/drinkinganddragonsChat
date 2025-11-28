@@ -3,7 +3,7 @@
 import { Member, MemberRole, Profile } from "@prisma/client"
 import UserAvatar from "@/components/user-avatar"
 import { ActionTooltip } from "@/components//action-tooltip"
-import { Pencil, Trash, Loader2, Smile } from "lucide-react"
+import { Pencil, Trash, Loader2, Smile, Pin, PinOff } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useState, useRef, useCallback } from "react"
 import { cn } from "@/lib/utils"
@@ -44,6 +44,7 @@ interface ChatItemProps {
   isRetrying?: boolean,
   isUnread?: boolean,
   reactions?: MessageReactionWithMember[],
+  pinned?: boolean,
 }
 
 const formSchema = z.object({
@@ -67,6 +68,7 @@ export const ChatItem = ({
   isRetrying,
   isUnread = false,
   reactions = [],
+  pinned = false,
 }: ChatItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number; width: number } | null>(null);
@@ -74,6 +76,7 @@ export const ChatItem = ({
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
   const [isMouseOverPicker, setIsMouseOverPicker] = useState(false);
   const [anchorPosition, setAnchorPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isPinning, setIsPinning] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -327,6 +330,21 @@ export const ChatItem = ({
     return reactionsByEmoji[emoji]?.some((r: MessageReactionWithMember) => r.memberId === currentMember.id) || false;
   };
 
+  const handlePinToggle = async () => {
+    try {
+      setIsPinning(true);
+      const url = qs.stringifyUrl({
+        url: `/api/messages/${id}/pin`,
+        query: socketQuery,
+      });
+      await axios.patch(url);
+    } catch (error) {
+      console.error("Failed to toggle pin:", error);
+    } finally {
+      setIsPinning(false);
+    }
+  };
+
   const isPending = status === "pending"
   const isFailed = status === "failed"
 
@@ -356,6 +374,11 @@ export const ChatItem = ({
             <span className="text-xs font-medium text-muted-foreground">
               {timestamp}
             </span>
+            {pinned && (
+              <ActionTooltip label="Pinned">
+                <Pin className="w-4 h-4 text-mana-400" />
+              </ActionTooltip>
+            )}
             {isUnread && (
               <span className="text-[10px] font-semibold uppercase tracking-wide text-atomicorange-600">
                 Unread
@@ -588,6 +611,24 @@ export const ChatItem = ({
                 }}
               >
                 <Smile className="w-4 h-4 text-icon-muted-foreground hover:text-lavender-800 dark:hover:text-white transition" />
+              </button>
+            </ActionTooltip>
+            <ActionTooltip label={pinned ? "Unpin" : "Pin"}>
+              <button
+                type="button"
+                className="outline-none border-none bg-transparent p-0 cursor-pointer flex items-center justify-center"
+                aria-label={pinned ? "Unpin" : "Pin"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePinToggle();
+                }}
+                disabled={isPinning}
+              >
+                {pinned ? (
+                  <PinOff className="w-4 h-4 text-icon-muted-foreground hover:text-lavender-800 dark:hover:text-white transition" />
+                ) : (
+                  <Pin className="w-4 h-4 text-icon-muted-foreground hover:text-lavender-800 dark:hover:text-white transition" />
+                )}
               </button>
             </ActionTooltip>
             {canDeleteMessage && (

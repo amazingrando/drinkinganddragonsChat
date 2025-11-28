@@ -577,6 +577,7 @@ const ChatMessages = ({
                 onRetry={message.status === "failed" ? () => handleRetry(message) : undefined}
                 isUnread={isUnread}
                 reactions={"reactions" in message && message.reactions ? message.reactions : undefined}
+                pinned={"pinned" in message ? message.pinned : false}
               />
             )
 

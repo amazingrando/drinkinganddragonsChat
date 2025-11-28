@@ -80,6 +80,7 @@ model Member {
   pollVotes   PollVote[]
 
   messageReactions MessageReaction[]
+  pinnedMessages   Message[]         @relation("PinnedMessages")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -159,6 +160,11 @@ model Message {
 
   deleted Boolean @default(false)
 
+  pinned         Boolean   @default(false)
+  pinnedAt       DateTime?
+  pinnedBy       String?
+  pinnedByMember Member?   @relation("PinnedMessages", fields: [pinnedBy], references: [id], onDelete: SetNull)
+
   poll Poll?
 
   reactions MessageReaction[]
@@ -168,6 +174,8 @@ model Message {
 
   @@index([memberId])
   @@index([channelId])
+  @@index([pinned])
+  @@index([pinnedBy])
 }
 
 model Conversation {
@@ -289,7 +297,7 @@ model ChannelReadState {
 }
 
 model MessageReaction {
-  id        String @id @default(uuid())
+  id        String  @id @default(uuid())
   emoji     String // Store the emoji character(s)
   messageId String
   message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)

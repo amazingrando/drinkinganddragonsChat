@@ -1,6 +1,6 @@
 "use client"
 
-import { Hash } from "lucide-react"
+import { Hash, Pin } from "lucide-react"
 import UserAvatar from "@/components/user-avatar"
 import { SocketIndicator } from "@/components/socket-indicator"
 import { ChatVideoButton } from "./chat-video-button"
@@ -30,6 +30,15 @@ const ChatHeader = ({ serverId, name, type, imageUrl, description, channelId, me
         channel: { id: channelId, name, description: description || null } as { id: string; name: string; description: string | null },
         server: { id: serverId } as { id: string },
         currentMemberRole: memberRole
+      })
+    }
+  }
+
+  const handlePinnedMessagesClick = () => {
+    if (type === "channel" && channelId) {
+      onOpen("pinnedMessages", {
+        channelId,
+        serverId,
       })
     }
   }
@@ -72,7 +81,16 @@ const ChatHeader = ({ serverId, name, type, imageUrl, description, channelId, me
           </button>
         )}
       </div>
-      <div className="ml-auto flex items-center">
+      <div className="ml-auto flex items-center gap-2">
+        {type === "channel" && (
+          <button
+            onClick={handlePinnedMessagesClick}
+            className="p-1.5 rounded-md hover:bg-lavender-200 dark:hover:bg-background/70 transition"
+            title="Pinned Messages"
+          >
+            <Pin className="w-4 h-4 text-icon-muted-foreground hover:text-lavender-800 dark:hover:text-white transition" />
+          </button>
+        )}
         {type === "conversation" && (
           <ChatVideoButton />
         )}

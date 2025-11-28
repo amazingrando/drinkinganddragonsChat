@@ -16,6 +16,7 @@ import CreatePollModal from '@/components/modals/create-poll-modal'
 import EditPollModal from '@/components/modals/edit-poll-modal'
 import JoinServerModal from '@/components/modals/join-server-modal'
 import EditAccountModal from '@/components/modals/edit-account'
+import PinnedMessagesModal from '@/components/modals/pinned-messages-modal'
 
 import { useEffect, useState } from 'react'
 import InitialModal from '../modals/initial-modal'
@@ -50,6 +51,7 @@ export const ModalProvider = () => {
       <EditPollModal />
       <JoinServerModal />
       <EditAccountModal />
+      <PinnedMessagesModal />
     </>
   )
 }
