@@ -47,7 +47,7 @@ export function MarkdownShortcutsPlugin(): null {
           const textBefore = textContent.slice(0, offset - 2)
           const textAfter = textContent.slice(offset)
           const boldMatch = textBefore.match(/\*\*([^*]+)\*\*$/)
-          
+
           if (boldMatch && boldMatch[1]) {
             // Already has matching **, just apply formatting
             return
@@ -59,7 +59,7 @@ export function MarkdownShortcutsPlugin(): null {
           const textBefore = textContent.slice(0, offset - 1)
           const textAfter = textContent.slice(offset)
           const italicMatch = textBefore.match(/(?:^|[^*])\*([^*\n]+)\*$/)
-          
+
           if (italicMatch && italicMatch[1]) {
             // Already has matching *, just apply formatting
             return
@@ -71,7 +71,7 @@ export function MarkdownShortcutsPlugin(): null {
           const textBefore = textContent.slice(0, offset - 2)
           const textAfter = textContent.slice(offset)
           const spoilerMatch = textBefore.match(/\|\|([^|]+)\|\|$/)
-          
+
           if (spoilerMatch && spoilerMatch[1]) {
             // Already has matching ||, just apply formatting
             return
@@ -119,7 +119,7 @@ export function useMarkdownFormatting() {
       const selection = $getSelection()
       if ($isRangeSelection(selection)) {
         const anchorNode = selection.anchor.getNode()
-        
+
         // Find the paragraph containing the selection
         let paragraph = anchorNode
         while (paragraph && !$isParagraphNode(paragraph)) {
@@ -127,11 +127,11 @@ export function useMarkdownFormatting() {
           if (!parent) break
           paragraph = parent
         }
-        
+
         if (paragraph && $isParagraphNode(paragraph)) {
           const text = paragraph.getTextContent()
           const newText = text.startsWith("> ") ? text.slice(2) : "> " + text
-          
+
           // Clear paragraph and insert new text node
           paragraph.clear()
           const textNode = $createTextNode(newText)
@@ -157,7 +157,7 @@ export function useMarkdownFormatting() {
           // Wrap selected text with ||
           const textNode = selection.anchor.getNode()
           if (textNode) {
-            let parent = textNode.getParent()
+            const parent = textNode.getParent()
             if (parent && $isParagraphNode(parent)) {
               const fullText = parent.getTextContent()
               const start = selection.anchor.offset
@@ -165,12 +165,12 @@ export function useMarkdownFormatting() {
               const before = fullText.slice(0, Math.min(start, end))
               const selected = fullText.slice(Math.min(start, end), Math.max(start, end))
               const after = fullText.slice(Math.max(start, end))
-              
+
               // Check if already wrapped
               const newText = (before.endsWith("||") && after.startsWith("||"))
                 ? before.slice(0, -2) + selected + after.slice(2)
                 : before + "||" + selected + "||" + after
-              
+
               // Replace paragraph content
               parent.clear()
               const newTextNode = $createTextNode(newText)
@@ -183,11 +183,11 @@ export function useMarkdownFormatting() {
               const before = fullText.slice(0, Math.min(start, end))
               const selected = fullText.slice(Math.min(start, end), Math.max(start, end))
               const after = fullText.slice(Math.max(start, end))
-              
+
               const newText = (before.endsWith("||") && after.startsWith("||"))
                 ? before.slice(0, -2) + selected + after.slice(2)
                 : before + "||" + selected + "||" + after
-              
+
               parent.setTextContent(newText)
             }
           }
@@ -195,12 +195,12 @@ export function useMarkdownFormatting() {
           // Insert || markers
           const textNode = selection.anchor.getNode()
           if (textNode) {
-            let parent = textNode.getParent()
+            const parent = textNode.getParent()
             if (parent && $isParagraphNode(parent)) {
               const fullText = parent.getTextContent()
               const offset = selection.anchor.offset
               const newText = fullText.slice(0, offset) + "||||" + fullText.slice(offset)
-              
+
               // Replace paragraph content
               parent.clear()
               const newTextNode = $createTextNode(newText)
@@ -226,19 +226,19 @@ export function useMarkdownFormatting() {
           if (!url || url.trim() === "") {
             return
           }
-          
+
           // Validate URL
           const trimmedUrl = url.trim()
           if (!isValidUrl(trimmedUrl)) {
             // Validation error should be handled by the popover component
             return
           }
-          
+
           // Insert markdown link syntax: [text](url)
           const linkMarkdown = `[${selectedText}](${trimmedUrl})`
           const textNode = selection.anchor.getNode()
           if (textNode) {
-            let parent = textNode.getParent()
+            const parent = textNode.getParent()
             if (parent && $isParagraphNode(parent)) {
               const fullText = parent.getTextContent()
               const start = selection.anchor.offset
@@ -246,12 +246,12 @@ export function useMarkdownFormatting() {
               const before = fullText.slice(0, Math.min(start, end))
               const after = fullText.slice(Math.max(start, end))
               const newText = before + linkMarkdown + after
-              
+
               // Replace paragraph content
               parent.clear()
               const newTextNode = $createTextNode(newText)
               parent.append(newTextNode)
-              
+
               // Position cursor after the inserted link
               newTextNode.select(
                 before.length + linkMarkdown.length,
@@ -264,9 +264,9 @@ export function useMarkdownFormatting() {
               const before = fullText.slice(0, Math.min(start, end))
               const after = fullText.slice(Math.max(start, end))
               const newText = before + linkMarkdown + after
-              
+
               parent.setTextContent(newText)
-              
+
               // Position cursor after the inserted link
               parent.select(before.length + linkMarkdown.length, before.length + linkMarkdown.length)
             }
@@ -275,12 +275,12 @@ export function useMarkdownFormatting() {
           // Insert link template
           const textNode = selection.anchor.getNode()
           if (textNode) {
-            let parent = textNode.getParent()
+            const parent = textNode.getParent()
             if (parent && $isParagraphNode(parent)) {
               const fullText = parent.getTextContent()
               const offset = selection.anchor.offset
               const newText = fullText.slice(0, offset) + "[text](url)" + fullText.slice(offset)
-              
+
               // Replace paragraph content
               parent.clear()
               const newTextNode = $createTextNode(newText)

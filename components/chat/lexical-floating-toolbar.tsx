@@ -237,9 +237,11 @@ export function LexicalFloatingToolbar({
           onOpenAutoFocus={(e) => {
             // Focus the input when popover opens
             e.preventDefault()
-            const input = e.currentTarget.querySelector("input")
-            if (input) {
-              setTimeout(() => input.focus(), 0)
+            if (e.currentTarget) {
+              const input = e.currentTarget.querySelector("input")
+              if (input) {
+                setTimeout(() => input.focus(), 0)
+              }
             }
           }}
           onInteractOutside={(e) => {
