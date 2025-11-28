@@ -95,9 +95,10 @@ enum ChannelType {
 }
 
 model Channel {
-  id   String      @id @default(uuid())
-  name String
-  type ChannelType @default(TEXT)
+  id          String      @id @default(uuid())
+  name        String
+  type        ChannelType @default(TEXT)
+  description String?
 
   profileID String
   profile   Profile @relation(fields: [profileID], references: [id], onDelete: Cascade)

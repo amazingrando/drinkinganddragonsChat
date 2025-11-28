@@ -74,10 +74,10 @@ const MembersModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={onClose}>
       <DialogContent>
-        <ModalHeader title="Manage Members" description={`${server?.members.length} members`} />
+        <ModalHeader title="Manage Members" description={`${server?.members?.length ?? 0} members`} />
 
         <ScrollArea className="mt-8 max-h-[480px] px-3">
-          {server?.members.map((member) => (
+          {server?.members?.map((member) => (
             <div key={member.id} className="flex items-center gap-x-2">
               <UserAvatar src={member.profile.email} imageUrl={member.profile.imageUrl} />
               <p className="text-sm text-muted-foreground flex items-center gap-x-2">

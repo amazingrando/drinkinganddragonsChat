@@ -6,6 +6,7 @@ import { currentProfile } from "@/lib/current-profile"
 import { db } from "@/lib/db"
 import { redirect } from "next/navigation"
 import { MediaRoom } from "@/components/media-room"
+import { MobileToggleWrapper } from "@/components/mobile-toggle-wrapper"
 
 interface MemberIdPageProps {
   params: Promise<{ serverId: string, memberId: string }>
@@ -51,7 +52,13 @@ const MemberIdPage = async ({ params, searchParams }: MemberIdPageProps) => {
 
   return (
     <div className="bg-lavender-100 dark:bg-lavender-900 text-foreground flex flex-col h-full">
-      <ChatHeader imageUrl={otherMember.profile.imageUrl} name={otherMemberName} type="conversation" serverId={(await params).serverId} />
+      <ChatHeader 
+        imageUrl={otherMember.profile.imageUrl} 
+        name={otherMemberName} 
+        type="conversation" 
+        serverId={(await params).serverId}
+        mobileToggle={<MobileToggleWrapper serverId={(await params).serverId} />}
+      />
       {(await searchParams).video && (
         <MediaRoom chatId={conversation.id} video={true} audio={true} />
       )}

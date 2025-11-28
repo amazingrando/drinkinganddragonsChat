@@ -43,6 +43,7 @@ export const channelSchema = z.object({
   name: z.string().min(1, 'Channel name is required').max(100, 'Channel name too long'),
   type: z.enum(['TEXT', 'AUDIO', 'VIDEO']),
   serverId: uuidSchema,
+  description: z.string().max(500, 'Description too long').optional(),
 })
 
 // Message creation

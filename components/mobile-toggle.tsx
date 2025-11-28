@@ -1,3 +1,5 @@
+"use client"
+
 import {
   Sheet,
   SheetContent,
@@ -5,10 +7,14 @@ import {
 } from "@/components/ui/sheet"
 import { Menu } from "lucide-react"
 import { Button } from "./ui/button"
-import ServerSidebar from "./server/server-sidebar"
-import NavigationSidebar from "./navigation/navigation-sidebar"
+import { ReactNode } from "react"
 
-export const MobileToggle = ({ serverId }: { serverId: string }) => {
+interface MobileToggleProps {
+  navigationSidebar: ReactNode
+  serverSidebar: ReactNode
+}
+
+export const MobileToggle = ({ navigationSidebar, serverSidebar }: MobileToggleProps) => {
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -18,9 +24,9 @@ export const MobileToggle = ({ serverId }: { serverId: string }) => {
       </SheetTrigger>
       <SheetContent side="left" className="p-0 flex flex-row gap-0 overflow-hidden w-[90vw]" hideClose>
         <div className="w-[72px]">
-          <NavigationSidebar />
+          {navigationSidebar}
         </div>
-        <ServerSidebar serverId={serverId} />
+        {serverSidebar}
       </SheetContent>
     </Sheet>
   )

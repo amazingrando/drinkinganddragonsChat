@@ -7,6 +7,7 @@ import { ChatInput } from "@/components/chat/chat-input"
 import ChatMessages from "@/components/chat/chat-messages"
 import { ChannelType } from "@prisma/client"
 import { MediaRoom } from "@/components/media-room"
+import { MobileToggleWrapper } from "@/components/mobile-toggle-wrapper"
 
 interface ChannelIdPageProps {
   params: Promise<{ serverId: string, channelId: string }>
@@ -38,6 +39,12 @@ const ChannelIdPage = async ({ params }: ChannelIdPageProps) => {
     },
   })
 
+  const server = await db.server.findUnique({
+    where: {
+      id: (await params).serverId,
+    },
+  })
+
   const member = await db.member.findFirst({
     where: {
       serverID: (await params).serverId,
@@ -48,7 +55,7 @@ const ChannelIdPage = async ({ params }: ChannelIdPageProps) => {
     },
   })
 
-  if (!channel || !member) {
+  if (!channel || !member || !server) {
     return redirect('/')
   }
 
@@ -101,7 +108,15 @@ const ChannelIdPage = async ({ params }: ChannelIdPageProps) => {
 
   return (
     <div className="bg-lavender-100 dark:bg-lavender-900 text-foreground flex flex-col h-full">
-      <ChatHeader serverId={channel.serverID} name={channel.name} type="channel" />
+      <ChatHeader
+        serverId={channel.serverID}
+        name={channel.name}
+        type="channel"
+        description={channel.description}
+        channelId={channel.id}
+        memberRole={member.role}
+        mobileToggle={<MobileToggleWrapper serverId={channel.serverID} />}
+      />
       {channel.type === ChannelType.TEXT && (
         <>
           <ChatMessages

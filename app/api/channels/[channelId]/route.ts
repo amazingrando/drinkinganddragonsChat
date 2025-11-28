@@ -56,7 +56,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ chann
 export async function PATCH(req: Request, { params }: { params: Promise<{ channelId: string }> }) {
   try {
     const profile = await currentProfile()
-    const { name, type } = await req.json()
+    const { name, type, description } = await req.json()
     const { searchParams } = new URL(req.url)
     const serverId = searchParams.get("serverId")
 
@@ -75,6 +75,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ channe
     if (name === "general") {
       return new NextResponse("Name cannot be 'general'", { status: 400 })
     }
+
+    const updateData: { name?: string; type?: string; description?: string | null } = {}
+    if (name !== undefined) updateData.name = name
+    if (type !== undefined) updateData.type = type
+    if (description !== undefined) updateData.description = description || null
 
     const server = await db.server.update({
       where: {
@@ -97,10 +102,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ channe
                 name: "general",
               }
             },
-            data: {
-              name,
-              type,
-            },
+            data: updateData,
           },
         },
       },
