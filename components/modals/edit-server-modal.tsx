@@ -54,8 +54,12 @@ const EditServerModal = () => {
 
   useEffect(() => {
     if (server) {
-      form.setValue('name', server.name)
-      form.setValue('imageUrl', server.imageUrl)
+      if (server.name) {
+        form.setValue('name', server.name)
+      }
+      if (server.imageUrl) {
+        form.setValue('imageUrl', server.imageUrl)
+      }
     }
   }, [server, form])
 

@@ -27,8 +27,8 @@ const ChatHeader = ({ serverId, name, type, imageUrl, description, channelId, me
     if (type === "channel" && channelId) {
       // Pass minimal data - modal will handle fetching full channel/server data if needed
       onOpen("channelDetails", {
-        channel: { id: channelId, name, description: description || null } as { id: string; name: string; description: string | null },
-        server: { id: serverId } as { id: string },
+        channel: { id: channelId, name, description: description || null },
+        server: { id: serverId },
         currentMemberRole: memberRole
       })
     }

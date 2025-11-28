@@ -1,7 +1,7 @@
 import { currentProfile } from "@/lib/current-profile"
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { MemberRole } from "@prisma/client"
+import { MemberRole, ChannelType } from "@prisma/client"
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ channelId: string }> }) {
   try {
@@ -76,9 +76,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ channe
       return new NextResponse("Name cannot be 'general'", { status: 400 })
     }
 
-    const updateData: { name?: string; type?: string; description?: string | null } = {}
+    const updateData: { name?: string; type?: ChannelType; description?: string | null } = {}
     if (name !== undefined) updateData.name = name
-    if (type !== undefined) updateData.type = type
+    if (type !== undefined) updateData.type = type as ChannelType
     if (description !== undefined) updateData.description = description || null
 
     const server = await db.server.update({

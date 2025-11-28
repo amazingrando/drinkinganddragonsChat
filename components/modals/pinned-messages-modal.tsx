@@ -4,7 +4,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useModal } from "@/hooks/use-modal-store"
 import { Button } from "@/components/ui/button"
 import axios from "axios"
@@ -31,13 +31,7 @@ const PinnedMessagesModal = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [unpinningId, setUnpinningId] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (isModalOpen && channelId && serverId) {
-      fetchPinnedMessages()
-    }
-  }, [isModalOpen, channelId, serverId])
-
-  const fetchPinnedMessages = async () => {
+  const fetchPinnedMessages = useCallback(async () => {
     if (!channelId || !serverId) return
 
     try {
@@ -53,7 +47,13 @@ const PinnedMessagesModal = () => {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [channelId, serverId])
+
+  useEffect(() => {
+    if (isModalOpen && channelId && serverId) {
+      fetchPinnedMessages()
+    }
+  }, [isModalOpen, channelId, serverId, fetchPinnedMessages])
 
   const handleUnpin = async (messageId: string) => {
     try {
