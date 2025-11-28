@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react"
 import { parseMarkdown, type MarkdownToken } from "@/lib/markdown/parser"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { isValidUrl, isValidUuid } from "@/lib/url-validation"
 
 interface MarkdownRendererProps {
   content: string
@@ -91,22 +92,29 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       }
 
       case "link":
-        return (
-          <a
-            key={key}
-            href={token.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="chat-link"
-          >
-            {token.text}
-          </a>
-        )
+        // Validate URL before rendering - if invalid, render as plain text
+        if (isValidUrl(token.url)) {
+          return (
+            <a
+              key={key}
+              href={token.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="chat-link"
+            >
+              {token.text}
+            </a>
+          )
+        }
+        // Invalid URL - render as plain text
+        return <span key={key}>{token.text}</span>
 
       case "mention": {
         const hasId = !!token.mentionId
         const hasServerId = !!serverId
-        const canLink = hasId && hasServerId
+        // Validate mention ID is a UUID before using it in URLs
+        const isValidId = hasId && isValidUuid(token.mentionId)
+        const canLink = isValidId && hasServerId
 
         if (canLink) {
           const href =
@@ -129,7 +137,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           )
         }
 
-        // Render as plain text for mentions without ID or serverId
+        // Render as plain text for mentions without ID, invalid ID, or serverId
         return (
           <span key={key}>
             {token.mentionType === "user" ? "@" : "#"}

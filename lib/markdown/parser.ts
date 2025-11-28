@@ -3,6 +3,8 @@
  * Supports: **bold**, *italic*, > quotes, ||spoiler||, [text](url), and auto-detected URLs
  */
 
+import { isValidUuid, isValidUrl } from "@/lib/url-validation"
+
 export type MarkdownToken =
   | { type: "text"; content: string }
   | { type: "bold"; content: MarkdownToken[] }
@@ -20,7 +22,6 @@ export function parseMarkdown(text: string): MarkdownToken[] {
   if (!text) return []
 
   const tokens: MarkdownToken[] = []
-  const i = 0
   const lines = text.split("\n")
 
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
@@ -63,12 +64,23 @@ function parseInlineMarkdown(text: string): MarkdownToken[] {
     // 1. Mentions @username[id] or #channelname[id] (with ID) or @username or #channelname (without ID)
     const mentionWithIdMatch = text.slice(i).match(/^(@|#)([a-zA-Z0-9_-]+)\[([a-zA-Z0-9_-]+)\]/)
     if (mentionWithIdMatch) {
-      tokens.push({
-        type: "mention",
-        name: mentionWithIdMatch[2],
-        mentionType: mentionWithIdMatch[1] === "@" ? "user" : "channel",
-        mentionId: mentionWithIdMatch[3],
-      })
+      const mentionId = mentionWithIdMatch[3]
+      // Validate mention ID is a UUID - if not, treat as mention without ID
+      if (isValidUuid(mentionId)) {
+        tokens.push({
+          type: "mention",
+          name: mentionWithIdMatch[2],
+          mentionType: mentionWithIdMatch[1] === "@" ? "user" : "channel",
+          mentionId: mentionId,
+        })
+      } else {
+        // Invalid UUID - treat as mention without ID
+        tokens.push({
+          type: "mention",
+          name: mentionWithIdMatch[2],
+          mentionType: mentionWithIdMatch[1] === "@" ? "user" : "channel",
+        })
+      }
       i += mentionWithIdMatch[0].length
       continue
     }
@@ -86,11 +98,21 @@ function parseInlineMarkdown(text: string): MarkdownToken[] {
     // 2. Links [text](url) - most specific
     const linkMatch = text.slice(i).match(/^\[([^\]]+)\]\(([^)]+)\)/)
     if (linkMatch) {
-      tokens.push({
-        type: "link",
-        text: linkMatch[1],
-        url: linkMatch[2],
-      })
+      const url = linkMatch[2]
+      // Validate URL protocol - only allow http://, https://, mailto:
+      if (isValidUrl(url)) {
+        tokens.push({
+          type: "link",
+          text: linkMatch[1],
+          url: url,
+        })
+      } else {
+        // Invalid URL - render as plain text
+        tokens.push({
+          type: "text",
+          content: linkMatch[0],
+        })
+      }
       i += linkMatch[0].length
       continue
     }
@@ -134,11 +156,21 @@ function parseInlineMarkdown(text: string): MarkdownToken[] {
     // 6. Auto-detect URLs (http://, https://)
     const urlMatch = text.slice(i).match(/^(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/i)
     if (urlMatch) {
-      tokens.push({
-        type: "link",
-        text: urlMatch[1],
-        url: urlMatch[1],
-      })
+      const url = urlMatch[1]
+      // Validate URL protocol
+      if (isValidUrl(url)) {
+        tokens.push({
+          type: "link",
+          text: url,
+          url: url,
+        })
+      } else {
+        // Invalid URL - render as plain text
+        tokens.push({
+          type: "text",
+          content: url,
+        })
+      }
       i += urlMatch[1].length
       continue
     }

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { rateLimitPresets } from "@/lib/rate-limit"
 import { ChannelType } from "@prisma/client"
+import { uuidSchema } from "@/lib/validation"
 
 export async function GET(request: NextRequest) {
   const rateLimitResponse = await rateLimitPresets.lenient(request)
@@ -23,6 +24,18 @@ export async function GET(request: NextRequest) {
 
     if (!serverId) {
       return new NextResponse("Server ID is required", { status: 400 })
+    }
+
+    // Validate serverId is a valid UUID
+    const serverIdValidation = uuidSchema.safeParse(serverId)
+    if (!serverIdValidation.success) {
+      return new NextResponse("Invalid server ID format", { status: 400 })
+    }
+
+    // Validate query length to prevent DoS
+    const MAX_QUERY_LENGTH = 100
+    if (query.length > MAX_QUERY_LENGTH) {
+      return new NextResponse("Query too long", { status: 400 })
     }
 
     // Verify user is a member of the server

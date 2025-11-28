@@ -15,8 +15,8 @@ import {
 } from "lexical"
 import { useEffect, useState, useCallback, useRef } from "react"
 import { $createMentionNode } from "@/lib/lexical/nodes"
-import { useLexicalComposerContext as useLexicalComposerContextType } from "@lexical/react/LexicalComposerContext"
 import { $isMentionNode } from "@/lib/lexical/nodes"
+import { isValidUrl } from "@/lib/url-validation"
 
 interface MentionOption {
   id: string
@@ -55,12 +55,27 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): null {
         })
 
         const response = await fetch(`/api/mentions?${params.toString()}`)
+        
         if (!response.ok) {
+          // Handle rate limiting
+          if (response.status === 429) {
+            console.warn("[MENTIONS_FETCH_ERROR] Rate limited")
+            setOptions([])
+            return
+          }
+          // Handle other errors
+          console.error("[MENTIONS_FETCH_ERROR] HTTP error:", response.status)
+          setOptions([])
           return
         }
 
         const data = (await response.json()) as MentionOption[]
-        setOptions(data)
+        // Validate and sanitize image URLs
+        const sanitizedData = data.map((option) => ({
+          ...option,
+          imageUrl: option.imageUrl && isValidUrl(option.imageUrl) ? option.imageUrl : undefined,
+        }))
+        setOptions(sanitizedData)
       } catch (error) {
         console.error("[MENTIONS_FETCH_ERROR]", error)
         setOptions([])
@@ -333,7 +348,7 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): null {
           onClick={() => insertMention(option)}
           onMouseEnter={() => setSelectedIndex(index)}
         >
-          {option.type === "user" && option.imageUrl && (
+          {option.type === "user" && option.imageUrl && isValidUrl(option.imageUrl) && (
             <img
               src={option.imageUrl}
               alt={option.name}
