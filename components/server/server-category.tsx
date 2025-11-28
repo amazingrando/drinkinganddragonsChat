@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import { ChannelCategory, MemberRole, Server } from "@prisma/client"
-import { ChevronDown, Edit, Trash, GripVertical } from "lucide-react"
+import { ChevronDown, Edit, Trash, GripVertical, Plus } from "lucide-react"
 import { useState } from "react"
 import { ActionTooltip } from "../action-tooltip"
 import { useModal, ModalType } from "@/hooks/use-modal-store"
@@ -69,7 +69,7 @@ export const ServerCategory = ({
     >
       <div
         className={cn(
-          "flex items-center justify-between py-2 px-2 rounded-md group cursor-pointer hover:bg-muted/60 transition",
+          "flex items-center justify-between py-2 px-1 rounded-md group cursor-pointer hover:bg-muted/60 transition",
           !collapsed && "mb-1"
         )}
         onClick={handleToggle}
@@ -92,6 +92,12 @@ export const ServerCategory = ({
         </div>
         {canManage && (
           <div className="ml-auto flex items-center gap-x-2 flex-shrink-0">
+            <ActionTooltip label="Create Channel">
+              <Plus
+                onClick={(e) => onAction(e, "createChannel")}
+                className="hidden group-hover:block w-4 h-4 text-icon-muted-foreground hover:text-foreground dark:hover:text-white transition"
+              />
+            </ActionTooltip>
             <ActionTooltip label="Edit Category">
               <Edit
                 onClick={(e) => onAction(e, "editCategory")}

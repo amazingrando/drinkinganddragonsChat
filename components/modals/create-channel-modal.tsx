@@ -50,7 +50,7 @@ const CreateChannelModal = () => {
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
 
   const isModalOpen = isOpen && type === "createChannel"
-  const { channelType } = data || {}
+  const { channelType, category } = data || {}
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -82,6 +82,16 @@ const CreateChannelModal = () => {
       form.setValue("type", ChannelType.TEXT)
     }
   }, [channelType, form])
+
+  useEffect(() => {
+    if (isModalOpen) {
+      if (category?.id) {
+        form.setValue("categoryId", category.id)
+      } else {
+        form.setValue("categoryId", null)
+      }
+    }
+  }, [category, form, isModalOpen])
 
   const isLoading = form.formState.isSubmitting
 

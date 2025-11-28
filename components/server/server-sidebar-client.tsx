@@ -8,11 +8,10 @@ import { cn } from "@/lib/utils"
 import { ServerHeader } from "@/components/server/server-header"
 import { ScrollArea } from "@radix-ui/react-scroll-area"
 import { ServerSearch } from "@/components/server/server-search"
-import { ServerSection } from "@/components/server/server-section"
 import { ServerChannel } from "@/components/server/server-channel"
 import { ServerMember } from "@/components/server/server-member"
 import { ServerCategory } from "@/components/server/server-category"
-import { Hash, Mic, ShieldAlert, ShieldCheck, Users, Video, Plus } from "lucide-react"
+import { Hash, Mic, ShieldAlert, ShieldCheck, Users, Video, Plus, ChevronDown, Settings } from "lucide-react"
 import { ChatMessage, MessageWithPoll, ServerWithMembersWithProfiles } from "@/types"
 import { useParams } from "next/navigation"
 import { useModal } from "@/hooks/use-modal-store"
@@ -132,7 +131,8 @@ export const ServerSidebarClient = ({
   const [unreadMap, setUnreadMap] = useState<UnreadMap>(() => buildInitialMap(ungroupedChannels, categories))
   const [mentionMap, setMentionMap] = useState<MentionMap>(() => buildInitialMentionMap(ungroupedChannels, categories))
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
-  
+  const [collapsedMembers, setCollapsedMembers] = useState<boolean>(false)
+
   // Optimistic state for drag-and-drop
   const [optimisticCategories, setOptimisticCategories] = useState<CategoryWithChannels[] | null>(null)
   const [optimisticUngroupedChannels, setOptimisticUngroupedChannels] = useState<ChannelWithUnread[] | null>(null)
@@ -255,7 +255,7 @@ export const ServerSidebarClient = ({
     // Reset optimistic state when props change (after server refresh)
     setOptimisticCategories(null)
     setOptimisticUngroupedChannels(null)
-    
+
     const initialUnreadMap = buildInitialMap(ungroupedChannels, categories)
     const initialMentionMap = buildInitialMentionMap(ungroupedChannels, categories)
     const activeChannelIds = new Set(Object.keys(initialUnreadMap))
@@ -535,7 +535,7 @@ export const ServerSidebarClient = ({
       ]
       const activeChannel = allChannelsList.find((entry) => entry.channel.id === activeId)
       const overChannel = allChannelsList.find((entry) => entry.channel.id === overId)
-      
+
       // Check if dropping on a category header or ungrouped section
       const overCategoryHeader = displayCategories.find((cat) => cat.id === overId)
       const isDroppingOnUngrouped = overId === "ungrouped"
@@ -620,8 +620,8 @@ export const ServerSidebarClient = ({
           cat.id === targetCategoryId
             ? { ...cat, channels: reorderedChannels }
             : cat.id === sourceCategoryId
-            ? { ...cat, channels: cat.channels.filter((ch) => ch.channel.id !== activeId) }
-            : cat
+              ? { ...cat, channels: cat.channels.filter((ch) => ch.channel.id !== activeId) }
+              : cat
         )
         setOptimisticCategories(updatedCategories)
 
@@ -666,7 +666,7 @@ export const ServerSidebarClient = ({
             const remainingUngrouped = displayUngroupedChannels.filter(
               (entry) => entry.channel.id !== activeId
             )
-            
+
             for (let i = 0; i < remainingUngrouped.length; i++) {
               await axios.patch(
                 `/api/channels/${remainingUngrouped[i].channel.id}/category?serverId=${server.id}`,
@@ -677,7 +677,7 @@ export const ServerSidebarClient = ({
               )
             }
           }
-          
+
           router.refresh()
         } catch (error) {
           console.error("[DRAG_END_ERROR]", error)
@@ -707,7 +707,7 @@ export const ServerSidebarClient = ({
         if (targetCategoryId === sourceCategoryId && oldIndex !== -1 && newIndex !== -1) {
           // Reorder the array
           const reorderedChannels = arrayMove([...targetCategoryChannels], oldIndex, newIndex)
-          
+
           // Optimistically update UI
           if (targetCategoryId) {
             const updatedCategories = displayCategories.map((cat) =>
@@ -721,7 +721,7 @@ export const ServerSidebarClient = ({
             const reordered = reorderedChannels.map((ch) => ({ ...ch, channel: { ...ch.channel, categoryId: null } }))
             setOptimisticUngroupedChannels(reordered)
           }
-          
+
           // Update all channels in the new order in the background
           try {
             for (let i = 0; i < reorderedChannels.length; i++) {
@@ -746,7 +746,7 @@ export const ServerSidebarClient = ({
           const channelsWithoutActive = targetCategoryChannels.filter(
             (entry) => entry.channel.id !== activeId
           )
-          
+
           // Insert at the new position
           const insertIndex = newIndex >= 0 ? newIndex : channelsWithoutActive.length
           const reorderedChannels = [
@@ -762,11 +762,11 @@ export const ServerSidebarClient = ({
               cat.id === targetCategoryId
                 ? { ...cat, channels: reorderedChannels }
                 : cat.id === sourceCategoryId
-                ? { ...cat, channels: cat.channels.filter((ch) => ch.channel.id !== activeId) }
-                : cat
+                  ? { ...cat, channels: cat.channels.filter((ch) => ch.channel.id !== activeId) }
+                  : cat
             )
             setOptimisticCategories(updatedCategories)
-            
+
             // Update ungrouped if moving from ungrouped
             if (sourceCategoryId === null) {
               setOptimisticUngroupedChannels(
@@ -777,22 +777,22 @@ export const ServerSidebarClient = ({
             // Moving to ungrouped
             const updatedCategories = sourceCategoryId
               ? displayCategories.map((cat) =>
-                  cat.id === sourceCategoryId
-                    ? { ...cat, channels: cat.channels.filter((ch) => ch.channel.id !== activeId) }
-                    : cat
-                )
+                cat.id === sourceCategoryId
+                  ? { ...cat, channels: cat.channels.filter((ch) => ch.channel.id !== activeId) }
+                  : cat
+              )
               : displayCategories
             setOptimisticCategories(updatedCategories)
-            
+
             // Add to ungrouped list
             const updatedChannel = { ...activeChannel, channel: { ...activeChannel.channel, categoryId: null } }
             const insertIdx = displayUngroupedChannels.findIndex((ch) => ch.channel.id === overId)
             const newUngrouped = insertIdx >= 0
               ? [
-                  ...displayUngroupedChannels.slice(0, insertIdx),
-                  updatedChannel,
-                  ...displayUngroupedChannels.slice(insertIdx),
-                ]
+                ...displayUngroupedChannels.slice(0, insertIdx),
+                updatedChannel,
+                ...displayUngroupedChannels.slice(insertIdx),
+              ]
               : [...displayUngroupedChannels, updatedChannel]
             setOptimisticUngroupedChannels(newUngrouped)
           }
@@ -831,7 +831,7 @@ export const ServerSidebarClient = ({
               const remainingUngrouped = displayUngroupedChannels.filter(
                 (entry) => entry.channel.id !== activeId
               )
-              
+
               for (let i = 0; i < remainingUngrouped.length; i++) {
                 await axios.patch(
                   `/api/channels/${remainingUngrouped[i].channel.id}/category?serverId=${server.id}`,
@@ -842,7 +842,7 @@ export const ServerSidebarClient = ({
                 )
               }
             }
-            
+
             router.refresh()
           } catch (error) {
             console.error("[DRAG_END_ERROR]", error)
@@ -878,30 +878,30 @@ export const ServerSidebarClient = ({
             data={[
               ...(ungroupedChannels.length > 0
                 ? [
+                  {
+                    label: "Ungrouped Channels",
+                    type: "channel" as const,
+                    data: ungroupedChannels.map(({ channel }) => ({
+                      icon: iconMap[channel.type],
+                      name: channel.name,
+                      id: channel.id,
+                    })),
+                  },
+                ]
+                : []),
+              ...categories.flatMap((category) =>
+                category.channels.length > 0
+                  ? [
                     {
-                      label: "Ungrouped Channels",
+                      label: category.name,
                       type: "channel" as const,
-                      data: ungroupedChannels.map(({ channel }) => ({
+                      data: category.channels.map(({ channel }) => ({
                         icon: iconMap[channel.type],
                         name: channel.name,
                         id: channel.id,
                       })),
                     },
                   ]
-                : []),
-              ...categories.flatMap((category) =>
-                category.channels.length > 0
-                  ? [
-                      {
-                        label: category.name,
-                        type: "channel" as const,
-                        data: category.channels.map(({ channel }) => ({
-                          icon: iconMap[channel.type],
-                          name: channel.name,
-                          id: channel.id,
-                        })),
-                      },
-                    ]
                   : []
               ),
               {
@@ -1023,12 +1023,46 @@ export const ServerSidebarClient = ({
           })()}
         </DndContext>
 
+        <Separator className="h-[2px] bg-border rounded-md my-4" />
+
         {!!members?.length && (
           <div className="mb-4">
-            <ServerSection label="Members" sectionType="members" role={role} server={server} />
-            {members.map((member) => (
-              <ServerMember key={member.id} member={member} server={server} />
-            ))}
+            <div
+              className={cn(
+                "flex items-center justify-between py-2 px-2 rounded-md group cursor-pointer hover:bg-muted/60 transition",
+                !collapsedMembers && "mb-1"
+              )}
+              onClick={() => setCollapsedMembers(!collapsedMembers)}
+            >
+              <div className="flex items-center gap-x-1 flex-1 min-w-0">
+                <ChevronDown className={cn("w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform duration-150", collapsedMembers ? "-rotate-90" : "rotate-0")} />
+                <p className="text-xs uppercase font-semibold text-muted-foreground truncate">
+                  Members
+                </p>
+              </div>
+              {role === MemberRole.ADMIN && (
+                <div className="ml-auto flex items-center gap-x-2 flex-shrink-0">
+                  <ActionTooltip label="Manage Members" side="top">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onOpen("members", { server })
+                      }}
+                      className="hidden group-hover:block text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
+                  </ActionTooltip>
+                </div>
+              )}
+            </div>
+            {!collapsedMembers && (
+              <div className="pl-2">
+                {members.map((member) => (
+                  <ServerMember key={member.id} member={member} server={server} />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </ScrollArea>
