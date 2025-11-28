@@ -128,7 +128,7 @@ export const ServerChannel = ({ channel, server, role, unreadCount = 0, mentionC
         }}
         aria-label={accessibilityLabel}
         className={cn(
-          "group px-2 py-2 rounded-md flex items-center gap-x-1 w-full hover:bg-muted/60 transition mb-1",
+          "group px-1 py-2 rounded-md flex items-center gap-x-1 w-full hover:bg-muted/60 transition mb-1",
           params?.channelId === channel.id && "bg-muted hover:bg-muted",
         )}
       >

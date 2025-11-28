@@ -17,6 +17,13 @@ import { useParams } from "next/navigation"
 import { useModal } from "@/hooks/use-modal-store"
 import { ActionTooltip } from "@/components/action-tooltip"
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
+import {
   DndContext,
   closestCenter,
   KeyboardSensor,
@@ -73,6 +80,46 @@ type UnreadCountResponse = {
   unreadCount: number
   mentionCount: number
   lastMessageId?: string | null
+}
+
+type ServerSidebarState = {
+  collapsedCategories: string[]
+  collapsedMembers: boolean
+}
+
+const fetchSidebarPreferences = async (serverId: string): Promise<ServerSidebarState> => {
+  try {
+    const response = await fetch(`/api/servers/${serverId}/sidebar-preferences`, {
+      method: "GET",
+      cache: "no-store",
+    })
+    if (!response.ok) {
+      console.error(`[SIDEBAR_PREFERENCES_FETCH_ERROR] Failed to fetch preferences for server ${serverId}`, response.status)
+      return { collapsedCategories: [], collapsedMembers: false }
+    }
+    const data = (await response.json()) as ServerSidebarState
+    return data
+  } catch (error) {
+    console.error("[SIDEBAR_PREFERENCES_FETCH_ERROR]", error)
+    return { collapsedCategories: [], collapsedMembers: false }
+  }
+}
+
+const saveSidebarPreferences = async (serverId: string, state: ServerSidebarState) => {
+  try {
+    const response = await fetch(`/api/servers/${serverId}/sidebar-preferences`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(state),
+    })
+    if (!response.ok) {
+      console.error(`[SIDEBAR_PREFERENCES_SAVE_ERROR] Failed to save preferences for server ${serverId}`, response.status)
+    }
+  } catch (error) {
+    console.error("[SIDEBAR_PREFERENCES_SAVE_ERROR]", error)
+  }
 }
 
 const isChannelMessage = (message: ChatMessage | undefined): message is MessageWithPoll => {
@@ -132,6 +179,8 @@ export const ServerSidebarClient = ({
   const [mentionMap, setMentionMap] = useState<MentionMap>(() => buildInitialMentionMap(ungroupedChannels, categories))
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
   const [collapsedMembers, setCollapsedMembers] = useState<boolean>(false)
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true)
+  const [isMounted, setIsMounted] = useState(false)
 
   // Optimistic state for drag-and-drop
   const [optimisticCategories, setOptimisticCategories] = useState<CategoryWithChannels[] | null>(null)
@@ -283,6 +332,32 @@ export const ServerSidebarClient = ({
       Object.entries(lastMessageIdsRef.current).filter(([channelId]) => activeChannelIds.has(channelId)),
     )
   }, [ungroupedChannels, categories])
+
+  // Load sidebar preferences from server when server changes
+  useEffect(() => {
+    let isMounted = true
+    setIsLoadingPreferences(true)
+
+    const loadPreferences = async () => {
+      const savedState = await fetchSidebarPreferences(server.id)
+      if (isMounted) {
+        setCollapsedCategories(new Set(savedState.collapsedCategories))
+        setCollapsedMembers(savedState.collapsedMembers)
+        setIsLoadingPreferences(false)
+      }
+    }
+
+    void loadPreferences()
+
+    return () => {
+      isMounted = false
+    }
+  }, [server.id])
+
+  // Track mount state to prevent hydration mismatches
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     activeChannelIdRef.current = activeChannelId
@@ -869,202 +944,231 @@ export const ServerSidebarClient = ({
     })
   }
 
+  const toggleMembersCollapse = () => {
+    setCollapsedMembers((prev) => !prev)
+  }
+
+  // Save sidebar preferences to server whenever they change (debounced)
+  useEffect(() => {
+    if (isLoadingPreferences) {
+      return // Don't save while loading initial state
+    }
+
+    const timeoutId = setTimeout(() => {
+      void saveSidebarPreferences(server.id, {
+        collapsedCategories: Array.from(collapsedCategories),
+        collapsedMembers,
+      })
+    }, 300) // Debounce saves by 300ms
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, [server.id, collapsedCategories, collapsedMembers, isLoadingPreferences])
+
   return (
     <div className="flex flex-col h-full w-full bg-lavender-200 dark:bg-background text-foreground border-r border-border/60">
       <ServerHeader server={server} role={role} />
       <ScrollArea className="flex-1 px-3 max-h-svh overflow-auto">
-        <div className="mt-2">
-          <ServerSearch
-            data={[
-              ...(ungroupedChannels.length > 0
-                ? [
-                  {
-                    label: "Ungrouped Channels",
-                    type: "channel" as const,
-                    data: ungroupedChannels.map(({ channel }) => ({
-                      icon: iconMap[channel.type],
-                      name: channel.name,
-                      id: channel.id,
-                    })),
-                  },
-                ]
-                : []),
-              ...categories.flatMap((category) =>
-                category.channels.length > 0
-                  ? [
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <div className="h-full">
+              <div className="mt-2">
+                <ServerSearch
+                  data={[
+                    ...(ungroupedChannels.length > 0
+                      ? [
+                        {
+                          label: "Ungrouped Channels",
+                          type: "channel" as const,
+                          data: ungroupedChannels.map(({ channel }) => ({
+                            icon: iconMap[channel.type],
+                            name: channel.name,
+                            id: channel.id,
+                          })),
+                        },
+                      ]
+                      : []),
+                    ...categories.flatMap((category) =>
+                      category.channels.length > 0
+                        ? [
+                          {
+                            label: category.name,
+                            type: "channel" as const,
+                            data: category.channels.map(({ channel }) => ({
+                              icon: iconMap[channel.type],
+                              name: channel.name,
+                              id: channel.id,
+                            })),
+                          },
+                        ]
+                        : []
+                    ),
                     {
-                      label: category.name,
-                      type: "channel" as const,
-                      data: category.channels.map(({ channel }) => ({
-                        icon: iconMap[channel.type],
-                        name: channel.name,
-                        id: channel.id,
+                      label: "Members",
+                      type: "member" as const,
+                      data: members.map((member) => ({
+                        icon: roleIconMap[member.role],
+                        name: member.profile.name || member.profile.email,
+                        id: member.id,
                       })),
                     },
-                  ]
-                  : []
-              ),
-              {
-                label: "Members",
-                type: "member" as const,
-                data: members.map((member) => ({
-                  icon: roleIconMap[member.role],
-                  name: member.profile.name || member.profile.email,
-                  id: member.id,
-                })),
-              },
-            ]}
-          />
-        </div>
+                  ]}
+                />
+              </div>
 
-        <Separator className="h-[2px] bg-border rounded-md my-4" />
+              <Separator className="h-[2px] bg-border rounded-md my-4" />
 
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          {displayCategories.length > 0 && (
-            <SortableContext items={displayCategories.map((cat) => cat.id)} strategy={verticalListSortingStrategy}>
-              {displayCategories.map((category) => (
-                <ServerCategory
-                  key={category.id}
-                  category={{
-                    ...category,
-                    channels: category.channels.map(({ channel }) => ({
-                      id: channel.id,
-                      name: channel.name,
-                      type: channel.type,
-                    })),
-                  }}
-                  server={server}
-                  role={role}
-                  isCollapsed={collapsedCategories.has(category.id)}
-                  onToggleCollapse={() => toggleCategoryCollapse(category.id)}
-                >
-                  <SortableContext
-                    items={category.channels.map((entry) => entry.channel.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {category.channels.map(({ channel }) => (
-                      <ServerChannel
-                        key={channel.id}
-                        channel={channel}
-                        server={server}
-                        role={role}
-                        unreadCount={getUnread(channel.id)}
-                        mentionCount={getMentionCount(channel.id)}
-                        categories={categories.map((cat) => ({ id: cat.id, name: cat.name }))}
-                      />
-                    ))}
-                  </SortableContext>
-                </ServerCategory>
-              ))}
-            </SortableContext>
-          )}
-
-          {role !== MemberRole.MEMBER && (
-            <div className="mb-2 px-2">
-              <ActionTooltip label="Create Category" side="top">
-                <button
-                  onClick={() => onOpen("createCategory", { server })}
-                  className="text-muted-foreground hover:text-foreground transition text-xs uppercase font-semibold flex items-center gap-x-1"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Create Category</span>
-                </button>
-              </ActionTooltip>
-            </div>
-          )}
-
-          {(() => {
-            const UngroupedSection = () => {
-              const { setNodeRef, isOver } = useDroppable({
-                id: "ungrouped",
-              })
-
-              if (displayUngroupedChannels.length === 0 && !isOver) {
-                return null
-              }
-
-              return (
-                <div className="mb-2" ref={setNodeRef}>
-                  <div
-                    className={cn(
-                      "flex items-center justify-between py-2 px-2 rounded-md cursor-default",
-                      isOver && "bg-muted/60"
-                    )}
-                  >
-                    <p className="text-xs uppercase font-semibold text-muted-foreground">
-                      Ungrouped
-                    </p>
-                  </div>
-                  {displayUngroupedChannels.length > 0 && (
-                    <SortableContext
-                      items={displayUngroupedChannels.map((entry) => entry.channel.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="pl-2">
-                        {displayUngroupedChannels.map(({ channel }) => (
-                          <ServerChannel
-                            key={channel.id}
-                            channel={channel}
-                            server={server}
-                            role={role}
-                            unreadCount={getUnread(channel.id)}
-                            mentionCount={getMentionCount(channel.id)}
-                            categories={displayCategories.map((cat) => ({ id: cat.id, name: cat.name }))}
-                          />
-                        ))}
-                      </div>
+              {isMounted && !isLoadingPreferences && (
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  {displayCategories.length > 0 && (
+                    <SortableContext items={displayCategories.map((cat) => cat.id)} strategy={verticalListSortingStrategy}>
+                      {displayCategories.map((category) => (
+                        <ServerCategory
+                          key={category.id}
+                          category={{
+                            ...category,
+                            channels: category.channels.map(({ channel }) => ({
+                              id: channel.id,
+                              name: channel.name,
+                              type: channel.type,
+                            })),
+                          }}
+                          server={server}
+                          role={role}
+                          isCollapsed={collapsedCategories.has(category.id)}
+                          onToggleCollapse={() => toggleCategoryCollapse(category.id)}
+                        >
+                          <SortableContext
+                            items={category.channels.map((entry) => entry.channel.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            {category.channels.map(({ channel }) => (
+                              <ServerChannel
+                                key={channel.id}
+                                channel={channel}
+                                server={server}
+                                role={role}
+                                unreadCount={getUnread(channel.id)}
+                                mentionCount={getMentionCount(channel.id)}
+                                categories={categories.map((cat) => ({ id: cat.id, name: cat.name }))}
+                              />
+                            ))}
+                          </SortableContext>
+                        </ServerCategory>
+                      ))}
                     </SortableContext>
                   )}
-                </div>
-              )
-            }
 
-            return <UngroupedSection />
-          })()}
-        </DndContext>
+                  {(() => {
+                    const UngroupedSection = () => {
+                      const { setNodeRef, isOver } = useDroppable({
+                        id: "ungrouped",
+                      })
 
-        <Separator className="h-[2px] bg-border rounded-md my-4" />
+                      if (displayUngroupedChannels.length === 0 && !isOver) {
+                        return null
+                      }
 
-        {!!members?.length && (
-          <div className="mb-4">
-            <div
-              className={cn(
-                "flex items-center justify-between py-2 px-2 rounded-md group cursor-pointer hover:bg-muted/60 transition",
-                !collapsedMembers && "mb-1"
+                      return (
+                        <div className="mb-2" ref={setNodeRef}>
+                          <div
+                            className={cn(
+                              "flex items-center justify-between py-2 px-2 rounded-md cursor-default",
+                              isOver && "bg-muted/60"
+                            )}
+                          >
+                            <p className="text-xs uppercase font-semibold text-muted-foreground">
+                              Ungrouped
+                            </p>
+                          </div>
+                          {displayUngroupedChannels.length > 0 && (
+                            <SortableContext
+                              items={displayUngroupedChannels.map((entry) => entry.channel.id)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              <div className="pl-2">
+                                {displayUngroupedChannels.map(({ channel }) => (
+                                  <ServerChannel
+                                    key={channel.id}
+                                    channel={channel}
+                                    server={server}
+                                    role={role}
+                                    unreadCount={getUnread(channel.id)}
+                                    mentionCount={getMentionCount(channel.id)}
+                                    categories={displayCategories.map((cat) => ({ id: cat.id, name: cat.name }))}
+                                  />
+                                ))}
+                              </div>
+                            </SortableContext>
+                          )}
+                        </div>
+                      )
+                    }
+
+                    return <UngroupedSection />
+                  })()}
+                </DndContext>
               )}
-              onClick={() => setCollapsedMembers(!collapsedMembers)}
-            >
-              <div className="flex items-center gap-x-1 flex-1 min-w-0">
-                <ChevronDown className={cn("w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform duration-150", collapsedMembers ? "-rotate-90" : "rotate-0")} />
-                <p className="text-xs uppercase font-semibold text-muted-foreground truncate">
-                  Members
-                </p>
-              </div>
-              {role === MemberRole.ADMIN && (
-                <div className="ml-auto flex items-center gap-x-2 flex-shrink-0">
-                  <ActionTooltip label="Manage Members" side="top">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onOpen("members", { server })
-                      }}
-                      className="hidden group-hover:block text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition"
-                    >
-                      <Settings className="w-4 h-4" />
-                    </button>
-                  </ActionTooltip>
+
+              <Separator className="h-[2px] bg-border rounded-md my-4" />
+
+              {!!members?.length && (
+                <div className="mb-4">
+                  <div
+                    className={cn(
+                      "flex items-center justify-between py-2 px-2 rounded-md group cursor-pointer hover:bg-muted/60 transition",
+                      !collapsedMembers && "mb-1"
+                    )}
+                    onClick={toggleMembersCollapse}
+                  >
+                    <div className="flex items-center gap-x-1 flex-1 min-w-0">
+                      <ChevronDown className={cn("w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform duration-150", collapsedMembers ? "-rotate-90" : "rotate-0")} />
+                      <p className="text-xs uppercase font-semibold text-muted-foreground truncate tracking-wide">
+                        Members
+                      </p>
+                    </div>
+                    {role === MemberRole.ADMIN && (
+                      <div className="ml-auto flex items-center gap-x-2 flex-shrink-0">
+                        <ActionTooltip label="Manage Members" side="top">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onOpen("members", { server })
+                            }}
+                            className="hidden group-hover:block text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition"
+                          >
+                            <Settings className="w-4 h-4" />
+                          </button>
+                        </ActionTooltip>
+                      </div>
+                    )}
+                  </div>
+                  {!collapsedMembers && (
+                    <div className="pl-2">
+                      {members.map((member) => (
+                        <ServerMember key={member.id} member={member} server={server} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-            {!collapsedMembers && (
-              <div className="pl-2">
-                {members.map((member) => (
-                  <ServerMember key={member.id} member={member} server={server} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+          </ContextMenuTrigger>
+          {role !== MemberRole.MEMBER && (
+            <ContextMenuContent>
+              <ContextMenuItem onClick={() => onOpen("createCategory", { server })}>
+                <Plus className="w-4 h-4 mr-2" />
+                <span>Create Category</span>
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem onClick={() => onOpen("createChannel", { server })}>
+                <Plus className="w-4 h-4 mr-2" />
+                <span>Create Channel</span>
+              </ContextMenuItem>
+            </ContextMenuContent>
+          )}
+        </ContextMenu>
       </ScrollArea>
     </div>
   )

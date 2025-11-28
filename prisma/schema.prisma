@@ -42,12 +42,13 @@ model Server {
   profileID String
   profile   Profile @relation(fields: [profileID], references: [id], onDelete: Cascade)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  members   Member[]
-  channels  Channel[]
-  categories ChannelCategory[]
-  files     File[]
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  members            Member[]
+  channels           Channel[]
+  categories         ChannelCategory[]
+  files              File[]
+  sidebarPreferences ServerSidebarPreferences[]
 
   @@index([profileID])
 }
@@ -80,8 +81,9 @@ model Member {
   pollOptions PollOption[]
   pollVotes   PollVote[]
 
-  messageReactions MessageReaction[]
-  pinnedMessages   Message[]         @relation("PinnedMessages")
+  messageReactions   MessageReaction[]
+  pinnedMessages     Message[]                  @relation("PinnedMessages")
+  sidebarPreferences ServerSidebarPreferences[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -110,7 +112,7 @@ model Channel {
 
   categoryId String?
   category   ChannelCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  order      Int @default(0)
+  order      Int              @default(0)
 
   messages   Message[]
   readStates ChannelReadState[]
@@ -129,7 +131,7 @@ model ChannelCategory {
   name     String
   serverID String
   server   Server @relation(fields: [serverID], references: [id], onDelete: Cascade)
-  order    Int @default(0)
+  order    Int    @default(0)
 
   channels Channel[]
 
@@ -331,4 +333,22 @@ model MessageReaction {
   @@unique([messageId, memberId, emoji])
   @@index([messageId])
   @@index([memberId])
+}
+
+model ServerSidebarPreferences {
+  id       String @id @default(uuid())
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  serverId String
+  server   Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  collapsedCategories Json // Array of category IDs
+  collapsedMembers    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([memberId, serverId])
+  @@index([memberId])
+  @@index([serverId])
 }

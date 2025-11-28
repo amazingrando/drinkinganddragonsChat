@@ -93,6 +93,12 @@ export const ServerHeader = ({ server, role }: ServerHeaderProps) => {
             </DropdownMenuItem>
           )}
           {isModerator && (
+            <DropdownMenuItem className="px-3 py-2 text-sm cursor-pointer group" onClick={() => onOpen("createCategory", { server })}>
+              Create Category
+              <Plus className="w-4 h-4 ml-auto text-mana-500 group-hover:text-mana-600 dark:group-hover:text-mana-300" />
+            </DropdownMenuItem>
+          )}
+          {isModerator && (
             <DropdownMenuSeparator />
           )}
           {isAdmin && (

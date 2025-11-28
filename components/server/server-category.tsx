@@ -86,7 +86,7 @@ export const ServerCategory = ({
             </div>
           )}
           <ChevronDown className={cn("w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform duration-150", collapsed ? "-rotate-90" : "rotate-0")} />
-          <p className="text-xs uppercase font-semibold text-muted-foreground truncate">
+          <p className="text-xs uppercase font-semibold text-muted-foreground truncate tracking-wide">
             {category.name}
           </p>
         </div>
@@ -113,7 +113,7 @@ export const ServerCategory = ({
           </div>
         )}
       </div>
-      {!collapsed && children && <div className="pl-2">{children}</div>}
+      {!collapsed && children && <div>{children}</div>}
     </div>
   )
 }

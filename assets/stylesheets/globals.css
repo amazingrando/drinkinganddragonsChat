@@ -162,6 +162,8 @@
   --font-sans: GeneralSans, system-ui, sans-serif;
   --font-mono: var(--font-open-sans);
 
+  --text-tiny: 0.65rem;
+
   --animate-socket-ping: ping 3s cubic-bezier(0, 0, 0.2, 1) infinite;
   --animate-socket-pulse: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 
