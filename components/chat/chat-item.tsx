@@ -34,7 +34,7 @@ interface ChatItemProps {
   timestamp: string,
   fileUrl: string | null,
   deleted: boolean,
-  currentMember: Member,
+  currentMember: Member & { profile: Profile },
   isUpdated: boolean,
   socketUrl: string,
   socketQuery: Record<string, string>,
@@ -187,7 +187,6 @@ export const ChatItem = ({
     } else {
       setSelectionPosition(null);
       selectionRangeRef.current = null;
-      setShowSelectionHighlight(false);
     }
   }, []);
 

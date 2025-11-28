@@ -56,8 +56,6 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [triggerPosition, setTriggerPosition] = useState<{ x: number; y: number } | null>(null)
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null)
-  const [query, setQuery] = useState("")
-  const [mentionType, setMentionType] = useState<"user" | "channel" | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const fetchMentions = useCallback(
@@ -184,8 +182,6 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
         if (!$isRangeSelection(selection)) {
           if (isOpen) {
             setIsOpen(false)
-            setQuery("")
-            setMentionType(null)
             setTriggerPosition(null)
           }
           return
@@ -201,8 +197,6 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
           if ($isMentionNode(node)) {
             if (isOpen) {
               setIsOpen(false)
-              setQuery("")
-              setMentionType(null)
               setTriggerPosition(null)
             }
             return
@@ -234,8 +228,6 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
             const queryText = textContent.slice(triggerPos + 1, offset)
             setIsOpen(true)
             setSelectedIndex(0)
-            setQuery(queryText)
-            setMentionType(triggerChar === "@" ? "user" : "channel")
 
             // Calculate position for menu
             const selection = window.getSelection()
@@ -253,16 +245,12 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
           } else {
             if (isOpen) {
               setIsOpen(false)
-              setQuery("")
-              setMentionType(null)
               setTriggerPosition(null)
             }
           }
         } else {
           if (isOpen) {
             setIsOpen(false)
-            setQuery("")
-            setMentionType(null)
             setTriggerPosition(null)
           }
         }
@@ -337,8 +325,6 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.R
       () => {
         if (isOpen) {
           setIsOpen(false)
-          setQuery("")
-          setMentionType(null)
           setTriggerPosition(null)
           return true
         }
