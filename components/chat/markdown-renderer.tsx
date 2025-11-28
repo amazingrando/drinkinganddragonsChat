@@ -58,6 +58,23 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 
   let spoilerIndex = 0
 
+  // Helper function to calculate the actual text length of a token
+  const getTextLength = (token: MarkdownToken): number => {
+    if (token.type === "text") {
+      return token.content.length
+    }
+    if (token.type === "bold" || token.type === "italic" || token.type === "spoiler") {
+      return token.content.reduce((sum, t) => sum + getTextLength(t), 0)
+    }
+    if (token.type === "link") {
+      return token.text.length
+    }
+    if (token.type === "mention") {
+      return token.name.length + 1 // +1 for @ or #
+    }
+    return 0
+  }
+
   const renderToken = (
     token: MarkdownToken,
     key: string | number,
@@ -83,28 +100,37 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       case "spoiler": {
         const currentIndex = spoilerIndex++
         const isRevealed = revealedSpoilers.has(currentIndex)
+        const content = token.content.map((t, i) => renderToken(t, `${key}-${i}`))
+        const textLength = token.content.reduce(
+          (sum, t) => sum + getTextLength(t),
+          0,
+        )
+        // "█" is typically ~1.5-2x wider than regular characters, so use ~60% of text length
+        const coverLength = Math.max(1, Math.ceil(textLength * 0.6))
         return (
           <span
             key={key}
             onClick={() => toggleSpoiler(currentIndex)}
             className={cn(
-              "cursor-pointer rounded px-1 transition-colors",
+              "cursor-pointer rounded px-1 transition-colors relative inline-block",
               isRevealed
-                ? "bg-transparent text-foreground"
-                : "bg-foreground text-foreground",
+                ? "bg-transparent text-foreground border border-muted-foreground/30"
+                : "bg-muted-foreground text-muted-foreground border-r border-l border-muted-foreground/30",
             )}
             title={isRevealed ? undefined : "Click to reveal"}
           >
-            {isRevealed
-              ? token.content.map((t, i) => renderToken(t, `${key}-${i}`))
-              : "█".repeat(
-                token.content
-                  .map((t) => {
-                    if (t.type === "text") return t.content.length
-                    return 10 // Approximate length for nested content
-                  })
-                  .reduce((a, b) => a + b, 0),
-              )}
+            {isRevealed ? (
+              content
+            ) : (
+              <>
+                <span className="invisible whitespace-pre-wrap">{content}</span>
+                <span className="absolute inset-0 px-1 overflow-hidden">
+                  <span className="whitespace-pre-wrap">
+                    {"█".repeat(coverLength)}
+                  </span>
+                </span>
+              </>
+            )}
           </span>
         )
       }

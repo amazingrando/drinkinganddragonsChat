@@ -7,9 +7,10 @@ import {
   $createQuoteNode,
   $isQuoteNode,
 } from "@lexical/rich-text"
-import { $createParagraphNode, $getRoot } from "lexical"
+import { $createParagraphNode, $getRoot, $createTextNode, $isParagraphNode, $isTextNode } from "lexical"
 import { $isLinkNode, $createLinkNode } from "@lexical/link"
 import { $isMentionNode } from "@/lib/lexical/nodes"
+import { isValidUrl } from "@/lib/url-validation"
 
 /**
  * Plugin that handles markdown shortcuts for formatting
@@ -118,25 +119,23 @@ export function useMarkdownFormatting() {
       const selection = $getSelection()
       if ($isRangeSelection(selection)) {
         const anchorNode = selection.anchor.getNode()
-        const focusNode = selection.focus.getNode()
         
-        // Get the line containing the selection
-        const root = $getRoot()
-        const paragraphs = root.getChildren()
+        // Find the paragraph containing the selection
+        let paragraph = anchorNode
+        while (paragraph && !$isParagraphNode(paragraph)) {
+          const parent = paragraph.getParent()
+          if (!parent) break
+          paragraph = parent
+        }
         
-        // Find paragraph containing selection
-        for (const paragraph of paragraphs) {
-          if (paragraph.getTextContent().includes(anchorNode.getTextContent())) {
-            const text = paragraph.getTextContent()
-            if (text.startsWith("> ")) {
-              // Remove quote
-              paragraph.setTextContent(text.slice(2))
-            } else {
-              // Add quote
-              paragraph.setTextContent("> " + text)
-            }
-            break
-          }
+        if (paragraph && $isParagraphNode(paragraph)) {
+          const text = paragraph.getTextContent()
+          const newText = text.startsWith("> ") ? text.slice(2) : "> " + text
+          
+          // Clear paragraph and insert new text node
+          paragraph.clear()
+          const textNode = $createTextNode(newText)
+          paragraph.append(textNode)
         }
       } else {
         // Insert quote at cursor
@@ -158,8 +157,8 @@ export function useMarkdownFormatting() {
           // Wrap selected text with ||
           const textNode = selection.anchor.getNode()
           if (textNode) {
-            const parent = textNode.getParent()
-            if (parent) {
+            let parent = textNode.getParent()
+            if (parent && $isParagraphNode(parent)) {
               const fullText = parent.getTextContent()
               const start = selection.anchor.offset
               const end = selection.focus.offset
@@ -168,21 +167,45 @@ export function useMarkdownFormatting() {
               const after = fullText.slice(Math.max(start, end))
               
               // Check if already wrapped
-              if (before.endsWith("||") && after.startsWith("||")) {
-                // Remove spoiler markers
-                parent.setTextContent(before.slice(0, -2) + selected + after.slice(2))
-              } else {
-                // Add spoiler markers
-                parent.setTextContent(before + "||" + selected + "||" + after)
-              }
+              const newText = (before.endsWith("||") && after.startsWith("||"))
+                ? before.slice(0, -2) + selected + after.slice(2)
+                : before + "||" + selected + "||" + after
+              
+              // Replace paragraph content
+              parent.clear()
+              const newTextNode = $createTextNode(newText)
+              parent.append(newTextNode)
+            } else if (parent && $isTextNode(parent)) {
+              // If parent is a text node, use setTextContent directly
+              const fullText = parent.getTextContent()
+              const start = selection.anchor.offset
+              const end = selection.focus.offset
+              const before = fullText.slice(0, Math.min(start, end))
+              const selected = fullText.slice(Math.min(start, end), Math.max(start, end))
+              const after = fullText.slice(Math.max(start, end))
+              
+              const newText = (before.endsWith("||") && after.startsWith("||"))
+                ? before.slice(0, -2) + selected + after.slice(2)
+                : before + "||" + selected + "||" + after
+              
+              parent.setTextContent(newText)
             }
           }
         } else {
           // Insert || markers
           const textNode = selection.anchor.getNode()
           if (textNode) {
-            const parent = textNode.getParent()
-            if (parent) {
+            let parent = textNode.getParent()
+            if (parent && $isParagraphNode(parent)) {
+              const fullText = parent.getTextContent()
+              const offset = selection.anchor.offset
+              const newText = fullText.slice(0, offset) + "||||" + fullText.slice(offset)
+              
+              // Replace paragraph content
+              parent.clear()
+              const newTextNode = $createTextNode(newText)
+              parent.append(newTextNode)
+            } else if (parent && $isTextNode(parent)) {
               const fullText = parent.getTextContent()
               const offset = selection.anchor.offset
               parent.setTextContent(fullText.slice(0, offset) + "||||" + fullText.slice(offset))
@@ -199,16 +222,73 @@ export function useMarkdownFormatting() {
       if ($isRangeSelection(selection)) {
         const selectedText = selection.getTextContent()
         if (selectedText) {
-          // Create link with selected text
-          const linkNode = $createLinkNode("url")
-          linkNode.setTextContent(selectedText)
-          selection.insertNodes([linkNode])
+          // Prompt user for URL
+          const url = prompt("Enter URL for the link:")
+          
+          // If user cancelled or entered empty string, do nothing
+          if (url === null || url.trim() === "") {
+            return
+          }
+          
+          // Validate URL
+          const trimmedUrl = url.trim()
+          if (!isValidUrl(trimmedUrl)) {
+            alert("Please enter a valid URL (e.g., https://example.com)")
+            return
+          }
+          
+          // Insert markdown link syntax: [text](url)
+          const linkMarkdown = `[${selectedText}](${trimmedUrl})`
+          const textNode = selection.anchor.getNode()
+          if (textNode) {
+            let parent = textNode.getParent()
+            if (parent && $isParagraphNode(parent)) {
+              const fullText = parent.getTextContent()
+              const start = selection.anchor.offset
+              const end = selection.focus.offset
+              const before = fullText.slice(0, Math.min(start, end))
+              const after = fullText.slice(Math.max(start, end))
+              const newText = before + linkMarkdown + after
+              
+              // Replace paragraph content
+              parent.clear()
+              const newTextNode = $createTextNode(newText)
+              parent.append(newTextNode)
+              
+              // Position cursor after the inserted link
+              newTextNode.select(
+                before.length + linkMarkdown.length,
+                before.length + linkMarkdown.length,
+              )
+            } else if (parent && $isTextNode(parent)) {
+              const fullText = parent.getTextContent()
+              const start = selection.anchor.offset
+              const end = selection.focus.offset
+              const before = fullText.slice(0, Math.min(start, end))
+              const after = fullText.slice(Math.max(start, end))
+              const newText = before + linkMarkdown + after
+              
+              parent.setTextContent(newText)
+              
+              // Position cursor after the inserted link
+              parent.select(before.length + linkMarkdown.length, before.length + linkMarkdown.length)
+            }
+          }
         } else {
           // Insert link template
           const textNode = selection.anchor.getNode()
           if (textNode) {
-            const parent = textNode.getParent()
-            if (parent) {
+            let parent = textNode.getParent()
+            if (parent && $isParagraphNode(parent)) {
+              const fullText = parent.getTextContent()
+              const offset = selection.anchor.offset
+              const newText = fullText.slice(0, offset) + "[text](url)" + fullText.slice(offset)
+              
+              // Replace paragraph content
+              parent.clear()
+              const newTextNode = $createTextNode(newText)
+              parent.append(newTextNode)
+            } else if (parent && $isTextNode(parent)) {
               const fullText = parent.getTextContent()
               const offset = selection.anchor.offset
               parent.setTextContent(fullText.slice(0, offset) + "[text](url)" + fullText.slice(offset))
