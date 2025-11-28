@@ -1,12 +1,23 @@
 /**
  * URL validation utilities for security
- * Prevents XSS attacks via malicious URL protocols
+ * 
+ * Prevents XSS attacks via malicious URL protocols by:
+ * - Only allowing safe protocols (http://, https://, mailto:)
+ * - Rejecting dangerous protocols (javascript:, data:, vbscript:, file:, etc.)
+ * - Rejecting protocol-relative URLs (//example.com)
+ * - Handling URL encoding to prevent encoded protocol attacks
+ * - Validating UUIDs to prevent path traversal and injection attacks
  */
 
 /**
  * Validates that a URL uses a safe protocol
  * Only allows http://, https://, and optionally mailto:
  * Rejects javascript:, data:, vbscript:, and other dangerous protocols
+ * 
+ * Security considerations:
+ * - Explicitly rejects protocol-relative URLs (//example.com) to prevent protocol confusion
+ * - Handles URL encoding by decoding before validation
+ * - Validates protocol after parsing to catch encoded protocol attacks
  */
 export function isValidUrl(url: string): boolean {
   if (!url || typeof url !== 'string') {
@@ -14,12 +25,27 @@ export function isValidUrl(url: string): boolean {
   }
 
   // Trim whitespace
-  const trimmed = url.trim()
+  let trimmed = url.trim()
+  
+  // Reject protocol-relative URLs (//example.com) - these can be dangerous
+  if (trimmed.startsWith('//')) {
+    return false
+  }
+
+  // Decode URL encoding to catch encoded protocol attacks (e.g., javascript%3A)
+  try {
+    // Only decode once to prevent double-encoding attacks
+    trimmed = decodeURIComponent(trimmed)
+  } catch {
+    // If decoding fails, continue with original string
+    // This handles cases where the URL isn't properly encoded
+  }
+
+  const lowerUrl = trimmed.toLowerCase()
 
   // Check for allowed protocols
   const allowedProtocols = ['http://', 'https://', 'mailto:']
-  const lowerUrl = trimmed.toLowerCase()
-
+  
   // Must start with an allowed protocol
   const hasValidProtocol = allowedProtocols.some((protocol) =>
     lowerUrl.startsWith(protocol),
@@ -34,7 +60,10 @@ export function isValidUrl(url: string): boolean {
     try {
       const parsed = new URL(trimmed)
       // Ensure it's actually http or https (not javascript:http://...)
-      return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+      // Also check that protocol matches after parsing (catches encoded protocols)
+      const protocol = parsed.protocol.toLowerCase()
+      return (protocol === 'http:' || protocol === 'https:') && 
+             (lowerUrl.startsWith('http://') || lowerUrl.startsWith('https://'))
     } catch {
       return false
     }
@@ -43,7 +72,20 @@ export function isValidUrl(url: string): boolean {
   // For mailto:, basic validation
   if (lowerUrl.startsWith('mailto:')) {
     // mailto: should have at least mailto: and something after
-    return trimmed.length > 7
+    if (trimmed.length <= 7) {
+      return false
+    }
+    // Basic validation that mailto: is followed by something reasonable
+    const afterMailto = trimmed.slice(7)
+    // Reject if it looks like it might be trying to inject a protocol
+    // Reject protocol-relative URLs (mailto://)
+    if (afterMailto.startsWith('//') || 
+        afterMailto.includes('://') || 
+        afterMailto.includes('javascript:') || 
+        afterMailto.includes('data:')) {
+      return false
+    }
+    return true
   }
 
   return true

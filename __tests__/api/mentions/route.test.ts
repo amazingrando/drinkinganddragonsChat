@@ -35,7 +35,8 @@ describe("GET /api/mentions", () => {
       const parsed = await parseNextResponse(response)
 
       expect(parsed.status).toBe(401)
-      expect(parsed.data).toBe("Unauthorized")
+      expect(parsed.data).toHaveProperty("error")
+      expect(parsed.data.error).toBe("Unauthorized")
     })
   })
 
@@ -50,7 +51,8 @@ describe("GET /api/mentions", () => {
       const parsed = await parseNextResponse(response)
 
       expect(parsed.status).toBe(400)
-      expect(parsed.data).toBe("Server ID is required")
+      expect(parsed.data).toHaveProperty("error")
+      expect(parsed.data.error).toBe("Server ID is required")
     })
 
     it("should return 400 if serverId is not a valid UUID", async () => {
@@ -59,7 +61,8 @@ describe("GET /api/mentions", () => {
       const parsed = await parseNextResponse(response)
 
       expect(parsed.status).toBe(400)
-      expect(parsed.data).toContain("Invalid server ID format")
+      expect(parsed.data).toHaveProperty("error")
+      expect(parsed.data.error).toContain("Invalid server ID format")
     })
 
     it("should return 400 if query is too long", async () => {
@@ -72,7 +75,8 @@ describe("GET /api/mentions", () => {
       const parsed = await parseNextResponse(response)
 
       expect(parsed.status).toBe(400)
-      expect(parsed.data).toBe("Query too long")
+      expect(parsed.data).toHaveProperty("error")
+      expect(parsed.data.error).toBe("Query too long")
     })
   })
 
@@ -92,7 +96,8 @@ describe("GET /api/mentions", () => {
       const parsed = await parseNextResponse(response)
 
       expect(parsed.status).toBe(403)
-      expect(parsed.data).toBe("Access denied")
+      expect(parsed.data).toHaveProperty("error")
+      expect(parsed.data.error).toBe("Access denied")
     })
   })
 
@@ -285,12 +290,64 @@ describe("GET /api/mentions", () => {
     })
   })
 
+  describe("Type parameter validation", () => {
+    const validUuid = "550e8400-e29b-41d4-a716-446655440000"
+    const profile = createMockProfile({ id: "profile-id-1" })
+
+    beforeEach(() => {
+      mockCurrentProfile.mockResolvedValue(profile)
+      mockDb.member.findFirst.mockResolvedValue(
+        createMockMember({ profileID: profile.id, serverID: validUuid }),
+      )
+    })
+
+    it("should accept valid type parameter 'user'", async () => {
+      mockDb.member.findMany.mockResolvedValue([])
+
+      const request = new NextRequest(
+        `http://localhost/api/mentions?serverId=${validUuid}&query=test&type=user`,
+      )
+      const response = await GET(request)
+      const parsed = await parseNextResponse(response)
+
+      expect(parsed.status).toBe(200)
+    })
+
+    it("should accept valid type parameter 'channel'", async () => {
+      mockDb.channel.findMany.mockResolvedValue([])
+
+      const request = new NextRequest(
+        `http://localhost/api/mentions?serverId=${validUuid}&query=test&type=channel`,
+      )
+      const response = await GET(request)
+      const parsed = await parseNextResponse(response)
+
+      expect(parsed.status).toBe(200)
+    })
+
+    it("should ignore invalid type parameter and return both users and channels", async () => {
+      mockDb.member.findMany.mockResolvedValue([])
+      mockDb.channel.findMany.mockResolvedValue([])
+
+      const request = new NextRequest(
+        `http://localhost/api/mentions?serverId=${validUuid}&query=test&type=invalid`,
+      )
+      const response = await GET(request)
+      const parsed = await parseNextResponse(response)
+
+      expect(parsed.status).toBe(200)
+      // Should still return results (both types when type is invalid)
+      expect(mockDb.member.findMany).toHaveBeenCalled()
+      expect(mockDb.channel.findMany).toHaveBeenCalled()
+    })
+  })
+
   describe("Error handling", () => {
     beforeEach(() => {
       mockCurrentProfile.mockResolvedValue(createMockProfile())
     })
 
-    it("should return 500 on database error", async () => {
+    it("should return 500 on database error with JSON response", async () => {
       const validUuid = "550e8400-e29b-41d4-a716-446655440000"
       mockDb.member.findFirst.mockRejectedValue(new Error("Database error"))
 
@@ -301,7 +358,26 @@ describe("GET /api/mentions", () => {
       const parsed = await parseNextResponse(response)
 
       expect(parsed.status).toBe(500)
-      expect(parsed.data).toBe("Internal Server Error")
+      expect(parsed.data).toHaveProperty("error")
+      expect(parsed.data.error).toBe("Internal Server Error")
+    })
+
+    it("should return JSON error responses for all error cases", async () => {
+      // Test 401
+      mockCurrentProfile.mockResolvedValue(null)
+      const request1 = new NextRequest("http://localhost/api/mentions?serverId=test&query=test")
+      const response1 = await GET(request1)
+      const parsed1 = await parseNextResponse(response1)
+      expect(parsed1.status).toBe(401)
+      expect(parsed1.data).toHaveProperty("error")
+
+      // Test 400 - missing serverId
+      mockCurrentProfile.mockResolvedValue(createMockProfile())
+      const request2 = new NextRequest("http://localhost/api/mentions?query=test")
+      const response2 = await GET(request2)
+      const parsed2 = await parseNextResponse(response2)
+      expect(parsed2.status).toBe(400)
+      expect(parsed2.data).toHaveProperty("error")
     })
   })
 })

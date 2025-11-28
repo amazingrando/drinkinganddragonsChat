@@ -55,6 +55,38 @@ describe("Editor Security Tests", () => {
       expect(isValidUrl("data:text/html,<script>alert(1)</script>")).toBe(false)
       expect(isValidUrl("vbscript:msgbox('XSS')")).toBe(false)
     })
+
+    it("should reject protocol-relative URLs", () => {
+      expect(isValidUrl("//example.com")).toBe(false)
+      expect(isValidUrl("//evil.com/path")).toBe(false)
+      const result = parseMarkdown("[Link](//example.com)")
+      const linkToken = result.find((token) => token.type === "link")
+      expect(linkToken).toBeUndefined()
+    })
+
+    it("should handle URL encoding edge cases", () => {
+      // Encoded javascript: protocol
+      expect(isValidUrl("javascript%3Aalert(1)")).toBe(false)
+      expect(isValidUrl("JAVASCRIPT%3Aalert(1)")).toBe(false)
+      
+      // Encoded data: protocol
+      expect(isValidUrl("data%3Atext/html,<script>alert(1)</script>")).toBe(false)
+      
+      // Valid URLs with encoded characters in path (should be valid)
+      expect(isValidUrl("https://example.com/path%20with%20spaces")).toBe(true)
+      
+      // Test in markdown parser
+      const result = parseMarkdown("[Click](javascript%3Aalert('XSS'))")
+      const linkToken = result.find((token) => token.type === "link")
+      expect(linkToken).toBeUndefined()
+    })
+
+    it("should reject mailto: URLs with dangerous protocols", () => {
+      expect(isValidUrl("mailto:test@example.com")).toBe(true)
+      expect(isValidUrl("mailto:javascript:alert(1)")).toBe(false)
+      expect(isValidUrl("mailto:data:text/html,<script>alert(1)</script>")).toBe(false)
+      expect(isValidUrl("mailto://example.com")).toBe(false)
+    })
   })
 
   describe("Path Traversal Prevention - Mention ID Validation", () => {
@@ -92,6 +124,46 @@ describe("Editor Security Tests", () => {
       expect(isValidUuid("550e8400-e29b-11d4-a716-446655440000")).toBe(false)
       // Invalid - wrong format
       expect(isValidUuid("550e8400e29b41d4a716446655440000")).toBe(false)
+    })
+  })
+
+  describe("Mention Name Sanitization", () => {
+    it("should sanitize mention names with length limits", () => {
+      // Very long mention name should be truncated
+      const longName = "a".repeat(100)
+      const result = parseMarkdown(`@${longName}[550e8400-e29b-41d4-a716-446655440000]`)
+      const mentionToken = result.find((token) => token.type === "mention")
+      expect(mentionToken).toBeDefined()
+      if (mentionToken && mentionToken.type === "mention") {
+        // Name should be truncated to MAX_MENTION_NAME_LENGTH (50)
+        expect(mentionToken.name.length).toBeLessThanOrEqual(50)
+      }
+    })
+
+    it("should sanitize mention names with length limits", () => {
+      // Mention names should be truncated to MAX_MENTION_NAME_LENGTH (50)
+      const longName = "a".repeat(100)
+      const result = parseMarkdown(`@${longName}[550e8400-e29b-41d4-a716-446655440000]`)
+      const mentionToken = result.find((token) => token.type === "mention")
+      expect(mentionToken).toBeDefined()
+      if (mentionToken && mentionToken.type === "mention") {
+        // Name should be truncated to MAX_MENTION_NAME_LENGTH (50)
+        expect(mentionToken.name.length).toBeLessThanOrEqual(50)
+        expect(mentionToken.name).toBe("a".repeat(50))
+      }
+    })
+
+    it("should extract mention names correctly (regex stops at invalid characters)", () => {
+      // The regex pattern requires alphanumeric/underscore/hyphen
+      // When it encounters a space or other invalid character, it stops
+      // So "@user name" will extract "user" and stop at the space
+      const result = parseMarkdown("@user name[550e8400-e29b-41d4-a716-446655440000]")
+      const mentionToken = result.find((token) => token.type === "mention")
+      // Should create a mention with "user" (stops at space)
+      expect(mentionToken).toBeDefined()
+      if (mentionToken && mentionToken.type === "mention") {
+        expect(mentionToken.name).toBe("user")
+      }
     })
   })
 

@@ -1,9 +1,53 @@
 /**
  * Markdown parser for chat messages
- * Supports: **bold**, *italic*, > quotes, ||spoiler||, [text](url), and auto-detected URLs
+ * 
+ * Supports:
+ * - **bold** - Bold text formatting
+ * - *italic* - Italic text formatting
+ * - > quote - Block quotes
+ * - ||spoiler|| - Spoiler text
+ * - [text](url) - Links with URL validation
+ * - Auto-detected URLs (http://, https://)
+ * - @username[id] or @username - User mentions with optional UUID
+ * - #channelname[id] or #channelname - Channel mentions with optional UUID
+ * 
+ * Security features:
+ * - Validates URLs to prevent XSS (only allows http://, https://, mailto:)
+ * - Validates mention IDs are UUIDs
+ * - Sanitizes mention names (length limits, character validation)
+ * - Rejects protocol-relative URLs
+ * - Handles URL encoding to prevent encoded protocol attacks
  */
 
 import { isValidUuid, isValidUrl } from "@/lib/url-validation"
+
+/**
+ * Maximum length for mention names to prevent DoS attacks
+ */
+const MAX_MENTION_NAME_LENGTH = 50
+
+/**
+ * Sanitizes and validates a mention name
+ * - Truncates to max length
+ * - Ensures only valid characters (alphanumeric, underscore, hyphen)
+ * - Returns empty string if invalid
+ */
+function sanitizeMentionName(name: string): string {
+  if (!name || typeof name !== "string") {
+    return ""
+  }
+  
+  // Truncate to max length
+  const truncated = name.slice(0, MAX_MENTION_NAME_LENGTH)
+  
+  // Validate characters (alphanumeric, underscore, hyphen)
+  // This matches the regex pattern used for extraction
+  if (!/^[a-zA-Z0-9_-]+$/.test(truncated)) {
+    return ""
+  }
+  
+  return truncated
+}
 
 export type MarkdownToken =
   | { type: "text"; content: string }
@@ -65,11 +109,19 @@ function parseInlineMarkdown(text: string): MarkdownToken[] {
     const mentionWithIdMatch = text.slice(i).match(/^(@|#)([a-zA-Z0-9_-]+)\[([a-zA-Z0-9_-]+)\]/)
     if (mentionWithIdMatch) {
       const mentionId = mentionWithIdMatch[3]
+      const mentionName = sanitizeMentionName(mentionWithIdMatch[2])
+      
+      // Skip if mention name is invalid after sanitization
+      if (!mentionName) {
+        i += mentionWithIdMatch[0].length
+        continue
+      }
+      
       // Validate mention ID is a UUID - if not, treat as mention without ID
       if (isValidUuid(mentionId)) {
         tokens.push({
           type: "mention",
-          name: mentionWithIdMatch[2],
+          name: mentionName,
           mentionType: mentionWithIdMatch[1] === "@" ? "user" : "channel",
           mentionId: mentionId,
         })
@@ -77,7 +129,7 @@ function parseInlineMarkdown(text: string): MarkdownToken[] {
         // Invalid UUID - treat as mention without ID
         tokens.push({
           type: "mention",
-          name: mentionWithIdMatch[2],
+          name: mentionName,
           mentionType: mentionWithIdMatch[1] === "@" ? "user" : "channel",
         })
       }
@@ -86,9 +138,17 @@ function parseInlineMarkdown(text: string): MarkdownToken[] {
     }
     const mentionMatch = text.slice(i).match(/^(@|#)([a-zA-Z0-9_-]+)/)
     if (mentionMatch) {
+      const mentionName = sanitizeMentionName(mentionMatch[2])
+      
+      // Skip if mention name is invalid after sanitization
+      if (!mentionName) {
+        i += mentionMatch[0].length
+        continue
+      }
+      
       tokens.push({
         type: "mention",
-        name: mentionMatch[2],
+        name: mentionName,
         mentionType: mentionMatch[1] === "@" ? "user" : "channel",
       })
       i += mentionMatch[0].length

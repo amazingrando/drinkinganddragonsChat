@@ -14,7 +14,25 @@ interface MarkdownRendererProps {
 
 /**
  * Renders markdown content as React elements
- * Supports: **bold**, *italic*, > quotes, ||spoiler||, [text](url), and auto-detected URLs
+ * 
+ * Supported markdown:
+ * - **bold** - Bold text
+ * - *italic* - Italic text
+ * - > quote - Block quotes
+ * - ||spoiler|| - Spoiler text (click to reveal)
+ * - [text](url) - Links (validated for safe protocols)
+ * - Auto-detected URLs (http://, https://)
+ * - @username[id] or @username - User mentions
+ * - #channelname[id] or #channelname - Channel mentions
+ * 
+ * Security:
+ * - Validates all URLs before rendering (prevents XSS via javascript:, data:, etc.)
+ * - Validates mention IDs are UUIDs before creating links
+ * - Renders invalid mentions/URLs as plain text
+ * 
+ * @param content - Markdown content to render
+ * @param className - Optional CSS class
+ * @param serverId - Optional server ID for mention links (validated before use)
  */
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   content,

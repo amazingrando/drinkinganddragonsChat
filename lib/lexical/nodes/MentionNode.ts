@@ -11,6 +11,7 @@ import {
   Spread,
   TextNode,
 } from "lexical"
+import { isValidUuid } from "@/lib/url-validation"
 
 export type SerializedMentionNode = Spread<
   {
@@ -62,6 +63,10 @@ export class MentionNode extends TextNode {
     return element
   }
 
+  /**
+   * Imports DOM nodes into Lexical MentionNodes
+   * Validates mentionId to prevent importing malicious data from user-generated HTML
+   */
   static importDOM(): DOMConversionMap | null {
     return {
       span: (node: Node) => ({
@@ -72,7 +77,12 @@ export class MentionNode extends TextNode {
           const mentionName = domNode.getAttribute("data-mention-name") || ""
           const mentionType = (domNode.getAttribute("data-mention-type") || "user") as "user" | "channel"
           const mentionId = domNode.getAttribute("data-mention-id") || ""
-          const node = $createMentionNode(mentionName, mentionType, mentionId)
+          
+          // Validate mentionId is a valid UUID to prevent path traversal and other attacks
+          // If invalid, create node without mentionId (will render as plain text mention)
+          const validMentionId = mentionId && isValidUuid(mentionId) ? mentionId : ""
+          
+          const node = $createMentionNode(mentionName, mentionType, validMentionId)
           return { node }
         },
         priority: 1,
@@ -80,9 +90,15 @@ export class MentionNode extends TextNode {
     }
   }
 
+  /**
+   * Imports JSON-serialized MentionNode
+   * Validates mentionId to ensure data integrity
+   */
   static importJSON(serializedNode: SerializedMentionNode): MentionNode {
     const { mentionName, mentionType, mentionId, text } = serializedNode
-    const node = $createMentionNode(mentionName, mentionType, mentionId, text)
+    // Validate mentionId - if invalid, use empty string (will render as plain text mention)
+    const validMentionId = mentionId && isValidUuid(mentionId) ? mentionId : ""
+    const node = $createMentionNode(mentionName, mentionType, validMentionId, text)
     return node
   }
 

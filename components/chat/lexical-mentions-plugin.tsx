@@ -16,7 +16,7 @@ import {
 import { useEffect, useState, useCallback, useRef } from "react"
 import { $createMentionNode } from "@/lib/lexical/nodes"
 import { $isMentionNode } from "@/lib/lexical/nodes"
-import { isValidUrl } from "@/lib/url-validation"
+import { isValidUrl, isValidUuid } from "@/lib/url-validation"
 
 interface MentionOption {
   id: string
@@ -30,6 +30,23 @@ interface MentionsPluginProps {
   type: "channel" | "conversation"
 }
 
+/**
+ * MentionsPlugin - Lexical plugin for @user and #channel mentions
+ * 
+ * Features:
+ * - Auto-complete for user and channel mentions
+ * - Keyboard navigation (arrow keys, enter, tab, escape)
+ * - Validates serverId before making API calls
+ * - Sanitizes image URLs from API responses
+ * 
+ * Security:
+ * - Validates serverId is a valid UUID before API calls
+ * - Sanitizes image URLs to prevent XSS
+ * - Handles rate limiting gracefully
+ * 
+ * @param serverId - UUID of the server (validated before use)
+ * @param type - "channel" for server channels, "conversation" for DMs
+ */
 export function MentionsPlugin({ serverId, type }: MentionsPluginProps): null {
   const [editor] = useLexicalComposerContext()
   const [isOpen, setIsOpen] = useState(false)
@@ -42,7 +59,8 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): null {
 
   const fetchMentions = useCallback(
     async (searchQuery: string, mentionTypeParam: "user" | "channel" | null) => {
-      if (!serverId || type !== "channel") {
+      // Validate serverId before making API calls
+      if (!serverId || type !== "channel" || !isValidUuid(serverId)) {
         setOptions([])
         return
       }
