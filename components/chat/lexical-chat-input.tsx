@@ -11,6 +11,8 @@ import { $isLinkNode } from "@lexical/link"
 import { chatEditorTheme } from "@/lib/lexical/theme"
 import { MarkdownShortcutsPlugin } from "./lexical-markdown-shortcuts"
 import { MentionsPlugin } from "./lexical-mentions-plugin"
+import { FloatingToolbarPlugin, SelectionPosition } from "./lexical-floating-toolbar-plugin"
+import { LexicalFloatingToolbar } from "./lexical-floating-toolbar"
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin"
 import { LinkNode } from "@lexical/link"
 import { ListPlugin } from "@lexical/react/LexicalListPlugin"
@@ -185,6 +187,17 @@ function ClearEditorPlugin({ clearTrigger }: { clearTrigger?: number }) {
   return null
 }
 
+function FloatingToolbarWrapper() {
+  const [selectionPosition, setSelectionPosition] = useState<SelectionPosition | null>(null)
+
+  return (
+    <>
+      <FloatingToolbarPlugin onSelectionChange={setSelectionPosition} />
+      <LexicalFloatingToolbar position={selectionPosition} />
+    </>
+  )
+}
+
 export function LexicalChatInput({
   apiUrl,
   query,
@@ -273,6 +286,7 @@ export function LexicalChatInput({
         <MarkdownShortcutsPlugin />
         <MentionsPlugin serverId={query.serverId} type={type} />
         <ClearEditorPlugin clearTrigger={clearTrigger} />
+        <FloatingToolbarWrapper />
         <div className="relative p-4 pb-6">
           <EditorUI
             apiUrl={apiUrl}
