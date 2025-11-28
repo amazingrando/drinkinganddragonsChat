@@ -6,6 +6,7 @@ import {
   $isRangeSelection,
   $createTextNode,
   $insertNodes,
+  $isTextNode,
   COMMAND_PRIORITY_LOW,
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_UP_COMMAND,
@@ -13,7 +14,7 @@ import {
   KEY_ESCAPE_COMMAND,
   KEY_TAB_COMMAND,
 } from "lexical"
-import { useEffect, useState, useCallback, useRef } from "react"
+import React, { useEffect, useState, useCallback, useRef } from "react"
 import { $createMentionNode } from "@/lib/lexical/nodes"
 import { $isMentionNode } from "@/lib/lexical/nodes"
 import { isValidUrl, isValidUuid } from "@/lib/url-validation"
@@ -47,7 +48,7 @@ interface MentionsPluginProps {
  * @param serverId - UUID of the server (validated before use)
  * @param type - "channel" for server channels, "conversation" for DMs
  */
-export function MentionsPlugin({ serverId, type }: MentionsPluginProps): null {
+export function MentionsPlugin({ serverId, type }: MentionsPluginProps): React.ReactElement | null {
   const [editor] = useLexicalComposerContext()
   const [isOpen, setIsOpen] = useState(false)
   const [options, setOptions] = useState<MentionOption[]>([])
@@ -151,10 +152,12 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): null {
         const afterText = textContent.slice(endPos)
 
         // Split the text node if needed
-        if (beforeText) {
-          textNode.setTextContent(beforeText)
-        } else {
-          textNode.remove()
+        if ($isTextNode(textNode)) {
+          if (beforeText) {
+            textNode.setTextContent(beforeText)
+          } else {
+            textNode.remove()
+          }
         }
 
         // Insert mention and remaining text
@@ -271,7 +274,7 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): null {
       KEY_ARROW_DOWN_COMMAND,
       (event) => {
         if (isOpen && options.length > 0) {
-          event.preventDefault()
+          event?.preventDefault()
           setSelectedIndex((prev) => (prev + 1) % options.length)
           return true
         }
@@ -286,7 +289,7 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): null {
       KEY_ARROW_UP_COMMAND,
       (event) => {
         if (isOpen && options.length > 0) {
-          event.preventDefault()
+          event?.preventDefault()
           setSelectedIndex((prev) => (prev - 1 + options.length) % options.length)
           return true
         }
@@ -301,7 +304,7 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): null {
       KEY_ENTER_COMMAND,
       (event) => {
         if (isOpen && options.length > 0 && options[selectedIndex]) {
-          event.preventDefault()
+          event?.preventDefault()
           insertMention(options[selectedIndex])
           return true
         }
@@ -316,7 +319,7 @@ export function MentionsPlugin({ serverId, type }: MentionsPluginProps): null {
       KEY_TAB_COMMAND,
       (event) => {
         if (isOpen && options.length > 0 && options[selectedIndex]) {
-          event.preventDefault()
+          event?.preventDefault()
           insertMention(options[selectedIndex])
           return true
         }

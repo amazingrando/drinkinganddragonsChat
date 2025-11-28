@@ -142,7 +142,7 @@ export class MentionNode extends TextNode {
     return false
   }
 
-  isInline(): boolean {
+  isInline(): true {
     return true
   }
 }

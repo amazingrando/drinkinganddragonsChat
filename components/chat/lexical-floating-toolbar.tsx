@@ -250,7 +250,7 @@ export function LexicalFloatingToolbar({
             const editorElement = editor.getRootElement()
             if (
               editorElement?.contains(target) ||
-              e.currentTarget.parentElement?.contains(target)
+              (e.currentTarget instanceof HTMLElement && e.currentTarget.parentElement?.contains(target))
             ) {
               e.preventDefault()
             }

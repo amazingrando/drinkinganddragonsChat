@@ -157,7 +157,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         const hasId = !!token.mentionId
         const hasServerId = !!serverId
         // Validate mention ID is a UUID before using it in URLs
-        const isValidId = hasId && isValidUuid(token.mentionId)
+        const isValidId = hasId && token.mentionId ? isValidUuid(token.mentionId) : false
         const canLink = isValidId && hasServerId
 
         if (canLink) {
