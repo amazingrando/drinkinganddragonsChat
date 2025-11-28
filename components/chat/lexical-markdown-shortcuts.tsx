@@ -216,24 +216,21 @@ export function useMarkdownFormatting() {
     })
   }
 
-  const applyLink = () => {
+  const applyLink = (url?: string) => {
     editor.update(() => {
       const selection = $getSelection()
       if ($isRangeSelection(selection)) {
         const selectedText = selection.getTextContent()
         if (selectedText) {
-          // Prompt user for URL
-          const url = prompt("Enter URL for the link:")
-          
-          // If user cancelled or entered empty string, do nothing
-          if (url === null || url.trim() === "") {
+          // If no URL provided, return early (popover will handle URL input)
+          if (!url || url.trim() === "") {
             return
           }
           
           // Validate URL
           const trimmedUrl = url.trim()
           if (!isValidUrl(trimmedUrl)) {
-            alert("Please enter a valid URL (e.g., https://example.com)")
+            // Validation error should be handled by the popover component
             return
           }
           
