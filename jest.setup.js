@@ -1,6 +1,9 @@
 // Jest setup file
 // This file runs before each test file
 
+// Extend Jest matchers with @testing-library/jest-dom
+import '@testing-library/jest-dom'
+
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
   useRouter() {
