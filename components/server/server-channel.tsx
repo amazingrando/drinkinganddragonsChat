@@ -146,8 +146,9 @@ export const ServerChannel = ({ channel, server, role, unreadCount = 0, mentionC
         <div className="flex items-center gap-x-1 min-w-0">
           <p
             className={cn(
-              "font-semibold text-sm text-muted-foreground group-hover:text-foreground transition whitespace-nowrap text-ellipsis max-w-full overflow-hidden",
+              "font-semibold text-sm group-hover:text-foreground transition whitespace-nowrap text-ellipsis max-w-full overflow-hidden",
               params?.channelId === channel.id && "text-foreground",
+              hasMentions || hasUnread ? "text-foreground" : "text-muted-foreground",
             )}
           >
             {channel.name}
