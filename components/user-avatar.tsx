@@ -1,5 +1,5 @@
 import Avatar from "boring-avatars";
-import { Avatar as UIAvatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar as UIAvatar, AvatarFallback } from "@/components/ui/avatar";
 import Image from "next/image";
 
 interface UserAvatarProps {

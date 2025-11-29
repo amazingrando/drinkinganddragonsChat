@@ -162,7 +162,7 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
         unsubscribe(voteChannel)
       }
     }
-  }, [poll.id, subscribe, unsubscribe])
+  }, [poll.id, subscribe, unsubscribe, currentMemberId])
 
   // Subscribe to poll updates (for edits)
   useEffect(() => {
@@ -303,7 +303,7 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
               optionId: option.id,
               memberId: currentMemberId,
               createdAt: new Date(),
-              member: null as unknown, // Will be populated by realtime update
+              member: null, // Will be populated by realtime update
             }
             return {
               ...option,
