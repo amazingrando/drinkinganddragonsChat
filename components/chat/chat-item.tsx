@@ -21,6 +21,7 @@ import { PollDisplay } from "@/components/poll/poll-display"
 import { PollWithOptionsAndVotes, MessageReactionWithMember } from "@/types"
 import { RoleIcon } from "@/components/role-icon"
 import { MarkdownRenderer } from "@/components/chat/markdown-renderer"
+import { ChatImageLightbox } from "@/components/chat/chat-image-lightbox"
 import { FormattingToolbar } from "@/components/chat/formatting-toolbar"
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
 import data from "@emoji-mart/data"
@@ -77,6 +78,7 @@ export const ChatItem = ({
   const [isMouseOverPicker, setIsMouseOverPicker] = useState(false);
   const [anchorPosition, setAnchorPosition] = useState<{ x: number; y: number } | null>(null);
   const [isPinning, setIsPinning] = useState(false);
+  const [isImageLightboxOpen, setIsImageLightboxOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -386,10 +388,23 @@ export const ChatItem = ({
             )}
           </div>
 
-          {isImage && (
-            <a className="relative rounded-md overflow-hidden border flex items-center justify-center bg-secondary max-w-fit max-h-fit mt-1" href={fileUrl} target="_blank" rel="noopener noreferrer">
-              <Image src={fileUrl} alt="Content" width={400} height={400} className="object-contain " />
-            </a>
+          {isImage && fileUrl && (
+            <>
+              <button
+                type="button"
+                className="relative rounded-md overflow-hidden border flex items-center justify-center bg-secondary max-w-fit max-h-fit mt-1 cursor-zoom-in"
+                onClick={() => setIsImageLightboxOpen(true)}
+                aria-label="Open image in fullscreen"
+              >
+                <Image src={fileUrl} alt="Content" width={400} height={400} className="object-contain" />
+              </button>
+              <ChatImageLightbox
+                open={isImageLightboxOpen}
+                onOpenChange={setIsImageLightboxOpen}
+                src={fileUrl}
+                alt="Content"
+              />
+            </>
           )}
 
           {poll && (
