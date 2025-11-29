@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useRef } from "react"
 import { PollWithOptionsAndVotes } from "@/types"
 import { CheckSquare, Square, Clock, Lock, Pencil, Circle, CircleCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -9,6 +9,7 @@ import { UseRealtime } from "@/components/providers/realtime-provider"
 import { useModal } from "@/hooks/use-modal-store"
 import { ActionTooltip } from "@/components/action-tooltip"
 import { MemberRole } from "@prisma/client"
+import { toast } from "sonner"
 
 interface PollDisplayProps {
   poll: PollWithOptionsAndVotes
@@ -31,6 +32,9 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
   const [localPoll, setLocalPoll] = useState<PollWithOptionsAndVotes>(poll)
   const [isClosed, setIsClosed] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState<string>("")
+  const [pendingVoteOptionIds, setPendingVoteOptionIds] = useState<Set<string>>(new Set())
+  const pendingVoteOptionIdsRef = useRef<Set<string>>(new Set())
+  const previousPollStatesRef = useRef<Map<string, PollWithOptionsAndVotes>>(new Map())
   const { subscribe, unsubscribe } = UseRealtime()
   const { onOpen } = useModal()
 
@@ -49,7 +53,108 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
     const channelKey = `poll:${poll.id}:votes`
     const voteChannel = subscribe(channelKey, channelKey, (payload: RealtimeBroadcastPayload<unknown>) => {
       const updatedPoll = payload.payload as PollWithOptionsAndVotes
-      setLocalPoll(updatedPoll)
+      
+      // Merge broadcasted state with any remaining optimistic votes
+      setLocalPoll((prevPoll) => {
+        // Check which pending votes have been confirmed in the broadcast
+        const confirmedPendingIds = new Set<string>()
+        
+        // For each pending option, check if the broadcast confirms our optimistic vote
+        // Use ref to get current pending votes (not stale closure value)
+        pendingVoteOptionIdsRef.current.forEach((pendingOptionId) => {
+          const broadcastOption = updatedPoll.options.find(opt => opt.id === pendingOptionId)
+          const prevOption = prevPoll.options.find(opt => opt.id === pendingOptionId)
+          
+          if (broadcastOption && prevOption) {
+            const hasOurVoteInBroadcast = broadcastOption.votes.some(
+              vote => vote.memberId === currentMemberId || vote.member?.id === currentMemberId
+            )
+            const hasOurOptimisticVote = prevOption.votes.some(
+              vote => (vote.id?.startsWith('optimistic-') || vote.id === undefined) && vote.memberId === currentMemberId
+            )
+            const previousState = previousPollStatesRef.current.get(pendingOptionId)
+            const hadVoteBefore = previousState?.options.find(opt => opt.id === pendingOptionId)?.votes.some(
+              vote => vote.memberId === currentMemberId || vote.member?.id === currentMemberId
+            ) ?? false
+            
+            // If we added a vote optimistically and it's now in the broadcast, it's confirmed
+            if (hasOurOptimisticVote && hasOurVoteInBroadcast) {
+              confirmedPendingIds.add(pendingOptionId)
+            }
+            // If we removed a vote optimistically (no optimistic vote but had one before) and it's confirmed removed
+            else if (!hasOurOptimisticVote && !hasOurVoteInBroadcast && hadVoteBefore) {
+              confirmedPendingIds.add(pendingOptionId)
+            }
+          }
+        })
+        
+        // Remove confirmed pending votes from tracking
+        if (confirmedPendingIds.size > 0) {
+          setPendingVoteOptionIds((prev) => {
+            const next = new Set(prev)
+            confirmedPendingIds.forEach(id => {
+              next.delete(id)
+              previousPollStatesRef.current.delete(id)
+            })
+            pendingVoteOptionIdsRef.current = next
+            return next
+          })
+        }
+        
+        // Merge broadcast state with any remaining optimistic votes
+        const mergedOptions = updatedPoll.options.map((broadcastOption) => {
+          // If this option still has a pending optimistic vote, merge it with broadcast
+          // Use ref to get current pending votes (not stale closure value)
+          if (pendingVoteOptionIdsRef.current.has(broadcastOption.id) && !confirmedPendingIds.has(broadcastOption.id)) {
+            const prevOption = prevPoll.options.find(opt => opt.id === broadcastOption.id)
+            
+            if (prevOption) {
+              // Find our optimistic vote
+              const optimisticVotes = prevOption.votes.filter(
+                vote => (vote.id?.startsWith('optimistic-') || vote.id === undefined) && vote.memberId === currentMemberId
+              )
+              
+              if (optimisticVotes.length > 0) {
+                // We optimistically added a vote - check if broadcast has it
+                const hasOurVoteInBroadcast = broadcastOption.votes.some(
+                  vote => vote.memberId === currentMemberId || vote.member?.id === currentMemberId
+                )
+                
+                if (!hasOurVoteInBroadcast) {
+                  // Our optimistic vote isn't in broadcast yet, keep it
+                  return {
+                    ...broadcastOption,
+                    votes: [...broadcastOption.votes, ...optimisticVotes],
+                  }
+                }
+              } else {
+                // We optimistically removed a vote - check if broadcast still has it
+                const hasOurVoteInBroadcast = broadcastOption.votes.some(
+                  vote => vote.memberId === currentMemberId || vote.member?.id === currentMemberId
+                )
+                
+                if (hasOurVoteInBroadcast) {
+                  // Broadcast still has our vote but we removed it optimistically, remove it
+                  return {
+                    ...broadcastOption,
+                    votes: broadcastOption.votes.filter(
+                      vote => vote.memberId !== currentMemberId && vote.member?.id !== currentMemberId
+                    ),
+                  }
+                }
+              }
+            }
+          }
+          
+          // No pending optimistic vote for this option, use broadcast state as-is
+          return broadcastOption
+        })
+        
+        return {
+          ...updatedPoll,
+          options: mergedOptions,
+        }
+      })
     })
 
     return () => {
@@ -162,12 +267,69 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
   }, [sortedOptions, currentMemberId])
 
   const handleVote = async (optionId: string) => {
-    if (isClosed) return
+    if (isClosed || pendingVoteOptionIds.has(optionId)) return
 
     const isCurrentlyVoted = memberVotes.includes(optionId)
+    
+    // Save current state for potential rollback (only if we don't already have a saved state)
+    if (!previousPollStatesRef.current.has(optionId)) {
+      previousPollStatesRef.current.set(optionId, JSON.parse(JSON.stringify(localPoll)))
+    }
+    
+    // Add this option to pending set
+    setPendingVoteOptionIds((prev) => {
+      const next = new Set(prev).add(optionId)
+      pendingVoteOptionIdsRef.current = next
+      return next
+    })
+
+    // Optimistically update the poll state
+    setLocalPoll((prevPoll) => {
+      const updatedOptions = prevPoll.options.map((option) => {
+        if (option.id === optionId) {
+          if (isCurrentlyVoted) {
+            // Remove vote optimistically
+            return {
+              ...option,
+              votes: option.votes.filter(
+                (vote) => vote.memberId !== currentMemberId && vote.member?.id !== currentMemberId
+              ),
+            }
+          } else {
+            // Add vote optimistically
+            const optimisticVote = {
+              id: `optimistic-${Date.now()}-${optionId}`,
+              pollId: prevPoll.id,
+              optionId: option.id,
+              memberId: currentMemberId,
+              createdAt: new Date(),
+              member: null as unknown, // Will be populated by realtime update
+            }
+            return {
+              ...option,
+              votes: [...option.votes, optimisticVote],
+            }
+          }
+        } else if (!prevPoll.allowMultipleChoices && !isCurrentlyVoted) {
+          // If single choice poll and adding a vote, remove vote from other options
+          return {
+            ...option,
+            votes: option.votes.filter(
+              (vote) => vote.memberId !== currentMemberId && vote.member?.id !== currentMemberId
+            ),
+          }
+        }
+        return option
+      })
+
+      return {
+        ...prevPoll,
+        options: updatedOptions,
+      }
+    })
 
     try {
-      await fetch(`/api/polls/${localPoll.id}/vote?channelId=${channelId}`, {
+      const response = await fetch(`/api/polls/${poll.id}/vote?channelId=${channelId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -177,7 +339,33 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
           removeVote: isCurrentlyVoted,
         }),
       })
+
+      if (!response.ok) {
+        throw new Error(response.statusText || "Failed to vote")
+      }
+
+      // Remove from pending set - realtime broadcast will update the poll
+      setPendingVoteOptionIds((prev) => {
+        const next = new Set(prev)
+        next.delete(optionId)
+        pendingVoteOptionIdsRef.current = next
+        return next
+      })
+      previousPollStatesRef.current.delete(optionId)
     } catch (error) {
+      // Revert to previous state on error
+      const previousState = previousPollStatesRef.current.get(optionId)
+      if (previousState) {
+        setLocalPoll(previousState)
+        previousPollStatesRef.current.delete(optionId)
+      }
+      setPendingVoteOptionIds((prev) => {
+        const next = new Set(prev)
+        next.delete(optionId)
+        pendingVoteOptionIdsRef.current = next
+        return next
+      })
+      toast.error("Failed to vote. Please try again.")
       console.error("Error voting:", error)
     }
   }
@@ -228,18 +416,23 @@ export const PollDisplay = ({ poll, currentMemberId, currentMemberRole, channelI
           const isVoted = option.votes.some(vote =>
             vote.memberId === currentMemberId || vote.member?.id === currentMemberId
           )
-          const voters = option.votes.map(vote => vote.member)
+          const voters = option.votes
+            .map(vote => vote.member)
+            .filter((member): member is NonNullable<typeof member> => member !== null && member !== undefined)
+
+          const isPending = pendingVoteOptionIds.has(option.id)
 
           return (
             <div key={option.id} className="space-y-2">
               <button
                 onClick={() => handleVote(option.id)}
-                disabled={isClosed}
+                disabled={isClosed || isPending}
                 className={cn(
                   "w-full text-left p-3 rounded border transition-colors group/option-item",
                   "hover:border-white/40",
                   isVoted && " border-white/60",
-                  isClosed && "cursor-not-allowed pointer-events-none"
+                  (isClosed || isPending) && "cursor-not-allowed pointer-events-none",
+                  isPending && "opacity-75"
                 )}
               >
                 <div className="flex items-center gap-2 mb-2">
