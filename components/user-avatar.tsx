@@ -1,5 +1,6 @@
 import Avatar from "boring-avatars";
 import { Avatar as UIAvatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import Image from "next/image";
 
 interface UserAvatarProps {
   src?: string // Email or identifier for fallback avatar
@@ -12,7 +13,7 @@ const UserAvatar = ({ src, imageUrl, size = 40, className }: UserAvatarProps) =>
   if (imageUrl && imageUrl.trim() !== "") {
     return (
       <UIAvatar className={className} style={{ width: size, height: size }}>
-        <AvatarImage src={imageUrl} alt={src ? `Avatar for ${src}` : "User avatar"} style={{ width: size, height: size }} />
+        <Image src={imageUrl} alt={src ? `Avatar for ${src}` : "User avatar"} width={size} height={size} />
         <AvatarFallback>
           <Avatar
             className={className}
