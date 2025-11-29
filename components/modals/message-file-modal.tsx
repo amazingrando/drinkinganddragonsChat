@@ -25,6 +25,7 @@ import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/d
 import { useRouter } from "next/navigation"
 import { useModal } from "@/hooks/use-modal-store"
 import { ModalHeader } from "./_modal-header"
+import Image from "next/image"
 
 const formSchema = z.object({
   fileUrl: z.string().min(1, {
@@ -112,18 +113,44 @@ const MessageFileModal = () => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="space-y-8 px-6">
-              <FormField control={form.control} name="fileUrl" render={({ }) => (
-                <FormItem>
-                  <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">Attachment</FormLabel>
-                  <FormControl>
-                    <Dropzone {...dropzoneProps} >
-                      <DropzoneEmptyState />
-                      <DropzoneContent />
-                    </Dropzone>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="fileUrl"
+                render={() => {
+                  const fileUrl = form.watch("fileUrl")
+
+                  return (
+                    <FormItem>
+                      <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-white">
+                        Attachment
+                      </FormLabel>
+                      <FormControl>
+                        <div className="space-y-4">
+                          <Dropzone {...dropzoneProps}>
+                            <DropzoneEmptyState />
+                            <DropzoneContent />
+                          </Dropzone>
+
+                          {dropzoneProps.isSuccess && fileUrl && (
+                            <div className="relative w-full overflow-hidden rounded-md border bg-muted">
+                              <div className="relative aspect-video w-full">
+                                <Image
+                                  src={fileUrl}
+                                  alt="Attachment preview"
+                                  fill
+                                  sizes="100vw"
+                                  className="object-contain"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )
+                }}
+              />
             </div>
             <DialogFooter className="px-6 py-4">
               <Button disabled={isLoading} variant="primary">Send</Button>

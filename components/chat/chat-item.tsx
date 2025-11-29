@@ -387,8 +387,8 @@ export const ChatItem = ({
           </div>
 
           {isImage && (
-            <a className="relative aspect-video rounded-md overflow-hidden border flex items-center justify-center bg-secondary h-48 w-48" href={fileUrl} target="_blank" rel="noopener noreferrer">
-              <Image src={fileUrl} alt="Content" fill className="object-cover" />
+            <a className="relative rounded-md overflow-hidden border flex items-center justify-center bg-secondary max-w-fit max-h-fit mt-1" href={fileUrl} target="_blank" rel="noopener noreferrer">
+              <Image src={fileUrl} alt="Content" width={400} height={400} className="object-contain " />
             </a>
           )}
 
